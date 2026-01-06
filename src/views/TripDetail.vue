@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InviteModal from '@/components/InviteModal.vue'
-import ItineraryList from '@/components/ItineraryList.vue'
+// import ItineraryList from '@/components/ItineraryList.vue'
+import ItineraryView from '@/views/Itinerary.vue'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
@@ -13,7 +14,7 @@ const router = useRouter()
 const tripStore = useTripStore()
 const itineraryStore = useItineraryStore()
 const { currentTrip, loading, error } = storeToRefs(tripStore)
-const { itineraries } = storeToRefs(itineraryStore)
+// const { itineraries } = storeToRefs(itineraryStore)
 const isInviteModalOpen = ref(false)
 
 const tripId = route.params.id as string
@@ -102,8 +103,8 @@ function handleDelete() {
 
           <TabPanels class="mt-2">
             <TabPanel class="rounded-xl bg-gray-50 p-3 shadow-none">
-              <!-- Itinerary List Component -->
-              <ItineraryList :itineraries="itineraries" />
+              <!-- Itinerary View (Overview) -->
+              <ItineraryView />
             </TabPanel>
 
             <TabPanel class="rounded-xl bg-white p-3 shadow">

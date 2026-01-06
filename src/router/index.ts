@@ -42,6 +42,12 @@ const router = createRouter({
       name: 'join-trip',
       component: () => import('../views/JoinTrip.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/Profile.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

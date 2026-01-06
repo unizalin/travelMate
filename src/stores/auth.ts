@@ -44,6 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
       provider: provider as any,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     })
     if (error) throw error
