@@ -1,4 +1,12 @@
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+import { GoogleGenAI } from "@google/genai";
+
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+  throw new Error('Missing VITE_GEMINI_API_KEY');
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 export interface ActivitySuggestion {
   name: string;
@@ -18,69 +26,46 @@ export const geminiService = {
     destination: string,
     dayNumber: number
   ): Promise<ActivitySuggestion[]> {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing VITE_GEMINI_API_KEY environment variable');
-    }
+    const prompt = `我正在規劃${destination}旅遊的第 ${dayNumber} 天行程。
+使用者需求：${userMessage}
 
-    const systemPrompt = `
-      我正在規劃前往 ${destination} 的第 ${dayNumber} 天行程。
-      使用者需求：${userMessage}
-      
-      請以純 JSON 格式回覆建議的景點，不要包含任何 Markdown 標記 (如 \`\`\`json)。格式如下：
-      {
-        "suggestions": [
-          {
-            "name": "景點名稱",
-            "location": "完整地址",
-            "duration": 120,
-            "description": "簡短描述 (50字以內)",
-            "recommendedTime": "09:00"
-          }
-        ]
-      }
-    `;
+請以繁體中文回覆，並用 JSON 格式列出建議的景點：
+{
+  "suggestions": [
+    {
+      "name": "景點名稱",
+      "location": "完整地址",
+      "duration": 120,
+      "description": "簡短描述",
+      "recommendedTime": "09:00"
+    }
+  ]
+}`;
 
     try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: systemPrompt
-            }]
-          }]
-        })
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Gemini API request failed: ${response.status}`);
-      }
+      const text = response.text;
+      console.log('Gemini Response:', text);
 
-      const data = await response.json();
-      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!textResponse) {
+      if (!text) {
         throw new Error('Empty response from Gemini');
       }
 
-      // Clean up markdown code blocks if present
-      const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
 
-      try {
-        const parsed: DayPlanResponse = JSON.parse(cleanJson);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
         return parsed.suggestions || [];
-      } catch (e) {
-        console.error('Failed to parse JSON:', cleanJson);
-        throw new Error('Invalid JSON response from AI');
       }
 
-    } catch (error) {
-      console.error('Gemini Service Error:', error);
+      throw new Error('無法解析 JSON');
+    } catch (error: any) {
+      console.error('Gemini Error:', error);
       throw error;
     }
   }
