@@ -113,6 +113,8 @@ export interface Database {
           itinerary_id: string
           name: string
           location: string | null
+          start_time: string | null
+          end_time: string | null
           order_index: number
           duration: number | null
           notes: string | null
@@ -126,6 +128,8 @@ export interface Database {
           itinerary_id: string
           name: string
           location?: string | null
+          start_time?: string | null
+          end_time?: string | null
           order_index: number
           duration?: number | null
           notes?: string | null
@@ -139,6 +143,8 @@ export interface Database {
           itinerary_id?: string
           name?: string
           location?: string | null
+          start_time?: string | null
+          end_time?: string | null
           order_index?: number
           duration?: number | null
           notes?: string | null

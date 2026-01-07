@@ -90,28 +90,45 @@
 - is_paid (boolean) - 是否已繳交
 - paid_at (timestamp) - 繳交時間
 
-## Row Level Security（RLS）政策
+### Row Level Security (RLS) - Updated Strategy
+RLS policies have been refactored to use `SECURITY DEFINER` functions to prevent infinite recursion and ensure performance.
 
-### trips 政策
+Core Function: `is_trip_member(trip_id, user_id)`
+- Used in almost all policies to safely check membership without direct recursive table queries.
+
+Key Policy Example (Trips):
 ```sql
 CREATE POLICY "Users can view trips they are members of"
 ON trips FOR SELECT
 USING (
-  id IN (
-    SELECT trip_id FROM trip_members
-    WHERE user_id = auth.uid()
-  )
+  public.is_trip_member(id, auth.uid()) 
+  OR created_by = auth.uid()
 );
+```
 
-CREATE POLICY "Users can create trips"
-ON trips FOR INSERT
-WITH CHECK (created_by = auth.uid());
+### activities（景點表）
+- id (uuid, primary key)
+- itinerary_id (uuid, references itineraries.id)
+- name (text) - 景點名稱
+- location (text) - 地址
+- start_time (time) - 開始時間（新增）
+- end_time (time) - 結束時間（新增）
+- order_index (integer) - 排序序號
+- duration (integer) - 停留時間（分鐘）
+- notes (text) - 備註
+- image_url (text) - 景點照片
+- created_by (uuid, references profiles.id)
+- created_at (timestamp)
+- updated_at (timestamp)
 
-CREATE POLICY "Trip organizers can update trips"
-ON trips FOR UPDATE
-USING (
-  id IN (
-    SELECT trip_id FROM trip_members
-    WHERE user_id = auth.uid() AND role = 'organizer'
-  )
-);
+### ai_suggestions（AI 建議記錄表）- 新增
+- id (uuid, primary key)
+- trip_id (uuid, references trips.id)
+- user_id (uuid, references profiles.id)
+- user_message (text) - 使用者提問
+- ai_response (text) - AI 回覆
+- suggested_activities (jsonb) - AI 建議的景點列表
+- created_at (timestamp)
+
+
+Please refer to `supabase/schema.sql` for the latest and complete policy definitions.

@@ -64,14 +64,11 @@ export const tripService = {
   },
 
   async joinTrip(inviteCode: string, userId: string) {
-    // 1. Find trip by invite code
-    const { data: trip, error: findError } = await supabase
-      .from('trips')
-      .select('id')
-      .eq('invite_code', inviteCode)
-      .single()
+    // 1. Find trip by invite code (using RPC to bypass RLS)
+    const { data: tripId, error: findError } = await supabase
+      .rpc('get_trip_id_by_invite_code' as any, { code: inviteCode } as any)
 
-    if (findError) throw new Error('Invalid invite code')
+    if (findError || !tripId) throw new Error('Invalid invite code')
 
     // 2. Add member
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,7 +76,7 @@ export const tripService = {
       .from('trip_members')
       .insert({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        trip_id: (trip as any).id,
+        trip_id: tripId,
         user_id: userId,
         role: 'member'
       } as any)
@@ -89,8 +86,7 @@ export const tripService = {
       throw joinError
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (trip as any).id
+    return tripId
   },
 
   async deleteTrip(id: string) {

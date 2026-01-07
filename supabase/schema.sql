@@ -1,268 +1,346 @@
--- Enable necessary extensions
-create extension if not exists "uuid-ossp";
+-- 全新重建 Schema (包含 RLS 無限迴圈修復)
+-- 此腳本會清除所有現有資料表並重新建立
 
--- Profiles table (extends auth.users)
-create table profiles (
-  id uuid references auth.users on delete cascade primary key,
-  display_name text,
-  avatar_url text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- ⚠️ 警告：這會刪除所有資料！
+DROP TABLE IF EXISTS expense_payments CASCADE;
+DROP TABLE IF EXISTS expenses CASCADE;
+DROP TABLE IF EXISTS activities CASCADE;
+DROP TABLE IF EXISTS itineraries CASCADE;
+DROP TABLE IF EXISTS trip_members CASCADE;
+DROP TABLE IF EXISTS trips CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+-- 1. 建立 profiles 表
+CREATE TABLE profiles (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  display_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Trips table
-create table trips (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null,
-  destination text not null,
-  start_date date not null,
-  end_date date not null,
-  created_by uuid references profiles(id) not null,
-  invite_code text unique default substr(md5(random()::text), 0, 7),
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 1.1 Backfill profiles from auth.users (Fix for "trips_created_by_fkey" error)
+-- Recreating schema wipes profiles, but auth.users remains. We must restore profiles for existing users.
+INSERT INTO public.profiles (id, display_name, avatar_url)
+SELECT 
+  id, 
+  COALESCE(raw_user_meta_data->>'display_name', email), 
+  raw_user_meta_data->>'avatar_url'
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. 建立 trips 表
+CREATE TABLE trips (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  destination TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  created_by UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  invite_code TEXT UNIQUE NOT NULL DEFAULT substr(md5(random()::text), 0, 7),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Trip Members table
-create table trip_members (
-  id uuid default uuid_generate_v4() primary key,
-  trip_id uuid references trips(id) on delete cascade not null,
-  user_id uuid references profiles(id) on delete cascade not null,
-  role text not null check (role in ('organizer', 'member')),
-  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique(trip_id, user_id)
+-- 3. 建立 trip_members 表
+CREATE TABLE trip_members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('organizer', 'member')),
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(trip_id, user_id)
 );
 
--- Itineraries table
-create table itineraries (
-  id uuid default uuid_generate_v4() primary key,
-  trip_id uuid references trips(id) on delete cascade not null,
-  day_number integer not null,
-  date date not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 4. 建立 itineraries 表
+CREATE TABLE itineraries (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) ON DELETE CASCADE NOT NULL,
+  day_number INTEGER NOT NULL,
+  date DATE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(trip_id, day_number)
 );
 
--- Activities table
-create table activities (
-  id uuid default uuid_generate_v4() primary key,
-  itinerary_id uuid references itineraries(id) on delete cascade not null,
-  name text not null,
-  location text,
-  order_index integer not null,
-  duration integer, -- in minutes
-  notes text,
-  image_url text,
-  created_by uuid references profiles(id),
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 5. 建立 activities 表
+CREATE TABLE activities (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  location TEXT,
+  start_time TIME,
+  end_time TIME,
+  order_index INTEGER NOT NULL DEFAULT 0,
+  duration INTEGER,
+  notes TEXT,
+  image_url TEXT,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Expenses table
-create table expenses (
-  id uuid default uuid_generate_v4() primary key,
-  trip_id uuid references trips(id) on delete cascade not null,
-  name text not null,
-  amount numeric not null,
-  currency text not null default 'TWD',
-  category text not null,
-  expense_type text not null check (expense_type in ('shared', 'personal')),
-  paid_by uuid references profiles(id) not null,
-  receipt_url text,
-  split_members jsonb not null default '[]'::jsonb, -- Array of {user_id, amount}
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 6. 建立 expenses 表
+CREATE TABLE expenses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  amount NUMERIC(10, 2) NOT NULL,
+  currency TEXT DEFAULT 'TWD',
+  category TEXT NOT NULL CHECK (category IN ('交通', '餐飲', '住宿', '門票', '其他')),
+  expense_type TEXT NOT NULL CHECK (expense_type IN ('shared', 'personal')),
+  paid_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  receipt_url TEXT,
+  split_members JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Expense Payments table (Track who needs to pay whom)
-create table expense_payments (
-  id uuid default uuid_generate_v4() primary key,
-  expense_id uuid references expenses(id) on delete cascade not null,
-  payer_id uuid references profiles(id) not null, -- Who needs to pay
-  amount numeric not null,
-  is_paid boolean default false,
-  paid_at timestamp with time zone
+-- 7. 建立 expense_payments 表
+CREATE TABLE expense_payments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  expense_id UUID REFERENCES expenses(id) ON DELETE CASCADE NOT NULL,
+  payer_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  amount NUMERIC(10, 2) NOT NULL,
+  is_paid BOOLEAN DEFAULT FALSE,
+  paid_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(expense_id, payer_id)
 );
 
--- RLS Policies
+-- 8. 建立 ai_suggestions 表
+CREATE TABLE ai_suggestions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  day_number INTEGER,
+  user_message TEXT NOT NULL,
+  ai_response TEXT NOT NULL,
+  suggested_activities JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Enable RLS
-alter table profiles enable row level security;
-alter table trips enable row level security;
-alter table trip_members enable row level security;
-alter table itineraries enable row level security;
-alter table activities enable row level security;
-alter table expenses enable row level security;
-alter table expense_payments enable row level security;
+-- 9. 建立索引
+CREATE INDEX idx_trip_members_trip_id ON trip_members(trip_id);
+CREATE INDEX idx_trip_members_user_id ON trip_members(user_id);
+CREATE INDEX idx_itineraries_trip_id ON itineraries(trip_id);
+CREATE INDEX idx_activities_itinerary_id ON activities(itinerary_id);
+CREATE INDEX idx_expenses_trip_id ON expenses(trip_id);
+CREATE INDEX idx_expense_payments_expense_id ON expense_payments(expense_id);
+CREATE INDEX idx_ai_suggestions_trip_id ON ai_suggestions(trip_id);
 
--- Profiles policies
-create policy "Public profiles are viewable by everyone"
-  on profiles for select
-  using ( true );
+-- 9. 啟用 RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trip_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expense_payments ENABLE ROW LEVEL SECURITY;
 
-create policy "Users can update own profile"
-  on profiles for update
-  using ( auth.uid() = id );
+-----------------------------------------------------------------------
+-- 🔥 關鍵修復：使用 SECURITY DEFINER 函數打破無限遞迴 🔥
+-----------------------------------------------------------------------
+-- 這個函數會以「系統權限」執行查詢，繞過 RLS policy 的自我檢查
+CREATE OR REPLACE FUNCTION public.is_trip_member(trip_id uuid, user_id uuid)
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM trip_members 
+    WHERE trip_members.trip_id = $1 
+    AND trip_members.user_id = $2
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trips policies
-create policy "Users can view trips they are members of"
-  on trips for select
-  using (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = trips.id
-      and trip_members.user_id = auth.uid()
+CREATE OR REPLACE FUNCTION public.get_trip_id_by_invite_code(code text)
+RETURNS uuid AS $$
+BEGIN
+  RETURN (
+    SELECT id
+    FROM trips
+    WHERE invite_code = code
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+-----------------------------------------------------------------------
+
+-- 10. Profiles Policy
+CREATE POLICY "Users can view all profiles" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- 11. Trips Policies (使用函數)
+CREATE POLICY "Users can view trips they are members of"
+  ON trips FOR SELECT
+  USING (
+    public.is_trip_member(id, auth.uid()) 
+    OR created_by = auth.uid() -- 讓建立者也能看到（即使還沒加入成員表）
+  );
+
+CREATE POLICY "Users can create trips"
+  ON trips FOR INSERT
+  WITH CHECK (created_by = auth.uid());
+
+CREATE POLICY "Trip organizers can update trips"
+  ON trips FOR UPDATE
+  USING (
+    EXISTS (
+        SELECT 1 FROM trip_members 
+        WHERE trip_id = trips.id 
+        AND user_id = auth.uid() 
+        AND role = 'organizer'
     )
   );
 
-create policy "Users can create trips"
-  on trips for insert
-  with check ( auth.uid() = created_by );
-
-create policy "Organizers can update trips"
-  on trips for update
-  using (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = trips.id
-      and trip_members.user_id = auth.uid()
-      and trip_members.role = 'organizer'
+CREATE POLICY "Trip organizers can delete trips"
+  ON trips FOR DELETE
+  USING (
+    EXISTS (
+        SELECT 1 FROM trip_members 
+        WHERE trip_id = trips.id 
+        AND user_id = auth.uid() 
+        AND role = 'organizer'
     )
   );
 
--- Trip Members policies
-create policy "Members can view other members of same trip"
-  on trip_members for select
-  using (
-    exists (
-      select 1 from trip_members as tm
-      where tm.trip_id = trip_members.trip_id
-      and tm.user_id = auth.uid()
+-- 12. Trip Members Policies (使用函數 + 分離權限)
+-- A. 查看權限：
+-- 1. 自己看自己 (最基本，無遞迴)
+CREATE POLICY "Users can view own membership"
+  ON trip_members FOR SELECT
+  USING (user_id = auth.uid());
+
+-- 2. 看同團其他成員 (使用函數避免直接 query table 造成遞迴)
+CREATE POLICY "Users can view other members"
+  ON trip_members FOR SELECT
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+-- B. 加入/新增權限：
+-- 1. Organizer 可以加人
+CREATE POLICY "Organizers can add members"
+  ON trip_members FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM trip_members 
+      WHERE trip_id = trip_members.trip_id 
+      AND user_id = auth.uid() 
+      AND role = 'organizer'
     )
   );
 
-create policy "Organizers can add members"
-  on trip_members for insert
-  with check (
-    exists (
-      select 1 from trip_members as tm
-      where tm.trip_id = trip_members.trip_id
-      and tm.user_id = auth.uid()
-      and tm.role = 'organizer'
+-- 2. 建立者可以加入自己 (這是建立旅程時的關鍵一步)
+CREATE POLICY "Creators can add themselves"
+  ON trip_members FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM trips 
+      WHERE id = trip_members.trip_id 
+      AND created_by = auth.uid()
     )
   );
 
--- Itineraries policies
-create policy "Members can view itineraries"
-  on itineraries for select
-  using (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = itineraries.trip_id
-      and trip_members.user_id = auth.uid()
+-- 13. Itineraries Policies (使用函數)
+CREATE POLICY "Users can view itineraries"
+  ON itineraries FOR SELECT
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can manage itineraries"
+  ON itineraries FOR ALL
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+-- 14. Activities Policies (使用關聯檢查 + 函數)
+CREATE POLICY "Users can view activities"
+  ON activities FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = activities.itinerary_id
+      AND public.is_trip_member(itineraries.trip_id, auth.uid())
     )
   );
 
-create policy "Members can create itineraries (usually auto-created)"
-  on itineraries for insert
-  with check (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = itineraries.trip_id
-      and trip_members.user_id = auth.uid()
+CREATE POLICY "Users can manage activities"
+  ON activities FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = activities.itinerary_id
+      AND public.is_trip_member(itineraries.trip_id, auth.uid())
     )
   );
 
--- Activities policies
-create policy "Members can view activities"
-  on activities for select
-  using (
-    exists (
-      select 1 from itineraries
-      join trip_members on trip_members.trip_id = itineraries.trip_id
-      where itineraries.id = activities.itinerary_id
-      and trip_members.user_id = auth.uid()
+-- 15. Expenses Policies (使用函數)
+CREATE POLICY "Users can view expenses"
+  ON expenses FOR SELECT
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can create expenses"
+  ON expenses FOR INSERT
+  WITH CHECK (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can update own expenses"
+  ON expenses FOR UPDATE
+  USING (paid_by = auth.uid());
+
+CREATE POLICY "Users can delete own expenses"
+  ON expenses FOR DELETE
+  USING (paid_by = auth.uid());
+
+-- 16. Expense Payments Policies
+CREATE POLICY "Users can view payments"
+  ON expense_payments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM expenses
+      WHERE expenses.id = expense_payments.expense_id
+      AND public.is_trip_member(expenses.trip_id, auth.uid())
     )
   );
 
-create policy "Members can insert activities"
-  on activities for insert
-  with check (
-    exists (
-      select 1 from itineraries
-      join trip_members on trip_members.trip_id = itineraries.trip_id
-      where itineraries.id = activities.itinerary_id
-      and trip_members.user_id = auth.uid()
-    )
+CREATE POLICY "Users can manage own payments"
+  ON expense_payments FOR ALL
+  USING (payer_id = auth.uid());
+
+-- 17. AI Suggestions Policies
+ALTER TABLE ai_suggestions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view ai suggestions"
+  ON ai_suggestions FOR SELECT
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can create ai suggestions"
+  ON ai_suggestions FOR INSERT
+  WITH CHECK (public.is_trip_member(trip_id, auth.uid()));
+
+-- 18. Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE activities;
+ALTER PUBLICATION supabase_realtime ADD TABLE expenses;
+ALTER PUBLICATION supabase_realtime ADD TABLE expense_payments;
+
+-- 18-21. Triggers & Functions (維持原樣)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_activities_updated_at BEFORE UPDATE ON activities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_expenses_updated_at BEFORE UPDATE ON expenses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, display_name, avatar_url)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email),
+    NEW.raw_user_meta_data->>'avatar_url'
   );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-create policy "Members can update activities"
-  on activities for update
-  using (
-    exists (
-      select 1 from itineraries
-      join trip_members on trip_members.trip_id = itineraries.trip_id
-      where itineraries.id = activities.itinerary_id
-      and trip_members.user_id = auth.uid()
-    )
-  );
+-- Drop trigger if it already exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
-create policy "Members can delete activities"
-  on activities for delete
-  using (
-    exists (
-      select 1 from itineraries
-      join trip_members on trip_members.trip_id = itineraries.trip_id
-      where itineraries.id = activities.itinerary_id
-      and trip_members.user_id = auth.uid()
-    )
-  );
-
--- Expenses policies
-create policy "Members can view expenses"
-  on expenses for select
-  using (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = expenses.trip_id
-      and trip_members.user_id = auth.uid()
-    )
-  );
-
-create policy "Members can create expenses"
-  on expenses for insert
-  with check (
-    exists (
-      select 1 from trip_members
-      where trip_members.trip_id = expenses.trip_id
-      and trip_members.user_id = auth.uid()
-    )
-  );
-
--- Expense Payments policies
-create policy "Members can view payments"
-  on expense_payments for select
-  using (
-    exists (
-      select 1 from expenses
-      join trip_members on trip_members.trip_id = expenses.trip_id
-      where expenses.id = expense_payments.expense_id
-      and trip_members.user_id = auth.uid()
-    )
-  );
-
--- Function to handle new user signup
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, display_name, avatar_url)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
-  return new;
-end;
-$$ language plpgsql security definer;
-
--- Trigger for new user signup
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- Realtime
-alter publication supabase_realtime add table activities;
-alter publication supabase_realtime add table expenses;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user();
