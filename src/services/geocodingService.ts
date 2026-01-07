@@ -1,7 +1,12 @@
 export async function geocodeAddress(address: string) {
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+            {
+                headers: {
+                    'User-Agent': 'TravelMate App'
+                }
+            }
         );
         const data = await response.json();
 
