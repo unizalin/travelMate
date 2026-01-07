@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useItineraryStore } from '@/stores/itinerary';
+import { geocodeAddress } from '@/services/geocodingService';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 import { ref, watch } from 'vue';
 
@@ -44,19 +45,38 @@ async function handleSubmit() {
     loading.value = true
     error.value = ''
 
+    let lat = props.activity.latitude;
+    let lng = props.activity.longitude;
+
+    // Only geocode if location changed
+    if (location.value && location.value !== props.activity.location) {
+      console.log('地址已變更，重新取得座標...', location.value);
+      const coords = await geocodeAddress(location.value);
+      
+      if (coords) {
+        lat = coords.latitude;
+        lng = coords.longitude;
+        console.log('新座標:', coords);
+      }
+    }
+
     await itineraryStore.updateActivity(props.activity.id, {
       name: name.value,
       location: location.value,
       duration: duration.value || null,
       start_time: startTime.value || null,
       end_time: endTime.value || null,
-      notes: notes.value
+      notes: notes.value,
+      latitude: lat,
+      longitude: lng
     })
 
     emit('success')
     emit('close')
   } catch (e: any) {
+    console.error('Failed to update activity:', e);
     error.value = e.message
+    alert('更新失敗，請重試');
   } finally {
     loading.value = false
   }
