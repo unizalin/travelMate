@@ -38,6 +38,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/trips/:tripId/itinerary/:dayNumber',
+      name: 'day-detail',
+      component: () => import('../views/DayDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/join',
       name: 'join-trip',
       component: () => import('../views/JoinTrip.vue'),

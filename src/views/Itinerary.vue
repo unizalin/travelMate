@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import AddActivityModal from '@/components/AddActivityModal.vue'
 import CountdownTimer from '@/components/CountdownTimer.vue'
 import DayCard from '@/components/DayCard.vue'
+import EditActivityModal from '@/components/EditActivityModal.vue'
 import { weatherService } from '@/services/weatherService'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
@@ -12,8 +14,49 @@ const itineraryStore = useItineraryStore()
 const currentTrip = computed(() => tripStore.currentTrip)
 const itineraries = computed(() => itineraryStore.itineraries)
 
+const isAddModalOpen = ref(false)
+const isEditModalOpen = ref(false)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const selectedActivity = ref<any>(null)
+const selectedItineraryId = ref('')
+const selectedItineraryOrder = ref(0) // Need to find max order index
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const weatherData = ref<Record<string, any>>({})
+
+function handleAddActivity(itineraryId: string) {
+  selectedItineraryId.value = itineraryId
+
+  // Find current max order index
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const itinerary = itineraries.value.find((i: any) => i.id === itineraryId)
+  const maxOrder = itinerary?.activities?.length
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? Math.max(...itinerary.activities.map((a: any) => a.order_index))
+    : -1
+
+  selectedItineraryOrder.value = maxOrder
+  isAddModalOpen.value = true
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function handleEditActivity(activity: any) {
+  selectedActivity.value = activity
+  isEditModalOpen.value = true
+}
+
+function handleActivitySuccess() {
+  if (currentTrip.value) {
+    itineraryStore.fetchItineraries(
+      currentTrip.value.id,
+      currentTrip.value.start_date,
+      currentTrip.value.end_date
+    )
+  }
+  isAddModalOpen.value = false
+  isEditModalOpen.value = false
+  selectedActivity.value = null
+}
 
 async function fetchWeather() {
   if (!currentTrip.value?.destination) return
@@ -29,22 +72,31 @@ async function fetchWeather() {
 onMounted(() => {
   if (currentTrip.value) {
     fetchWeather()
+    itineraryStore.fetchItineraries(
+      currentTrip.value.id,
+      currentTrip.value.start_date,
+      currentTrip.value.end_date
+    )
   }
 })
 
-watch(() => currentTrip.value?.destination, () => {
-  fetchWeather()
-})
+watch(() => currentTrip.value, (newTrip) => {
+  if (newTrip) {
+    fetchWeather()
+    itineraryStore.fetchItineraries(
+      newTrip.id,
+      newTrip.start_date,
+      newTrip.end_date
+    )
+  }
+}, { deep: true })
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Countdown Section -->
     <div v-if="currentTrip" class="mb-8">
-      <CountdownTimer
-        :target-date="currentTrip.start_date"
-        :end-date="currentTrip.end_date"
-      />
+      <CountdownTimer :target-date="currentTrip.start_date" :end-date="currentTrip.end_date" />
     </div>
 
     <!-- Weather & Destination Info -->
@@ -57,17 +109,19 @@ watch(() => currentTrip.value?.destination, () => {
 
     <!-- Itinerary Grid -->
     <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <DayCard
-        v-for="itinerary in itineraries"
-        :key="itinerary.id"
-        :itinerary="itinerary"
-        :weather="weatherData[itinerary.date]"
-      />
+      <DayCard v-for="itinerary in itineraries" :key="itinerary.id" :itinerary="itinerary"
+        :weather="weatherData[itinerary.date]" @add-activity="handleAddActivity" @edit-activity="handleEditActivity" />
     </div>
 
     <!-- Empty State -->
     <div v-else class="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-        <p class="text-gray-500">尚未建立行程</p>
+      <p class="text-gray-500">尚未建立行程</p>
     </div>
+
+    <AddActivityModal :is-open="isAddModalOpen" :itinerary-id="selectedItineraryId"
+      :current-order="selectedItineraryOrder" @close="isAddModalOpen = false" @success="handleActivitySuccess" />
+
+    <EditActivityModal :is-open="isEditModalOpen" :activity="selectedActivity" @close="isEditModalOpen = false"
+      @success="handleActivitySuccess" />
   </div>
 </template>
