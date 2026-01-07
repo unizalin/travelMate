@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useItineraryStore } from '@/stores/itinerary';
+import { geocodeAddress } from '@/services/geocodingService';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 import { ref } from 'vue';
 
@@ -7,6 +8,7 @@ const props = defineProps<{
   isOpen: boolean
   itineraryId: string
   currentOrder: number
+  tripId?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +32,17 @@ async function handleSubmit() {
     loading.value = true
     error.value = ''
 
+    let lat = null;
+    let lng = null;
+
+    if (location.value) {
+      const coords = await geocodeAddress(location.value);
+      if (coords) {
+        lat = coords.latitude;
+        lng = coords.longitude;
+      }
+    }
+
     await itineraryStore.createActivity({
       itinerary_id: props.itineraryId,
       name: name.value,
@@ -38,7 +51,11 @@ async function handleSubmit() {
       start_time: startTime.value || null,
       end_time: endTime.value || null,
       notes: notes.value,
-      order_index: props.currentOrder + 1
+      order_index: props.currentOrder + 1,
+      // @ts-ignore
+      latitude: lat,
+      // @ts-ignore
+      longitude: lng
     })
 
     // Reset form
