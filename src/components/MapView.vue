@@ -2,15 +2,20 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { onMounted, ref, watch } from 'vue';
+import { MapPinIcon } from '@heroicons/vue/24/outline'; // Assuming this icon is available
 
 const props = defineProps<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   activities: any[]
+  highlightedId?: string | null
+}>()
+
+const emit = defineEmits<{
+  (e: 'marker-click', activityId: string): void
 }>()
 
 const mapContainer = ref<HTMLElement | null>(null)
 const map = ref<mapboxgl.Map | null>(null)
-const markers = ref<mapboxgl.Marker[]>([])
+const markers = ref<Record<string, mapboxgl.Marker>>({})
 
 // Default center (Taipei 101)
 const DEFAULT_CENTER: [number, number] = [121.5645, 25.0339]
@@ -18,24 +23,24 @@ const DEFAULT_CENTER: [number, number] = [121.5645, 25.0339]
 onMounted(() => {
   if (!mapContainer.value) return
 
-  // Check if token is available
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || import.meta.env.VITE_MAPBOX_TOKEN;
   if (!token) {
-    console.warn('VITE_MAPBOX_ACCESS_TOKEN or VITE_MAPBOX_TOKEN is missing. Map may not load.');
-  } else {
-    mapboxgl.accessToken = token;
+    console.error('Mapbox access token is missing! Please set VITE_MAPBOX_TOKEN in .env');
+    return;
   }
-
-  // If no token, maybe we can't initialize properly, but we'll try
-  // Note: Without a valid token, Mapbox won't render tiles.
+  mapboxgl.accessToken = token;
 
   try {
     map.value = new mapboxgl.Map({
       container: mapContainer.value,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: DEFAULT_CENTER,
-      zoom: 12
+      zoom: 12,
+      attributionControl: false
     });
+
+    // @ts-ignore - Mapbox deep type issue
+    map.value.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     map.value.on('load', () => {
       updateMarkers()
@@ -49,73 +54,117 @@ watch(() => props.activities, () => {
   updateMarkers()
 }, { deep: true })
 
+watch(() => props.highlightedId, (newId) => {
+  if (newId && markers.value[newId]) {
+    const marker = markers.value[newId];
+    // Zoom to marker
+    map.value?.easeTo({
+      center: marker.getLngLat(),
+      zoom: 15,
+      duration: 1000
+    });
+    // Open popup
+    marker.togglePopup();
+  }
+})
+
+// Mock coordinates for demo if missing
+function getMockCoords(activity: any, index: number): [number, number] {
+  if (activity.start_location_lng && activity.start_location_lat) {
+    return [activity.start_location_lng, activity.start_location_lat];
+  }
+  
+  // Deterministic mock around Taipei based on index to spread them out
+  const offset = 0.01;
+  return [
+    DEFAULT_CENTER[0] + (Math.cos(index) * offset),
+    DEFAULT_CENTER[1] + (Math.sin(index) * offset)
+  ];
+}
+
+function createNumberMarker(number: number, isActive: boolean) {
+  const el = document.createElement('div');
+  el.className = `w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-sm font-bold transition-all duration-300 cursor-pointer hover:scale-110`;
+  el.style.backgroundColor = isActive ? '#1D4ED8' : '#3B82F6';
+  el.style.color = 'white';
+  el.innerText = number.toString();
+  return el;
+}
+
 function updateMarkers() {
-  if (!map.value) return
+  if (!map.value || !map.value.loaded()) return
 
   // Clear existing markers
-  markers.value.forEach(marker => marker.remove())
-  markers.value = []
+  Object.values(markers.value).forEach(marker => marker.remove())
+  markers.value = {}
 
   if (props.activities.length === 0) return
 
   const bounds = new mapboxgl.LngLatBounds()
-  let hasValidCoords = false
 
-  props.activities.forEach(activity => {
-    // In a real app, we need lat/lng stored in activity or geocoded.
-    // Assuming for now activity has lat/lng or we can't map it without geocoding service.
-    // For this prototype, I will assume we might need to mock or geocode. 
-    // Since geocoding is async and costly, let's check if activity has 'coordinates' property 
-    // or try to use a simple hash for demo if not provided (NOT RECOMMENDED for production but good for mockup if no geo data).
+  props.activities.forEach((activity, index) => {
+    const coords = getMockCoords(activity, index);
+    const isActive = props.highlightedId === activity.id;
+    
+    const el = createNumberMarker(index + 1, isActive);
+    
+    const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
+      .setHTML(`
+        <div class="p-2 font-sans">
+          <div class="font-bold text-gray-900">${activity.name}</div>
+          <div class="text-xs text-gray-500 mt-0.5">${activity.location || ''}</div>
+        </div>
+      `);
 
-    // Better approach: User requirement didn't explicitly say geocode, 
-    // but Mapbox needs [lng, lat]. 
-    // Let's assume user inputs might not have coords yet.
-    // If coords missing, we skip marker or simple fallback.
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat(coords)
+      .setPopup(popup)
+      // @ts-ignore
+      .addTo(map.value!)
 
-    // START UPDATE: To make this robust, we should create a helper or store coords.
-    // For this MVP, let's use a placeholder approach if no coords, 
-    // OR just handle props if they have it.
+    // Handle marker click to emit event
+    el.addEventListener('click', () => {
+      emit('marker-click', activity.id);
+    });
 
-    if (activity.start_location_lat && activity.start_location_lng) {
-      const coords: [number, number] = [activity.start_location_lng, activity.start_location_lat]
-
-      const popup = new mapboxgl.Popup({ offset: 25 })
-        .setHTML(`<strong>${activity.name}</strong><br>${activity.location || ''}`);
-
-      // @ts-ignore - Mapbox GL type compatibility issue
-      const marker = new mapboxgl.Marker({ color: '#3B82F6' })
-        .setLngLat(coords)
-        .setPopup(popup)
-        .addTo(map.value!)
-
-      markers.value.push(marker)
-      bounds.extend(coords)
-      hasValidCoords = true
-    }
+    markers.value[activity.id] = marker;
+    bounds.extend(coords);
   })
 
-  // Since we don't have lat/lng in schema yet (schema only has 'location' text),
-  // we technically can't show real markers without geocoding.
-  // **CRITICAL DECISION**: I will add a comment that Geocoding is needed or schema update needed.
-  // For now, I will simulate markers for demo if input text contains "Taipei" just to show it works, 
-  // or just handle empty state if no coords. 
-
-  if (hasValidCoords) {
-    map.value.fitBounds(bounds, { padding: 50, maxZoom: 15 })
-  }
+  map.value.fitBounds(bounds, { 
+    padding: { top: 50, bottom: 50, left: 50, right: 50 },
+    maxZoom: 15,
+    linear: false
+  });
 }
 </script>
 
 <template>
-  <div class="w-full h-full rounded-lg overflow-hidden border border-gray-200 bg-gray-100 relative">
+  <div class="w-full h-full bg-gray-50 relative">
     <div ref="mapContainer" class="w-full h-full" />
-    <div v-if="!map" class="absolute inset-0 flex items-center justify-center text-gray-400">
-      地圖載入中...
+    
+    <!-- Empty/Loading State Overlay -->
+    <div v-if="!mapboxgl.accessToken" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 p-8 text-center">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 max-w-sm">
+        <MapPinIcon class="w-12 h-12 text-orange-400 mx-auto mb-4" />
+        <h3 class="text-gray-900 font-bold">地圖未載入</h3>
+        <p class="text-gray-500 text-sm mt-2">
+          請在 <code>.env</code> 檔案中設置有效的 <code>VITE_MAPBOX_TOKEN</code>。
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-/* Ensure container has height */
+<style>
+/* Global Mapbox Popup Styles */
+.mapboxgl-popup-content {
+  border-radius: 12px !important;
+  padding: 0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+}
+.mapboxgl-popup-tip {
+  border-top-color: white !important;
+}
 </style>

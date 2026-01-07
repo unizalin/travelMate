@@ -13,7 +13,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const _emit = defineEmits<{
+defineEmits<{
     (e: 'add-activity', itineraryId: string): void
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (e: 'edit-activity', activity: any): void
