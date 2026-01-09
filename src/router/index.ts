@@ -26,6 +26,11 @@ const router = createRouter({
       component: () => import('../views/AuthCallback.vue')
     },
     {
+      path: '/shared-trip/:tripId',
+      name: 'shared-trip',
+      component: () => import('../views/SharedTripView.vue')
+    },
+    {
       path: '/trips',
       name: 'trips',
       component: () => import('../views/Trips.vue'),

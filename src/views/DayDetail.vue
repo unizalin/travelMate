@@ -90,20 +90,33 @@ onMounted(async () => {
 
 // Actions
 async function onDragEnd() {
+  const previousActivities = [...localActivities.value]; // Save for possible reversion
+  
   const updates = localActivities.value.map((activity, index) => ({
     id: activity.id,
     order_index: index
   }));
 
+  // Optimistically update store
   if (currentItinerary.value) {
-    currentItinerary.value.activities = localActivities.value;
+    currentItinerary.value.activities = [...localActivities.value];
   }
 
   try {
     await Promise.all(updates.map(u => itineraryStore.updateActivity(u.id, { order_index: u.order_index })));
+    showToast('排序已更新', 'success');
   } catch (e) {
     console.error("Reorder failed", e);
-    await itineraryStore.fetchItineraries(tripId);
+    showToast('排序更新失敗', 'error');
+    
+    // Revert on failure
+    localActivities.value = previousActivities;
+    if (currentItinerary.value) {
+      currentItinerary.value.activities = previousActivities;
+    }
+    
+    // Refresh from server to be sure
+    await itineraryStore.fetchItineraries(tripId, currentTrip.value?.start_date, currentTrip.value?.end_date);
   }
 }
 
@@ -292,6 +305,8 @@ function setActivityRef(id: string, el: any) {
                 v-model="localActivities" 
                 item-key="id" 
                 handle=".drag-handle" 
+                ghost-class="opacity-50"
+                drag-class="scale-105"
                 @end="onDragEnd" 
                 class="space-y-4"
               >
@@ -483,6 +498,14 @@ function setActivityRef(id: string, el: any) {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
+}
+
+/* Draggable styles */
+:deep(.scale-105) {
+  transform: scale(1.05);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  z-index: 50;
+  cursor: grabbing;
 }
 
 /* Leaflet control z-index fix */

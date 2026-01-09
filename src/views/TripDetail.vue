@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import InviteModal from '@/components/modals/InviteModal.vue'
-// import ItineraryList from '@/components/trip/ItineraryList.vue'
+import ShareDialog from '@/components/modals/ShareDialog.vue'
 import ItineraryView from '@/views/Itinerary.vue'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
@@ -16,6 +16,7 @@ const itineraryStore = useItineraryStore()
 const { currentTrip, loading, error } = storeToRefs(tripStore)
 // const { itineraries } = storeToRefs(itineraryStore)
 const isInviteModalOpen = ref(false)
+const isShareModalOpen = ref(false)
 
 const tripId = route.params.id as string
 
@@ -94,6 +95,10 @@ async function handleDelete() {
                 class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
                 邀請成員
               </button>
+              <button @click="isShareModalOpen = true"
+                class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all flex items-center gap-2">
+                <span>🔗</span> 分享
+              </button>
               <button @click="handleDelete"
                 class="rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100 transition-all">
                 刪除行程
@@ -122,6 +127,11 @@ async function handleDelete() {
              class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 ring-1 ring-gray-200 transition-all"
              title="刪除行程">
              <span class="text-xs font-bold">刪除</span>
+          </button>
+          <button @click="isShareModalOpen = true" 
+             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-blue-600 hover:bg-blue-50 ring-1 ring-gray-200 transition-all"
+             title="分享行程">
+             <span class="text-xs font-bold">分享</span>
           </button>
       </div>
 
@@ -173,6 +183,13 @@ async function handleDelete() {
 
       <InviteModal :is-open="isInviteModalOpen" :invite-code="currentTrip.invite_code"
         @close="isInviteModalOpen = false" />
+
+      <ShareDialog 
+        :is-open="isShareModalOpen" 
+        :trip-id="tripId" 
+        :trip-name="currentTrip.name"
+        @close="isShareModalOpen = false" 
+      />
     </div>
   </div>
 </template>

@@ -54,28 +54,51 @@
         </div>
       </div>
 
-      <!-- Right Panel: Itinerary Overview -->
-      <aside v-if="viewMode === 'list' || viewMode === 'map'" class="w-96 bg-white border-l overflow-y-auto z-10">
-        <div class="p-6">
-          <h2 class="text-lg font-bold mb-4">行程概覽</h2>
-          
-          <!-- Day Tabs -->
-          <div class="flex flex-wrap gap-2 mb-6">
-            <button
-              v-for="day in totalDays"
-              :key="day"
-              @click="scrollToDay(day)"
-              class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-gray-200"
-            >
-              第 {{ day }} 天
+      <!-- Main Panel: Itinerary Carousel -->
+      <aside v-if="viewMode === 'list' || viewMode === 'map'" 
+        class="w-full lg:w-96 bg-white border-t lg:border-t-0 lg:border-l relative flex flex-col z-10"
+        :class="viewMode === 'map' ? 'h-1/2 lg:h-full' : 'flex-1'"
+      >
+        <div class="p-4 border-b flex items-center justify-between bg-white">
+          <h2 class="text-lg font-bold">行程概覽</h2>
+          <div class="flex gap-2">
+            <button @click="scrollPrev" class="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-30" :disabled="selectedDay === 1">
+              <ChevronLeftIcon class="w-5 h-5" />
+            </button>
+            <button @click="scrollNext" class="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-30" :disabled="selectedDay === totalDays">
+              <ChevronRightIcon class="w-5 h-5" />
             </button>
           </div>
+        </div>
+        
+        <!-- Quick Nav Tab -->
+        <div class="flex overflow-x-auto no-scrollbar gap-2 p-4 bg-gray-50 border-b">
+          <button
+            v-for="day in totalDays"
+            :key="day"
+            @click="scrollToDay(day)"
+            :class="selectedDay === day ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'"
+            class="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all"
+          >
+            D{{ day }}
+          </button>
+        </div>
 
-          <!-- Activities by Day -->
-          <div v-for="(dayItinerary, index) in itineraries" :key="dayItinerary.id" :id="'day-' + (index + 1)" class="mb-6">
-            <div class="flex items-center gap-2 mb-3">
-              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                D{{ index + 1 }}
+        <!-- Carousel Container -->
+        <div 
+          ref="carouselRef"
+          class="flex-1 overflow-x-auto snap-x snap-mandatory no-scrollbar flex items-stretch scroll-smooth"
+          @scroll="handleScroll"
+        >
+          <div 
+            v-for="(dayItinerary, index) in itineraries" 
+            :key="dayItinerary.id" 
+            :id="'day-' + (index + 1)"
+            class="snap-start snap-always w-full flex-shrink-0 p-6 flex flex-col"
+          >
+            <div class="flex items-center gap-2 mb-6 p-4 bg-blue-50 rounded-2xl">
+              <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold shadow-md">
+                {{ index + 1 }}
               </div>
               <div>
                 <h3 class="font-bold text-gray-900">第 {{ index + 1 }} 天</h3>
@@ -117,9 +140,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import { useTripStore } from '@/stores/trip';
 import { useItineraryStore } from '@/stores/itinerary';
 import TripMapView from '@/components/map/TripMapView.vue';
@@ -132,6 +155,8 @@ const itineraryStore = useItineraryStore();
 
 const viewMode = ref<'map' | 'list'>('map');
 const highlightedActivityId = ref<string | null>(null);
+const selectedDay = ref(1);
+const carouselRef = ref<HTMLElement | null>(null);
 
 const trip = computed(() => tripStore.currentTrip);
 const itineraries = computed(() => itineraryStore.itineraries);
@@ -201,15 +226,53 @@ const handleActivityClick = (activity: any) => {
   // TripMapView watches highlightedId and will pan to it.
 };
 
-const scrollToDay = (day: number) => {
-    const el = document.getElementById(`day-${day}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+const handleScroll = (event: Event) => {
+  const el = event.target as HTMLElement;
+  const index = Math.round(el.scrollLeft / el.offsetWidth);
+  const newDay = index + 1;
+  if (selectedDay.value !== newDay) {
+    selectedDay.value = newDay;
+  }
 };
 
+const scrollPrev = () => {
+    if (carouselRef.value) {
+        carouselRef.value.scrollLeft -= carouselRef.value.offsetWidth;
+    }
+};
+
+const scrollNext = () => {
+    if (carouselRef.value) {
+        carouselRef.value.scrollLeft += carouselRef.value.offsetWidth;
+    }
+};
+
+const scrollToDay = (day: number) => {
+    selectedDay.value = day;
+    if (carouselRef.value) {
+        carouselRef.value.scrollLeft = (day - 1) * carouselRef.value.offsetWidth;
+    }
+};
+
+const handleKeyDown = (e: KeyboardEvent) => {
+    if (viewMode.value !== 'list' && !window.matchMedia('(min-width: 1024px)').matches) return;
+    
+    if (e.key === 'ArrowLeft') {
+        scrollPrev();
+    } else if (e.key === 'ArrowRight') {
+        scrollNext();
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+});
+
 const scrollToActivity = (activityId: string) => {
-    // We don't have IDs on activity elements easily without ref usage in loop,
-    // but we can try to find by text or add IDs to elements.
-    // For now, let's just ensure the day is visible.
     const activity = allActivities.value.find(a => a.id === activityId);
     if(activity) {
         scrollToDay(activity.dayNumber);
@@ -230,3 +293,13 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>
