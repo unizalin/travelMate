@@ -1,0 +1,384 @@
+## UI Pro Max Search Results
+**Domain:** product | **Query:** travel planning app saas dashboard
+**Source:** products.csv | **Found:** 3 results
+
+### Result 1
+- **Product Type:** Micro SaaS
+- **Keywords:** app, b2b, cloud, indie, micro, micro-saas, niche, saas, small, software, solo, subscription
+- **Primary Style Recommendation:** Flat Design + Vibrant & Block
+- **Secondary Styles:** Motion-Driven, Micro-interactions
+- **Landing Page Pattern:** Minimal & Direct + Demo
+- **Dashboard Style (if applicable):** Executive Dashboard
+- **Color Palette Focus:** Vibrant primary + white space
+
+### Result 2
+- **Product Type:** SaaS (General)
+- **Keywords:** app, b2b, cloud, general, saas, software, subscription
+- **Primary Style Recommendation:** Glassmorphism + Flat Design
+- **Secondary Styles:** Soft UI Evolution, Minimalism
+- **Landing Page Pattern:** Hero + Features + CTA
+- **Dashboard Style (if applicable):** Data-Dense + Real-Time Monitoring
+- **Color Palette Focus:** Trust blue + accent contrast
+
+### Result 3
+- **Product Type:** Wedding/Event Planning
+- **Keywords:** conference, event, meetup, planning, registration, ticket, wedding
+- **Primary Style Recommendation:** Soft UI Evolution + Aurora UI
+- **Secondary Styles:** Glassmorphism, Motion-Driven
+- **Landing Page Pattern:** Storytelling-Driven + Social Proof
+- **Dashboard Style (if applicable):** N/A - Planning focused
+- **Color Palette Focus:** Soft Pink (#FFD6E0) + Gold + Cream + Sage
+
+## UI Pro Max Search Results
+**Domain:** style | **Query:** modern minimal light elegant
+**Source:** styles.csv | **Found:** 3 results
+
+### Result 1
+- **Style Category:** Glassmorphism
+- **Type:** General
+- **Keywords:** Frosted glass, transparent, blurred background, layered, vibrant background, light source, depth, multi-layer
+- **Primary Colors:** Translucent white: rgba(255,255,255,0.1-0.3)
+- **Effects & Animation:** Backdrop blur (10-20px), subtle border (1px solid rgba white 0.2), light reflection, Z-depth
+- **Best For:** Modern SaaS, financial dashboards, high-end corporate, lifestyle apps, modal overlays, navigation
+- **Performance:** ⚠ Good
+- **Accessibility:** ⚠ Ensure 4.5:1
+- **Framework Compatibility:** Tailwind 9/10, MUI 8/10, Chakra 8/10
+- **Complexity:** Medium
+
+### Result 2
+- **Style Category:** Neumorphism
+- **Type:** General
+- **Keywords:** Soft UI, embossed, debossed, convex, concave, light source, subtle depth, rounded (12-16px), monochromatic
+- **Primary Colors:** Light pastels: Soft Blue #C8E0F4, Soft Pink #F5E0E8, Soft Grey #E8E8E8
+- **Effects & Animation:** Soft box-shadow (multiple: -5px -5px 15px, 5px 5px 15px), smooth press (150ms), inner subtle shadow
+- **Best For:** Health/wellness apps, meditation platforms, fitness trackers, minimal interaction UIs
+- **Performance:** ⚡ Good
+- **Accessibility:** ⚠ Low contrast
+- **Framework Compatibility:** Tailwind 8/10, CSS-in-JS 9/10
+- **Complexity:** Medium
+
+### Result 3
+- **Style Category:** Soft UI Evolution
+- **Type:** General
+- **Keywords:** Evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid
+- **Primary Colors:** Improved contrast pastels: Soft Blue #87CEEB, Soft Pink #FFB6C1, Soft Green #90EE90, better hierarchy
+- **Effects & Animation:** Improved shadows (softer than flat, clearer than neumorphism), modern (200-300ms), focus visible, WCAG AA/AAA
+- **Best For:** Modern enterprise apps, SaaS platforms, health/wellness, modern business tools, professional, hybrid
+- **Performance:** ⚡ Excellent
+- **Accessibility:** ✓ WCAG AA+
+- **Framework Compatibility:** Tailwind 9/10, MUI 9/10, Chakra 9/10
+- **Complexity:** Medium
+
+## UI Pro Max Search Results
+**Domain:** typography | **Query:** modern professional clean
+**Source:** typography.csv | **Found:** 3 results
+
+### Result 1
+- **Font Pairing Name:** Modern Professional
+- **Category:** Sans + Sans
+- **Heading Font:** Poppins
+- **Body Font:** Open Sans
+- **Mood/Style Keywords:** modern, professional, clean, corporate, friendly, approachable
+- **Best For:** SaaS, corporate sites, business apps, startups, professional services
+- **Google Fonts URL:** https://fonts.google.com/share?selection.family=Open+Sans:wght@300;400;500;600;700|Poppins:wght@400;500;600;700
+- **CSS Import:** @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+- **Tailwind Config:** fontFamily: { heading: ['Poppins', 'sans-serif'], body: ['Open Sans', 'sans-serif'] }
+- **Notes:** Geometric Poppins for headings, humanist Open Sans for readability.
+
+### Result 2
+- **Font Pairing Name:** Korean Modern
+- **Category:** Sans + Sans
+- **Heading Font:** Noto Sans KR
+- **Body Font:** Noto Sans KR
+- **Mood/Style Keywords:** korean, modern, clean, professional, multilingual, readable
+- **Best For:** Korean sites, K-beauty, K-pop, Korean businesses, multilingual
+- **Google Fonts URL:** https://fonts.google.com/share?selection.family=Noto+Sans+KR:wght@300;400;500;700
+- **CSS Import:** @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+- **Tailwind Config:** fontFamily: { sans: ['Noto Sans KR', 'sans-serif'] }
+- **Notes:** Clean Korean typography. Single font with weight variations.
+
+### Result 3
+- **Font Pairing Name:** Hebrew Modern
+- **Category:** Sans + Sans
+- **Heading Font:** Noto Sans Hebrew
+- **Body Font:** Noto Sans Hebrew
+- **Mood/Style Keywords:** hebrew, modern, RTL, clean, professional, readable
+- **Best For:** Hebrew sites, Israeli market, Jewish content, bilingual sites
+- **Google Fonts URL:** https://fonts.google.com/share?selection.family=Noto+Sans+Hebrew:wght@300;400;500;700
+- **CSS Import:** @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;700&display=swap');
+- **Tailwind Config:** fontFamily: { sans: ['Noto Sans Hebrew', 'sans-serif'] }
+- **Notes:** RTL support. Clean modern Hebrew typography.
+
+## UI Pro Max Search Results
+**Domain:** color | **Query:** saas travel dashboard
+**Source:** colors.csv | **Found:** 3 results
+
+### Result 1
+- **Product Type:** SaaS (General)
+- **Keywords:** saas, general
+- **Primary (Hex):** #2563EB
+- **Secondary (Hex):** #3B82F6
+- **CTA (Hex):** #F97316
+- **Background (Hex):** #F8FAFC
+- **Text (Hex):** #1E293B
+- **Border (Hex):** #E2E8F0
+- **Notes:** Trust blue + accent contrast
+
+### Result 2
+- **Product Type:** Micro SaaS
+- **Keywords:** micro, saas
+- **Primary (Hex):** #2563EB
+- **Secondary (Hex):** #3B82F6
+- **CTA (Hex):** #F97316
+- **Background (Hex):** #F8FAFC
+- **Text (Hex):** #1E293B
+- **Border (Hex):** #E2E8F0
+- **Notes:** Vibrant primary + white space
+
+### Result 3
+- **Product Type:** Travel/Tourism Agency
+- **Keywords:** travel, tourism, agency
+- **Primary (Hex):** #EC4899
+- **Secondary (Hex):** #F472B6
+- **CTA (Hex):** #06B6D4
+- **Background (Hex):** #FDF2F8
+- **Text (Hex):** #831843
+- **Border (Hex):** #FBCFE8
+- **Notes:** Vibrant destination colors + Sky Blue + Warm accents
+
+## UI Pro Max Search Results
+**Domain:** landing | **Query:** hero-centric social-proof pricing
+**Source:** landing.csv | **Found:** 3 results
+
+### Result 1
+- **Pattern Name:** Hero + Testimonials + CTA
+- **Keywords:** hero, testimonials, social-proof, trust, reviews, cta
+- **Section Order:** 1. Hero, 2. Problem statement, 3. Solution overview, 4. Testimonials carousel, 5. CTA
+- **Primary CTA Placement:** Hero (sticky) + Post-testimonials
+- **Color Strategy:** Hero: Brand color. Testimonials: Light bg #F5F5F5. Quotes: Italic, muted color #666. CTA: Vibrant
+- **Conversion Optimization:** Social proof before CTA. Use 3-5 testimonials. Include photo + name + role. CTA after social proof.
+
+### Result 2
+- **Pattern Name:** Event/Conference Landing
+- **Keywords:** event, conference, meetup, registration, schedule
+- **Section Order:** 1. Hero (date/location/countdown), 2. Speakers grid, 3. Agenda/schedule, 4. Sponsors, 5. Register CTA
+- **Primary CTA Placement:** Register CTA sticky + After speakers + Bottom
+- **Color Strategy:** Urgency colors (countdown). Event branding. Speaker cards professional. Sponsor logos neutral.
+- **Conversion Optimization:** Early bird pricing with deadline. Social proof (past attendees). Speaker credibility. Multi-ticket discounts.
+
+### Result 3
+- **Pattern Name:** Waitlist/Coming Soon
+- **Keywords:** waitlist, coming-soon, launch, early-access, notify
+- **Section Order:** 1. Hero with countdown, 2. Product teaser/preview, 3. Email capture form, 4. Social proof (waitlist count)
+- **Primary CTA Placement:** Email form prominent (above fold) + Sticky form on scroll
+- **Color Strategy:** Anticipation: Dark + accent highlights. Countdown in brand color. Urgency indicators.
+- **Conversion Optimization:** Scarcity + exclusivity. Show waitlist count. Early access benefits. Referral program.
+
+## UI Pro Max Search Results
+**Domain:** chart | **Query:** timeline comparison trend
+**Source:** charts.csv | **Found:** 3 results
+
+### Result 1
+- **Data Type:** Trend Over Time
+- **Keywords:** trend, time-series, line, growth, timeline, progress
+- **Best Chart Type:** Line Chart
+- **Secondary Options:** Area Chart, Smooth Area
+- **Color Guidance:** Primary: #0080FF. Multiple series: use distinct colors. Fill: 20% opacity
+- **Accessibility Notes:** ✓ Clear line patterns for colorblind users. Add pattern overlays.
+- **Library Recommendation:** Chart.js, Recharts, ApexCharts
+- **Interactive Level:** Hover + Zoom
+
+### Result 2
+- **Data Type:** Multi-Variable Comparison
+- **Keywords:** multi-variable-comparison
+- **Best Chart Type:** Radar/Spider Chart
+- **Secondary Options:** Parallel Coordinates, Grouped Bar
+- **Color Guidance:** Single: #0080FF 20% fill. Multiple: distinct colors per dataset.
+- **Accessibility Notes:** ⚠ Moderate - limit 5-8 axes. Add data table.
+- **Library Recommendation:** Chart.js, Recharts, ApexCharts
+- **Interactive Level:** Hover + Toggle
+
+### Result 3
+- **Data Type:** Compare Categories
+- **Keywords:** compare, categories, bar, comparison, ranking
+- **Best Chart Type:** Bar Chart (Horizontal or Vertical)
+- **Secondary Options:** Column Chart, Grouped Bar
+- **Color Guidance:** Each bar: distinct color. Category: grouped same color. Sorted: descending order
+- **Accessibility Notes:** ✓ Easy to compare. Add value labels on bars for clarity.
+- **Library Recommendation:** Chart.js, Recharts, D3.js
+- **Interactive Level:** Hover + Sort
+
+## UI Pro Max Search Results
+**Domain:** ux | **Query:** animation
+**Source:** ux-guidelines.csv | **Found:** 3 results
+
+### Result 1
+- **Category:** Animation
+- **Issue:** Continuous Animation
+- **Platform:** All
+- **Description:** Infinite animations are distracting
+- **Do:** Use for loading indicators only
+- **Don't:** Use for decorative elements
+- **Code Example Good:** animate-spin on loader
+- **Code Example Bad:** animate-bounce on icons
+- **Severity:** Medium
+
+### Result 2
+- **Category:** Animation
+- **Issue:** Reduced Motion
+- **Platform:** All
+- **Description:** Respect user's motion preferences
+- **Do:** Check prefers-reduced-motion media query
+- **Don't:** Ignore accessibility motion settings
+- **Code Example Good:** @media (prefers-reduced-motion: reduce)
+- **Code Example Bad:** No motion query check
+- **Severity:** High
+
+### Result 3
+- **Category:** Animation
+- **Issue:** Easing Functions
+- **Platform:** All
+- **Description:** Linear motion feels robotic
+- **Do:** Use ease-out for entering ease-in for exiting
+- **Don't:** Use linear for UI transitions
+- **Code Example Good:** ease-out
+- **Code Example Bad:** linear
+- **Severity:** Low
+
+## UI Pro Max Search Results
+**Domain:** ux | **Query:** accessibility
+**Source:** ux-guidelines.csv | **Found:** 3 results
+
+### Result 1
+- **Category:** Accessibility
+- **Issue:** Alt Text
+- **Platform:** All
+- **Description:** Images need text alternatives
+- **Do:** Descriptive alt text for meaningful images
+- **Don't:** Empty or missing alt attributes
+- **Code Example Good:** alt='Dog playing in park'
+- **Code Example Bad:** alt='' for content images
+- **Severity:** High
+
+### Result 2
+- **Category:** Accessibility
+- **Issue:** Error Messages
+- **Platform:** All
+- **Description:** Error messages must be announced
+- **Do:** Use aria-live or role=alert for errors
+- **Don't:** Visual-only error indication
+- **Code Example Good:** role='alert'
+- **Code Example Bad:** Red border only
+- **Severity:** High
+
+### Result 3
+- **Category:** Accessibility
+- **Issue:** Color Contrast
+- **Platform:** All
+- **Description:** Text must be readable against background
+- **Do:** Minimum 4.5:1 ratio for normal text
+- **Don't:** Low contrast text
+- **Code Example Good:** #333 on white (7:1)
+- **Code Example Bad:** #999 on white (2.8:1)
+- **Severity:** High
+
+## UI Pro Max Search Results
+**Domain:** ux | **Query:** z-index
+**Source:** ux-guidelines.csv | **Found:** 2 results
+
+### Result 1
+- **Category:** Layout
+- **Issue:** Stacking Context
+- **Platform:** Web
+- **Description:** New stacking contexts reset z-index
+- **Do:** Understand what creates new stacking context
+- **Don't:** Expect z-index to work across contexts
+- **Code Example Good:** Parent with z-index isolates children
+- **Code Example Bad:** z-index: 9999 not working
+- **Severity:** Medium
+
+### Result 2
+- **Category:** Layout
+- **Issue:** Z-Index Management
+- **Platform:** Web
+- **Description:** Stacking context conflicts cause hidden elements
+- **Do:** Define z-index scale system (10 20 30 50)
+- **Don't:** Use arbitrary large z-index values
+- **Code Example Good:** z-10 z-20 z-50
+- **Code Example Bad:** z-[9999]
+- **Severity:** High
+
+## UI Pro Max Stack Guidelines
+**Stack:** html-tailwind | **Query:** component state composition
+**Source:** stacks/html-tailwind.csv | **Found:** 3 results
+
+### Result 1
+- **Category:** Layout
+- **Guideline:** Container Queries
+- **Description:** Use @container for component-based responsiveness
+- **Do:** Use @container and @lg: etc.
+- **Don't:** Media queries for component internals
+- **Code Good:** @container @lg:grid-cols-2
+- **Code Bad:** @media (min-width: ...) inside component
+- **Severity:** Medium
+- **Docs URL:** https://github.com/tailwindlabs/tailwindcss-container-queries
+
+### Result 2
+- **Category:** Interactivity
+- **Guideline:** Group and Peer
+- **Description:** Style based on parent/sibling state
+- **Do:** group-hover peer-checked
+- **Don't:** JS for simple state interactions
+- **Code Good:** group-hover:text-blue-500
+- **Code Bad:** onMouseEnter={() => setHover(true)}
+- **Severity:** Low
+- **Docs URL:** https://tailwindcss.com/docs/hover-focus-and-other-states#styling-based-on-parent-state
+
+### Result 3
+- **Category:** Animation
+- **Guideline:** Hover transitions
+- **Description:** Add smooth transitions on hover state changes
+- **Do:** Add transition class with hover states
+- **Don't:** Instant hover changes without transition
+- **Code Good:** hover:bg-gray-100 transition-colors
+- **Code Bad:** hover:bg-gray-100 (no transition)
+- **Severity:** Low
+- **Docs URL:** 
+
+## UI Pro Max Stack Guidelines
+**Stack:** html-tailwind | **Query:** responsive layout grid
+**Source:** stacks/html-tailwind.csv | **Found:** 3 results
+
+### Result 1
+- **Category:** Layout
+- **Guideline:** Grid gaps
+- **Description:** Use consistent gap utilities for spacing
+- **Do:** gap-4 gap-6 gap-8
+- **Don't:** Margins on individual items
+- **Code Good:** grid gap-6
+- **Code Bad:** grid with mb-4 on each item
+- **Severity:** Medium
+- **Docs URL:** https://tailwindcss.com/docs/gap
+
+### Result 2
+- **Category:** Layout
+- **Guideline:** Responsive padding
+- **Description:** Adjust padding for different screen sizes
+- **Do:** px-4 md:px-6 lg:px-8
+- **Don't:** Same padding all sizes
+- **Code Good:** px-4 sm:px-6 lg:px-8
+- **Code Bad:** px-8 (same all sizes)
+- **Severity:** Medium
+- **Docs URL:** 
+
+### Result 3
+- **Category:** Spacing
+- **Guideline:** Space between
+- **Description:** Use space-y-* for vertical lists
+- **Do:** space-y-4 on flex/grid column
+- **Don't:** Margin on each child
+- **Code Good:** space-y-4
+- **Code Bad:** Each child has mb-4
+- **Severity:** Low
+- **Docs URL:** https://tailwindcss.com/docs/space
+

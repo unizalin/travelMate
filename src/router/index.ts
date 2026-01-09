@@ -44,9 +44,9 @@ const router = createRouter({
     },
     {
       path: '/trips/:tripId/day/:dayNumber',
-      name: 'day-map-view',
-      component: () => import('../views/DayMapView.vue'),
-      meta: { requiresAuth: true }
+      redirect: to => {
+        return `/trips/${to.params.tripId}/itinerary/${to.params.dayNumber}`
+      }
     },
     {
       path: '/trips/:id',

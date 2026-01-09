@@ -102,18 +102,29 @@ watch(() => currentTrip.value, (newTrip) => {
     </div>
 
     <!-- Weather & Destination Info -->
-    <!-- Weather & Destination Info -->
-    <div v-if="currentTrip" class="flex items-center gap-3 mb-6">
-      <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-         <span>📋</span> 行程概覽
-      </h2>
+    <div v-if="currentTrip" class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-3xl font-heading font-bold text-secondary-900 flex items-center gap-3">
+           <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+           </svg>
+           行程概覽
+        </h2>
+        <p class="text-secondary-500 mt-1 font-body">針對 {{ currentTrip.destination }} 的專屬規劃</p>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <UIBadge variant="primary" size="md">
+          {{ itineraries.length }} 天行程
+        </UIBadge>
+      </div>
     </div>
 
     <!-- Itinerary Grid -->
     <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
       <DayCard v-for="itinerary in itineraries" :key="itinerary.id" :itinerary="itinerary"
         :weather="weatherData[itinerary.date]" @add-activity="handleAddActivity" @edit-activity="handleEditActivity"
-        @click="router.push(`/trips/${currentTrip?.id}/day/${itinerary.day_number}`)" />
+        @click="router.push(`/trips/${currentTrip?.id}/itinerary/${itinerary.day_number}`)" />
     </div>
 
     <!-- Empty State -->
