@@ -1,0 +1,131 @@
+## UI Pro Max Search Results
+**Domain:** style | **Query:** card layout grid responsive
+**Source:** styles.csv | **Found:** 3 results
+
+### Result 1
+- **Style Category:** Data-Dense Dashboard
+- **Type:** BI/Analytics
+- **Keywords:** Multiple charts/widgets, data tables, KPI cards, minimal padding, grid layout, space-efficient, maximum data visibility
+- **Primary Colors:** Neutral primary (light grey/white #F5F5F5), data colors (blue/green/red), dark text #333333
+- **Effects & Animation:** Hover tooltips, chart zoom on click, row highlighting on hover, smooth filter animations, data loading spinners
+- **Best For:** Business intelligence dashboards, financial analytics, enterprise reporting, operational dashboards, data warehousing
+- **Performance:** ⚡ Excellent
+- **Accessibility:** ✓ WCAG AA
+- **Framework Compatibility:** Recharts 9/10, Chart.js 9/10, D3.js 10/10
+- **Complexity:** Medium
+
+### Result 2
+- **Style Category:** Feature-Rich Showcase
+- **Type:** Landing Page
+- **Keywords:** Multiple feature sections, grid layout, benefit cards, visual feature demonstrations, interactive elements, problem-solution pairs
+- **Primary Colors:** Primary brand, bright secondary colors for feature cards, contrasting accent for CTAs
+- **Effects & Animation:** Card hover effects (lift/scale), icon animations on scroll, feature toggle animations, smooth section transitions
+- **Best For:** Enterprise SaaS, software tools landing pages, platform services, complex product explanations, B2B products
+- **Performance:** ⚡ Good
+- **Accessibility:** ✓ WCAG AA
+- **Framework Compatibility:** Tailwind 10/10, Bootstrap 9/10
+- **Complexity:** Medium
+
+### Result 3
+- **Style Category:** Dimensional Layering
+- **Type:** General
+- **Keywords:** Depth, overlapping, z-index, layers, 3D, shadows, elevation, floating, cards, spatial hierarchy
+- **Primary Colors:** Neutral base (#FFFFFF, #F5F5F5, #E0E0E0) + brand accent for elevated elements
+- **Effects & Animation:** z-index stacking, box-shadow elevation (4 levels), transform: translateZ(), backdrop-filter, parallax
+- **Best For:** Dashboards, card layouts, modals, navigation, product showcases, SaaS interfaces
+- **Performance:** ⚠ Good
+- **Accessibility:** ⚠ Moderate (SR issues)
+- **Framework Compatibility:** Tailwind 10/10, MUI 10/10, Chakra 10/10
+- **Complexity:** Medium
+
+## UI Pro Max Search Results
+**Domain:** product | **Query:** travel dashboard card design
+**Source:** products.csv | **Found:** 3 results
+
+### Result 1
+- **Product Type:** Travel/Tourism Agency
+- **Keywords:** agency, booking, creative, design, flight, hotel, marketing, studio, tourism, travel, vacation
+- **Primary Style Recommendation:** Aurora UI + Motion-Driven
+- **Secondary Styles:** Vibrant & Block-based, Glassmorphism
+- **Landing Page Pattern:** Storytelling-Driven + Hero-Centric
+- **Dashboard Style (if applicable):** Booking Analytics
+- **Color Palette Focus:** Vibrant destination colors + Sky Blue + Warm accents
+
+### Result 2
+- **Product Type:** Analytics Dashboard
+- **Keywords:** admin, analytics, dashboard, data, panel
+- **Primary Style Recommendation:** Data-Dense + Heat Map & Heatmap
+- **Secondary Styles:** Minimalism, Dark Mode (OLED)
+- **Landing Page Pattern:** N/A - Analytics focused
+- **Dashboard Style (if applicable):** Drill-Down Analytics + Comparative
+- **Color Palette Focus:** Cool→Hot gradients + neutral grey
+
+### Result 3
+- **Product Type:** Financial Dashboard
+- **Keywords:** admin, analytics, dashboard, data, financial, panel
+- **Primary Style Recommendation:** Dark Mode (OLED) + Data-Dense
+- **Secondary Styles:** Minimalism, Accessible & Ethical
+- **Landing Page Pattern:** N/A - Dashboard focused
+- **Dashboard Style (if applicable):** Financial Dashboard
+- **Color Palette Focus:** Dark bg + red/green alerts + trust blue
+
+## UI Pro Max Search Results
+**Domain:** ux | **Query:** card hover effect transition
+**Source:** ux-guidelines.csv | **Found:** 3 results
+
+### Result 1
+- **Category:** Animation
+- **Issue:** Hover vs Tap
+- **Platform:** All
+- **Description:** Hover effects don't work on touch devices
+- **Do:** Use click/tap for primary interactions
+- **Don't:** Rely only on hover for important actions
+- **Code Example Good:** onClick handler
+- **Code Example Bad:** onMouseEnter only
+- **Severity:** High
+
+### Result 2
+- **Category:** Interaction
+- **Issue:** Hover States
+- **Platform:** Web
+- **Description:** Visual feedback on interactive elements
+- **Do:** Change cursor and add subtle visual change
+- **Don't:** No hover feedback on clickable elements
+- **Code Example Good:** hover:bg-gray-100 cursor-pointer
+- **Code Example Bad:** No hover style
+- **Severity:** Medium
+
+### Result 3
+- **Category:** Spatial UI
+- **Issue:** Gaze Hover
+- **Platform:** VisionOS
+- **Description:** Elements should respond to eye tracking before pinch
+- **Do:** Scale/highlight element on look
+- **Don't:** Static element until pinch
+- **Code Example Good:** hoverEffect()
+- **Code Example Bad:** onTap only
+- **Severity:** High
+
+## UI Pro Max Search Results
+**Domain:** color | **Query:** gradient background color palette
+**Source:** colors.csv | **Found:** 1 results
+
+### Result 1
+- **Product Type:** Knowledge Base/Documentation
+- **Keywords:** knowledge, base, documentation
+- **Primary (Hex):** #3B82F6
+- **Secondary (Hex):** #60A5FA
+- **CTA (Hex):** #F97316
+- **Background (Hex):** #F8FAFC
+- **Text (Hex):** #1E293B
+- **Border (Hex):** #E2E8F0
+- **Notes:** Clean hierarchy + minimal color
+
+## UI Pro Max Search Results
+**Domain:** typography | **Query:** card typography spacing
+**Source:** typography.csv | **Found:** 0 results
+
+## UI Pro Max Stack Guidelines
+**Stack:** vue | **Query:** responsive grid 1 2 4 columns
+**Source:** stacks/vue.csv | **Found:** 0 results
+
