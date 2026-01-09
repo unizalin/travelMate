@@ -32,6 +32,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/trips/:tripId/map',
+      name: 'trip-map-overview',
+      component: () => import('../views/TripMapOverview.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/trips/:tripId/day/:dayNumber',
+      name: 'day-map-view',
+      component: () => import('../views/DayMapView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/trips/:id',
       name: 'trip-detail',
       component: () => import('../views/TripDetail.vue'),
@@ -41,6 +53,12 @@ const router = createRouter({
       path: '/trips/:tripId/itinerary/:dayNumber',
       name: 'day-detail',
       component: () => import('../views/DayDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/trips/:tripId/overview',
+      name: 'trip-overview',
+      component: () => import('../views/TripOverview.vue'),
       meta: { requiresAuth: true }
     },
     {

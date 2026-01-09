@@ -37,12 +37,11 @@ const coordsCache = ref<Record<string, [number, number]>>({});
 
 // Create custom numbered icon
 const createNumberedIcon = (number: number, isActive: boolean) => {
-  const bg = isActive ? '#1D4ED8' : '#3B82F6';
   return L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
-        background-color: ${bg};
+        background-color: ${isActive ? '#2563EB' : '#3B82F6'};
         color: white;
         width: 32px;
         height: 32px;
@@ -53,9 +52,9 @@ const createNumberedIcon = (number: number, isActive: boolean) => {
         font-weight: bold;
         font-size: 14px;
         border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        transition: transform 0.2s;
-        transform: ${isActive ? 'scale(1.1)' : 'scale(1)'};
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.2s ease;
+        transform: ${isActive ? 'scale(1.15)' : 'scale(1)'};
       ">
         ${number}
       </div>
@@ -69,7 +68,7 @@ const createNumberedIcon = (number: number, isActive: boolean) => {
 const initMap = () => {
   if (!mapContainer.value) return;
 
-  // Default: Taipei
+  // Default: Taipei (fallback)
   map = L.map(mapContainer.value).setView([25.033, 121.5654], 13);
 
   // Use OpenStreetMap
@@ -96,8 +95,9 @@ const updateMarkers = async () => {
 
   for (let index = 0; index < props.activities.length; index++) {
     const activity = props.activities[index];
-    let lat = activity.start_location_lat || activity.latitude;
-    let lng = activity.start_location_lng || activity.longitude;
+    // Prioritize lat/lon from DB if available (future proofing), then cache, then try to geocode
+    let lat = activity.latitude || activity.start_location_lat;
+    let lng = activity.longitude || activity.start_location_lng;
 
     // Try cache if missing
     if ((!lat || !lng) && coordsCache.value[activity.id]) {
@@ -106,9 +106,6 @@ const updateMarkers = async () => {
 
     // Geocode if still missing and has location
     if ((!lat || !lng) && activity.location) {
-      // Small delay to respect rate limits if batching (though Promise.all or sequential is better)
-      // For UX, better to show what we have first, but let's try to fetch.
-      // We'll process sequentially to be nice to the free API.
       const result = await geocodeAddress(activity.location);
       if (result) {
         lat = result.latitude;
@@ -127,9 +124,9 @@ const updateMarkers = async () => {
     )
       .addTo(map!)
       .bindPopup(`
-        <div style="padding: 4px;">
-          <h3 style="font-weight: bold; margin-bottom: 2px;">${activity.name}</h3>
-          <p style="font-size: 12px; color: #666; margin: 0;">${activity.location}</p>
+        <div style="padding: 4px; min-width: 150px;">
+          <h3 style="font-weight: bold; margin-bottom: 4px; color: #111827;">${activity.name}</h3>
+          <p style="font-size: 12px; color: #6B7280; margin: 0;">${activity.location}</p>
         </div>
       `)
       .on('click', () => {
@@ -141,10 +138,65 @@ const updateMarkers = async () => {
     hasValidCoords = true;
   }
 
-  if (hasValidCoords) {
+  // Only fit bounds on initial load or major updates if we have coords
+  if (hasValidCoords && !props.highlightedId) {
     map.fitBounds(bounds, { padding: [50, 50] });
   }
 };
+
+const focusOnActivity = (activityId: string) => {
+  const index = props.activities.findIndex(a => a.id === activityId);
+  if (index !== -1 && map) {
+    const activity = props.activities[index];
+    
+    // Get coords from activity or cache
+    let lat = activity.latitude || activity.start_location_lat;
+    let lng = activity.longitude || activity.start_location_lng;
+    
+    if (!lat || !lng) {
+      const cached = coordsCache.value[activity.id];
+      if (cached) {
+        [lat, lng] = cached;
+      }
+    }
+
+    if (lat && lng) {
+      map.setView([lat, lng], 15, {
+        animate: true,
+        duration: 0.5
+      });
+      markers[activity.id]?.openPopup();
+    }
+  }
+};
+
+const fitBounds = () => {
+  if (!map || props.activities.length === 0) return;
+  
+  const bounds = L.latLngBounds([]);
+  let hasPoints = false;
+
+  props.activities.forEach(activity => {
+    let lat = activity.latitude || activity.start_location_lat;
+    let lng = activity.longitude || activity.start_location_lng;
+
+    if (!lat || !lng) {
+       const cached = coordsCache.value[activity.id];
+       if (cached) [lat, lng] = cached;
+    }
+
+    if (lat && lng) {
+      bounds.extend([lat, lng]);
+      hasPoints = true;
+    }
+  });
+  
+  if (hasPoints) {
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }
+};
+
+defineExpose({ focusOnActivity, fitBounds });
 
 watch(() => props.activities, () => {
   // Re-run update when activities change
@@ -152,11 +204,8 @@ watch(() => props.activities, () => {
 }, { deep: true });
 
 watch(() => props.highlightedId, (newId) => {
-  if (newId && markers[newId] && map) {
-    const marker = markers[newId];
-    map.setView(marker.getLatLng(), 15);
-    marker.openPopup();
-    
+  if (newId) {
+    focusOnActivity(newId);
     // Update icons to reflect active state
     updateActiveIcon(newId);
   }
@@ -177,7 +226,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.custom-marker {
+:deep(.custom-marker) {
   background: transparent;
   border: none;
 }

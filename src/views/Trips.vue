@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import CreateTripModal from '@/components/CreateTripModal.vue'
-import TripCard from '@/components/TripCard.vue'
+import CreateTripModal from '@/components/modals/CreateTripModal.vue'
+import TripCard from '@/components/trip/TripCard.vue'
 import { useTripStore } from '@/stores/trip'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'

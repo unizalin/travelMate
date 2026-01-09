@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import AIAssistant from '@/components/AIAssistant.vue';
-import AddActivityModal from '@/components/AddActivityModal.vue';
-import EditActivityModal from '@/components/EditActivityModal.vue';
-import MapView from '@/components/MapView.vue';
+import AIAssistant from '@/components/trip/AIAssistant.vue';
+import AddActivityModal from '@/components/modals/AddActivityModal.vue';
+import EditActivityModal from '@/components/modals/EditActivityModal.vue';
+import MapView from '@/components/map/MapView.vue';
 import type { ActivitySuggestion } from '@/services/geminiService';
 import { useItineraryStore } from '@/stores/itinerary';
 import { useTripStore } from '@/stores/trip';
@@ -21,6 +21,8 @@ import {
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import draggable from 'vuedraggable';
+import { useToast } from '@/composables/useToast';
+import { useDialog } from '@/composables/useDialog';
 
 const route = useRoute();
 const tripId = route.params.tripId as string;
@@ -28,6 +30,8 @@ const dayNumber = parseInt(route.params.dayNumber as string) || 1;
 
 const itineraryStore = useItineraryStore();
 const tripStore = useTripStore();
+const { showToast } = useToast();
+const { openDeleteDialog } = useDialog();
 
 // State
 const isLoading = ref(true);
@@ -109,9 +113,16 @@ function handleEdit(activity: any) {
 }
 
 async function handleDelete(id: string) {
-  if (!confirm('確定要刪除此行程嗎？')) return;
+  const confirmed = await openDeleteDialog('刪除行程', '確定要刪除此行程嗎？');
+  if (!confirmed) return;
+  
   if (currentItinerary.value) {
-    await itineraryStore.deleteActivity(id, currentItinerary.value.id);
+    try {
+      await itineraryStore.deleteActivity(id, currentItinerary.value.id);
+      showToast('刪除成功', 'success');
+    } catch (e) {
+      showToast('刪除失敗', 'error');
+    }
   }
 }
 
@@ -128,9 +139,10 @@ async function handleAddAI(suggestion: ActivitySuggestion) {
       notes: suggestion.description,
       order_index: localActivities.value.length
     });
+    showToast('已加入行程', 'success');
   } catch (e) {
     console.error(e);
-    alert('加入失敗');
+    showToast('加入失敗', 'error');
   }
 }
 
@@ -427,9 +439,11 @@ function setActivityRef(id: string, el: any) {
         <div v-if="isAISidebarOpen" class="h-full flex flex-col overflow-hidden">
           <AIAssistant 
             v-if="currentTrip"
+            :is-open="isAISidebarOpen"
             :destination="currentTrip.destination"
             :day-number="dayNumber"
             @add-activity="handleAddAI"
+            @close="isAISidebarOpen = false"
           />
         </div>
       </aside>

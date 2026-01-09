@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import AddActivityModal from '@/components/AddActivityModal.vue'
-import CountdownTimer from '@/components/CountdownTimer.vue'
-import DayCard from '@/components/DayCard.vue'
-import EditActivityModal from '@/components/EditActivityModal.vue'
+import AddActivityModal from '@/components/modals/AddActivityModal.vue'
+import CountdownTimer from '@/components/trip/CountdownTimer.vue'
+import DayCard from '@/components/trip/DayCard.vue'
+import EditActivityModal from '@/components/modals/EditActivityModal.vue'
 import { weatherService } from '@/services/weatherService'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 const tripStore = useTripStore()
+const router = useRouter()
 const itineraryStore = useItineraryStore()
 
 const currentTrip = computed(() => tripStore.currentTrip)
@@ -100,17 +102,18 @@ watch(() => currentTrip.value, (newTrip) => {
     </div>
 
     <!-- Weather & Destination Info -->
-    <div v-if="currentTrip" class="flex items-center justify-between">
-      <h2 class="text-xl font-bold text-gray-900">行程概覽</h2>
-      <div v-if="currentTrip.destination" class="text-sm text-gray-500 flex items-center">
-        <span class="mr-2">📍 {{ currentTrip.destination }}</span>
-      </div>
+    <!-- Weather & Destination Info -->
+    <div v-if="currentTrip" class="flex items-center gap-3 mb-6">
+      <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+         <span>📋</span> 行程概覽
+      </h2>
     </div>
 
     <!-- Itinerary Grid -->
-    <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
       <DayCard v-for="itinerary in itineraries" :key="itinerary.id" :itinerary="itinerary"
-        :weather="weatherData[itinerary.date]" @add-activity="handleAddActivity" @edit-activity="handleEditActivity" />
+        :weather="weatherData[itinerary.date]" @add-activity="handleAddActivity" @edit-activity="handleEditActivity"
+        @click="router.push(`/trips/${currentTrip?.id}/day/${itinerary.day_number}`)" />
     </div>
 
     <!-- Empty State -->

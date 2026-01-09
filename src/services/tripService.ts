@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/services/supabase'
 import type { Database } from '@/types/database'
 
 type TripInsert = Database['public']['Tables']['trips']['Insert']

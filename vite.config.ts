@@ -16,4 +16,7 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'dist',
   },
+  optimizeDeps: {
+    include: ['leaflet']
+  }
 })

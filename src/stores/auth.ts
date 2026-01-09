@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/services/supabase'
 import type { Session, User } from '@supabase/supabase-js'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'

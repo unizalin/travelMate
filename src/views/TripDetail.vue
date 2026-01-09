@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import InviteModal from '@/components/InviteModal.vue'
-// import ItineraryList from '@/components/ItineraryList.vue'
+import InviteModal from '@/components/modals/InviteModal.vue'
+// import ItineraryList from '@/components/trip/ItineraryList.vue'
 import ItineraryView from '@/views/Itinerary.vue'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
@@ -26,8 +26,13 @@ onMounted(async () => {
   }
 })
 
-function handleDelete() {
-  if (confirm('Are you sure you want to delete this trip? This action cannot be undone.')) {
+import { useDialog } from '@/composables/useDialog';
+
+const { openDeleteDialog } = useDialog()
+
+async function handleDelete() {
+  const confirmed = await openDeleteDialog('刪除行程', '確定要刪除此行程嗎？此動作無法復原。')
+  if (confirmed) {
     tripStore.deleteTrip(tripId)
       .then(() => router.push('/trips'))
   }
@@ -46,48 +51,85 @@ function handleDelete() {
 
     <div v-else-if="currentTrip">
       <!-- Header -->
-      <div class="bg-white shadow">
+      <div class="bg-white shadow relative">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div class="flex justify-between items-start">
+          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <!-- Trip Info -->
             <div>
-              <h1 class="text-3xl font-bold tracking-tight text-gray-900">{{ currentTrip.name }}</h1>
-              <p class="mt-2 text-gray-600 flex items-center">
-                <span class="mr-4">📍 {{ currentTrip.destination }}</span>
-                <span>📅 {{ currentTrip.start_date }} - {{ currentTrip.end_date }}</span>
-              </p>
+              <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">{{ currentTrip.name }}</h1>
+              <div class="mt-2 flex flex-wrap items-center gap-y-2 gap-x-4 text-sm md:text-base text-gray-600">
+                 <span class="flex items-center gap-1">📍 {{ currentTrip.destination }}</span>
+                 <span class="flex items-center gap-1">📅 {{ currentTrip.start_date }} - {{ currentTrip.end_date }}</span>
+                 
+                 <!-- Members Inline for Desktop -->
+                 <div class="hidden md:flex items-center space-x-2 border-l pl-4 ml-2 border-gray-300">
+                    <div class="flex -space-x-2 overflow-hidden">
+                      <img v-for="member in currentTrip.trip_members" :key="member.id"
+                        class="inline-block h-6 w-6 rounded-full ring-2 ring-white"
+                        :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'"
+                        :alt="member.profiles?.display_name" :title="member.profiles?.display_name" />
+                    </div>
+                    <span class="text-xs text-gray-500">{{ currentTrip.trip_members.length }} 位成員</span>
+                 </div>
+              </div>
+               <!-- Members block for Mobile (below info) -->
+               <div class="flex md:hidden items-center space-x-2 mt-3">
+                  <div class="flex -space-x-2 overflow-hidden">
+                    <img v-for="member in currentTrip.trip_members" :key="member.id"
+                      class="inline-block h-7 w-7 rounded-full ring-2 ring-white"
+                      :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'"
+                      :alt="member.profiles?.display_name" />
+                  </div>
+                  <span class="text-xs text-gray-500 ml-1">{{ currentTrip.trip_members.length }} 位成員</span>
+               </div>
             </div>
-            <div class="space-x-3">
+
+            <!-- Desktop Buttons -->
+            <div class="hidden lg:flex items-center gap-3">
+              <button @click="router.push(`/trips/${tripId}/map`)"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 hover:shadow-md transition-all flex items-center gap-2">
+                <span>🗺️</span> 查看地圖總覽
+              </button>
               <button @click="isInviteModalOpen = true"
-                class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                Invite
+                class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
+                邀請成員
               </button>
               <button @click="handleDelete"
-                class="rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100">
-                Delete
+                class="rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100 transition-all">
+                刪除行程
               </button>
             </div>
           </div>
-
-          <!-- Members -->
-          <div class="mt-6 flex items-center space-x-2">
-            <div class="flex -space-x-2 overflow-hidden">
-              <img v-for="member in currentTrip.trip_members" :key="member.id"
-                class="inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'"
-                :alt="member.profiles?.display_name" :title="member.profiles?.display_name" />
-            </div>
-            <span class="text-sm text-gray-500 ml-2">
-              {{ currentTrip.trip_members.length }} members
-            </span>
-          </div>
         </div>
+      </div>
+
+      <!-- Mobile Floating Action Buttons (FAB) -->
+      <div class="fixed bottom-6 right-6 flex flex-col-reverse gap-3 z-40 lg:hidden">
+          <!-- Main Map Button -->
+          <button @click="router.push(`/trips/${tripId}/map`)" 
+             class="w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-500 hover:scale-105 transition-all text-2xl"
+             title="查看地圖總覽">
+             🗺️
+          </button>
+          
+          <!-- Secondary Buttons (Smaller) -->
+           <button @click="isInviteModalOpen = true" 
+             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-50 ring-1 ring-gray-200 transition-all"
+             title="邀請成員">
+             <span class="text-xs font-bold">邀請</span>
+          </button>
+           <button @click="handleDelete" 
+             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 ring-1 ring-gray-200 transition-all"
+             title="刪除行程">
+             <span class="text-xs font-bold">刪除</span>
+          </button>
       </div>
 
       <!-- Tabs -->
       <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <TabGroup>
           <TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
-            <Tab v-for="category in ['Itinerary', 'Expenses', 'Members']" as="template" :key="category"
+            <Tab v-for="category in ['行程', '費用', '成員']" as="template" :key="category"
               v-slot="{ selected }">
               <button :class="[
                 'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
@@ -108,7 +150,9 @@ function handleDelete() {
             </TabPanel>
 
             <TabPanel class="rounded-xl bg-white p-3 shadow">
-              Expenses content coming soon... (Phase 7)
+              <div class="text-center py-10 text-gray-500">
+                  費用功能開發中 (Phase 7)
+              </div>
             </TabPanel>
 
             <TabPanel class="rounded-xl bg-white p-3 shadow">
@@ -117,7 +161,7 @@ function handleDelete() {
                   <img class="h-10 w-10 rounded-full"
                     :src="member.profiles?.avatar_url || 'https://via.placeholder.com/40'" alt="" />
                   <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">{{ member.profiles?.display_name || 'Unknown' }}</p>
+                    <p class="text-sm font-medium text-gray-900">{{ member.profiles?.display_name || '未知成員' }}</p>
                     <p class="text-sm text-gray-500 capitalize">{{ member.role }}</p>
                   </div>
                 </li>
