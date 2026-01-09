@@ -20,6 +20,8 @@
 ## 已完成任務歷史 (Completed)
 
 ### 2026-01-09
+- [x] **景點拖曳排序**：強化 `vuedraggable` 視覺回饋與失敗復原邏輯。
+- [x] **行程分享功能**：實作 `shareService`、分享彈窗與天數滑動導航。
 - [x] **專案結構重構**：將組件分類並更新所有 Import Alias。
 - [x] **修復 DayDetail 語法錯誤**：修正 `handleAddAI` 導致的 build failure。
 - [x] **更新專案文檔**：全面改寫 `context.md`, `Planning.md`, `Rules.md`, `Task.md`。

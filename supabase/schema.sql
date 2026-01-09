@@ -257,15 +257,13 @@ CREATE POLICY "Users can view activities"
     )
   );
 
-CREATE POLICY "Users can manage activities"
-  ON activities FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = activities.itinerary_id
-      AND public.is_trip_member(itineraries.trip_id, auth.uid())
     )
   );
+
+-- 14.1 Public View Policies (For shared links)
+CREATE POLICY "Public can view trips" ON trips FOR SELECT USING (true);
+CREATE POLICY "Public can view itineraries" ON itineraries FOR SELECT USING (true);
+CREATE POLICY "Public can view activities" ON activities FOR SELECT USING (true);
 
 -- 15. Expenses Policies (使用函數)
 CREATE POLICY "Users can view expenses"
