@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useItineraryStore } from '@/stores/itinerary';
-import { geocodeAddress } from '@/services/geocodingService';
+import { geocodeAddress, type AddressSearchResult } from '@/services/geocodingService';
+import AddressAutocomplete from '@/components/modals/AddressAutocomplete.vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 import { ref } from 'vue';
+import { useToast } from '@/composables/useToast';
 
 const props = defineProps<{
   isOpen: boolean
@@ -17,6 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const itineraryStore = useItineraryStore()
+const { showToast } = useToast()
 
 const name = ref('')
 const location = ref('')
@@ -26,16 +29,30 @@ const endTime = ref('')
 const notes = ref('')
 const loading = ref(false)
 const error = ref('')
+const selectedLatitude = ref<number | null>(null)
+const selectedLongitude = ref<number | null>(null)
+
+const handleAddressSelect = (result: AddressSearchResult) => {
+  location.value = result.formatted_address;
+  selectedLatitude.value = result.latitude;
+  selectedLongitude.value = result.longitude;
+  
+  // Auto-fill name if empty
+  if (!name.value && result.name) {
+    name.value = result.name;
+  }
+};
 
 async function handleSubmit() {
   try {
     loading.value = true
     error.value = ''
 
-    let lat = null;
-    let lng = null;
+    let lat = selectedLatitude.value;
+    let lng = selectedLongitude.value;
 
-    if (location.value) {
+    // If coordinates are missing but we have a location string, try to geocode one last time
+    if ((!lat || !lng) && location.value) {
       const coords = await geocodeAddress(location.value);
       if (coords) {
         lat = coords.latitude;
@@ -65,7 +82,10 @@ async function handleSubmit() {
     startTime.value = ''
     endTime.value = ''
     notes.value = ''
+    selectedLatitude.value = null
+    selectedLongitude.value = null
 
+    showToast('新增成功', 'success')
     emit('success')
     emit('close')
   } catch (e: any) {
@@ -106,8 +126,11 @@ async function handleSubmit() {
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700">地點 (選填)</label>
-                  <input v-model="location" type="text"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border" />
+                  <AddressAutocomplete
+                    v-model="location"
+                    placeholder="搜尋地點或輸入地址..."
+                    @select="handleAddressSelect"
+                  />
                 </div>
 
                 <div>

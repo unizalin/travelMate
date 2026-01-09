@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import ActivityEditMode from './ActivityEditMode.vue';
-import WeatherTooltip from './WeatherTooltip.vue';
+import ActivityEditMode from '@/components/trip/ActivityEditMode.vue';
+import WeatherTooltip from '@/components/common/WeatherTooltip.vue';
 
 const props = defineProps<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,18 +11,18 @@ const props = defineProps<{
     weather?: any
 }>()
 
-const router = useRouter()
-defineEmits<{
+const emit = defineEmits<{
     (e: 'add-activity', itineraryId: string): void
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (e: 'edit-activity', activity: any): void
+    (e: 'click'): void
 }>()
 
 const isEditMode = ref(false)
 
-function navigateToDetail() {
+function handleClick() {
     if (!isEditMode.value) {
-        router.push(`/trips/${props.itinerary.trip_id}/itinerary/${props.itinerary.day_number}`)
+        emit('click')
     }
 }
 
@@ -46,7 +45,7 @@ function formatTime(time: string) {
 </script>
 
 <template>
-    <div @click="navigateToDetail"
+    <div @click="handleClick"
         class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 relative overflow-hidden cursor-pointer"
         :class="{ 'ring-2 ring-primary-400': isEditMode }">
         <!-- Edit Mode Overlay/Component -->

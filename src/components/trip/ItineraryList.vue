@@ -3,8 +3,8 @@ import { useItineraryStore } from '@/stores/itinerary'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import { ChevronUpIcon } from '@heroicons/vue/20/solid'
 import { ref } from 'vue'
-import ActivityItem from './ActivityItem.vue'
-import AddActivityModal from './AddActivityModal.vue'
+import ActivityItem from '@/components/trip/ActivityItem.vue'
+import AddActivityModal from '@/components/modals/AddActivityModal.vue'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 defineProps<{
