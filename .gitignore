@@ -27,3 +27,10 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Temporary files
+*.txt
+*.bak
+*.tmp
+INITIAL_PROMPT.md
+commit_msg.txt
