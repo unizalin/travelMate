@@ -101,5 +101,16 @@ export const itineraryService = {
       .eq('id', id)
 
     if (error) throw error
+  },
+
+  async updateItinerariesBatch(updates: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await supabase
+      .from('itineraries')
+      .upsert(updates as any)
+      .select()
+
+    if (error) throw error
+    return data
   }
 }

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const props = defineProps<{
-  targetDate: string // YYYY-MM-DD
-  endDate: string // YYYY-MM-DD
-}>()
+interface Props {
+  departureDate: string // YYYY-MM-DD
+  createdAt?: string    // Optional: when trip was created for better progress calculation
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  createdAt: () => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+})
 
 const timeLeft = ref({
   days: 0,
@@ -14,33 +18,43 @@ const timeLeft = ref({
 })
 
 const status = ref<'upcoming' | 'ongoing' | 'ended'>('upcoming')
+const progress = ref(0)
 let timer: number | null = null
+
+function calculateProgress() {
+  const now = new Date().getTime()
+  const start = new Date(props.createdAt).getTime()
+  const end = new Date(props.departureDate).getTime()
+  
+  const total = end - start
+  const elapsed = now - start
+  
+  if (total <= 0) return 100
+  const p = (elapsed / total) * 100
+  return Math.min(Math.max(p, 0), 100)
+}
 
 function updateTimer() {
   const now = new Date().getTime()
-  const start = new Date(props.targetDate).getTime()
-  // End date should be end of the day
-  const end = new Date(props.endDate).getTime() + 24 * 60 * 60 * 1000 - 1
-
-  if (now > end) {
-    status.value = 'ended'
-    return
-  }
-
-  if (now >= start && now <= end) {
+  const start = new Date(props.departureDate).getTime()
+  
+  if (now >= start) {
     status.value = 'ongoing'
+    progress.value = 100
     return
   }
 
   status.value = 'upcoming'
   const distance = start - now
-
+  
   timeLeft.value = {
     days: Math.floor(distance / (1000 * 60 * 60 * 24)),
     hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
     minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
     seconds: Math.floor((distance % (1000 * 60)) / 1000)
   }
+  
+  progress.value = calculateProgress()
 }
 
 onMounted(() => {
@@ -54,37 +68,63 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-8 md:p-10 shadow-lg text-white text-center">
-    <div v-if="status === 'ended'">
-      <h3 class="text-2xl md:text-3xl font-bold">旅程已結束</h3>
-      <p class="mt-2 text-blue-100">希望您留下了美好的回憶！</p>
-    </div>
+  <div class="minimal-horizontal-countdown group cursor-default">
+    <div class="flex flex-col gap-1.5">
+      <!-- Simplified Countdown Display -->
+      <div class="flex items-baseline justify-between gap-4">
+        <div v-if="status === 'upcoming'" class="flex items-baseline gap-1">
+          <span class="text-xs font-bold text-secondary-400 font-sans uppercase tracking-wider">距離出發還有</span>
+          <span class="text-2xl font-black text-secondary-900 font-display tabular-nums leading-none mx-1">
+            {{ timeLeft.days }}
+          </span>
+          <span class="text-xs font-bold text-secondary-400 font-sans uppercase tracking-wider">天</span>
+        </div>
+        <div v-else class="text-sm font-black text-emerald-600 font-sans tracking-wider">
+          旅途中，享受當下！
+        </div>
 
-    <div v-else-if="status === 'ongoing'">
-      <h3 class="text-3xl md:text-4xl font-bold animate-pulse">旅程進行中！</h3>
-      <p class="mt-2 text-blue-100 text-lg">享受您的旅程！</p>
-    </div>
+        <div class="text-[10px] font-black text-primary-500 font-sans tracking-tight">
+          已完成 {{ Math.round(progress) }}% 準備
+        </div>
+      </div>
 
-    <div v-else>
-      <h3 class="text-lg md:text-xl font-medium text-blue-100 mb-6">距離出發還有</h3>
-      <div class="grid grid-cols-4 gap-3 md:gap-4 max-w-2xl mx-auto">
-        <div class="bg-blue-400/30 rounded-xl p-4 md:p-6 backdrop-blur-sm animate-[pulse_3s_ease-in-out_infinite]">
-          <div class="text-4xl md:text-5xl lg:text-6xl font-bold">{{ timeLeft.days }}</div>
-          <div class="text-xs md:text-base text-blue-100 mt-1 uppercase tracking-wide">天</div>
-        </div>
-        <div class="bg-blue-400/30 rounded-xl p-4 md:p-6 backdrop-blur-sm animate-[pulse_3s_ease-in-out_infinite] delay-75">
-          <div class="text-4xl md:text-5xl lg:text-6xl font-bold">{{ timeLeft.hours }}</div>
-          <div class="text-xs md:text-base text-blue-100 mt-1 uppercase tracking-wide">時</div>
-        </div>
-        <div class="bg-blue-400/30 rounded-xl p-4 md:p-6 backdrop-blur-sm animate-[pulse_3s_ease-in-out_infinite] delay-150">
-          <div class="text-4xl md:text-5xl lg:text-6xl font-bold">{{ timeLeft.minutes }}</div>
-          <div class="text-xs md:text-base text-blue-100 mt-1 uppercase tracking-wide">分</div>
-        </div>
-        <div class="bg-blue-400/30 rounded-xl p-4 md:p-6 backdrop-blur-sm animate-[pulse_3s_ease-in-out_infinite] delay-200">
-          <div class="text-4xl md:text-5xl lg:text-6xl font-bold">{{ timeLeft.seconds }}</div>
-          <div class="text-xs md:text-base text-blue-100 mt-1 uppercase tracking-wide">秒</div>
+      <!-- Slim Progress Bar -->
+      <div class="relative h-1 w-full bg-secondary-100/50 rounded-full overflow-hidden">
+        <div 
+          class="h-full bg-gradient-to-r from-primary-500 to-blue-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(59,130,246,0.2)]"
+          :style="{ width: `${progress}%` }"
+        ></div>
+      </div>
+
+      <!-- Detail Grid (Hover Reveal) -->
+      <div v-if="status === 'upcoming'" class="flex justify-start items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div class="flex gap-3 text-[10px] font-bold text-secondary-400 tabular-nums">
+          <span>{{ timeLeft.hours }}時</span>
+          <span>{{ timeLeft.minutes }}分</span>
+          <span>{{ timeLeft.seconds }}秒</span>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Righteous&family=Outfit:wght@400;500;700;900&display=swap');
+
+.font-display {
+  font-family: 'Righteous', sans-serif;
+}
+
+.font-sans {
+  font-family: 'Outfit', sans-serif, "Microsoft JhengHei", "微軟正黑體";
+}
+
+.minimal-horizontal-countdown {
+  width: 100%;
+}
+
+/* Custom easing for progress bar */
+.transition-all {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+</style>

@@ -10,6 +10,14 @@ DROP TABLE IF EXISTS trip_members CASCADE;
 DROP TABLE IF EXISTS trips CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 
+-- 0. 建立枚舉類型
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+        CREATE TYPE payment_status AS ENUM ('unpaid', 'pending', 'settled');
+    END IF;
+END $$;
+
 -- 1. 建立 profiles 表
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
@@ -99,6 +107,7 @@ CREATE TABLE expense_payments (
   expense_id UUID REFERENCES expenses(id) ON DELETE CASCADE NOT NULL,
   payer_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
+  status payment_status DEFAULT 'unpaid',
   is_paid BOOLEAN DEFAULT FALSE,
   paid_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(expense_id, payer_id)
@@ -293,9 +302,27 @@ CREATE POLICY "Users can view payments"
     )
   );
 
-CREATE POLICY "Users can manage own payments"
-  ON expense_payments FOR ALL
-  USING (payer_id = auth.uid());
+CREATE POLICY "Users can update payments for their expenses"
+  ON expense_payments FOR UPDATE
+  USING (
+    payer_id = auth.uid() 
+    OR 
+    EXISTS (
+      SELECT 1 FROM expenses 
+      WHERE expenses.id = expense_payments.expense_id 
+      AND expenses.paid_by = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert payments for their expenses"
+  ON expense_payments FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM expenses 
+      WHERE expenses.id = expense_payments.expense_id 
+      AND expenses.paid_by = auth.uid()
+    )
+  );
 
 -- 17. AI Suggestions Policies
 ALTER TABLE ai_suggestions ENABLE ROW LEVEL SECURITY;

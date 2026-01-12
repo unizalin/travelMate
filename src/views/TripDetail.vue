@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import InviteModal from '@/components/modals/InviteModal.vue'
 import ShareDialog from '@/components/modals/ShareDialog.vue'
+import CountdownTimer from '@/components/trip/CountdownTimer.vue'
 import ItineraryView from '@/views/Itinerary.vue'
+import ExpenseView from '@/components/trip/ExpenseView.vue'
+import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
@@ -53,12 +56,12 @@ async function handleDelete() {
     <div v-else-if="currentTrip">
       <!-- Header -->
       <div class="bg-white shadow relative">
-        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-[1440px] 2xl:max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
           <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <!-- Trip Info -->
             <div>
               <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">{{ currentTrip.name }}</h1>
-              <div class="mt-2 flex flex-wrap items-center gap-y-2 gap-x-4 text-sm md:text-base text-gray-600">
+              <div class="mt-2 flex flex-wrap items-center gap-y-2 gap-x-4 xl:gap-x-6 text-sm md:text-base text-gray-600">
                  <span class="flex items-center gap-1">📍 {{ currentTrip.destination }}</span>
                  <span class="flex items-center gap-1">📅 {{ currentTrip.start_date }} - {{ currentTrip.end_date }}</span>
                  
@@ -83,26 +86,37 @@ async function handleDelete() {
                   </div>
                   <span class="text-xs text-gray-500 ml-1">{{ currentTrip.trip_members.length }} 位成員</span>
                </div>
+               
+
+               <!-- Countdown Integrated into Content Flow -->
+               <div class="mt-4 max-w-[400px]">
+                 <CountdownTimer 
+                   :departure-date="currentTrip.start_date" 
+                   :created-at="currentTrip.created_at"
+                 />
+               </div>
             </div>
 
-            <!-- Desktop Buttons -->
-            <div class="hidden lg:flex items-center gap-3">
+            <!-- Action Buttons Group (Right Aligned) -->
+            <div class="hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-6 ml-auto">
               <button @click="router.push(`/trips/${tripId}/map`)"
-                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 hover:shadow-md transition-all flex items-center gap-2">
-                <span>🗺️</span> 查看地圖總覽
+                class="rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-primary-100 hover:bg-primary-500 hover:shadow-primary-200 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <span>🗺️</span> 查看地圖
               </button>
-              <button @click="isInviteModalOpen = true"
-                class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
-                邀請成員
-              </button>
-              <button @click="isShareModalOpen = true"
-                class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all flex items-center gap-2">
-                <span>🔗</span> 分享
-              </button>
-              <button @click="handleDelete"
-                class="rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100 transition-all">
-                刪除行程
-              </button>
+              <div class="flex items-center gap-2">
+                <button @click="isInviteModalOpen = true"
+                  class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-secondary-700 shadow-sm ring-1 ring-inset ring-secondary-200 hover:bg-secondary-50 hover:ring-secondary-300 transition-all">
+                  邀請
+                </button>
+                <button @click="isShareModalOpen = true"
+                  class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-secondary-700 shadow-sm ring-1 ring-inset ring-secondary-200 hover:bg-secondary-50 hover:ring-secondary-300 transition-all">
+                  分享
+                </button>
+                <button @click="handleDelete"
+                  class="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm hover:bg-red-100 transition-all">
+                  刪除
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -135,8 +149,9 @@ async function handleDelete() {
           </button>
       </div>
 
+
       <!-- Tabs -->
-      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-[1440px] 2xl:max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
         <TabGroup>
           <TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
             <Tab v-for="category in ['行程', '費用', '成員']" as="template" :key="category"
@@ -159,10 +174,11 @@ async function handleDelete() {
               <ItineraryView />
             </TabPanel>
 
-            <TabPanel class="rounded-xl bg-white p-3 shadow">
-              <div class="text-center py-10 text-gray-500">
-                  費用功能開發中 (Phase 7)
-              </div>
+            <TabPanel class="rounded-xl bg-white p-6 shadow-none">
+              <ExpenseView 
+                :trip-id="tripId" 
+                :members="currentTrip.trip_members" 
+              />
             </TabPanel>
 
             <TabPanel class="rounded-xl bg-white p-3 shadow">
@@ -176,6 +192,9 @@ async function handleDelete() {
                   </div>
                 </li>
               </ul>
+
+              <!-- Preparation Checklist -->
+              <PreparationChecklist :trip-id="tripId" />
             </TabPanel>
           </TabPanels>
         </TabGroup>
