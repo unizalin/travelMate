@@ -1,41 +1,47 @@
-# TravelMate 旅程規劃助手
+# TravelMate 旅程規劃協作應用
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Vue](https://img.shields.io/badge/vue-3.4.0-green.svg)
-![TypeScript](https://img.shields.io/badge/typescript-5.5.0-blue.svg)
+![TravelMate Banner](https://via.placeholder.com/1200x400?text=TravelMate+Next-Gen+Trip+Planner)
 
-**TravelMate** 是一個直覺、協作且具備 AI 輔助功能的旅程規劃平台。它整合了互動式地圖、智慧行程建議與即時協作功能，旨在讓每次旅行的規劃過程變得輕鬆有趣。
+TravelMate 是一款專為現代旅人打造的跨平台、高性能旅程規劃應用。結合了 AI 智慧推薦、實時地圖協作、多人分帳記帳與出發前準備清單，讓您的每一次旅行都能從規劃階段就享受到極致與直覺的體驗。
 
 ---
 
-## 主要功能
+## 🌟 主要功能
 
--  **多元認證系統**：支援 Google 第三方快速登入。
--  **互動式地圖**：整合 Leaflet 地圖，自動標記景點位置並規劃每日行程視圖。
--  **AI 行程助手**：串接 Google Gemini AI，根據目的地提供智慧行程建議並一鍵加入。
--  **全球地址搜尋**：整合 OpenStreetMap 地理解碼，提供精準的地點自動完成功能。
--  **拖曳式行程規劃**：直覺的景點排序與跨天數調整（基於 VueDraggable）。
--  **天氣預報摘要**：整合即時天氣服務（開發中）。
--  **協作記帳系統**：支援多人分帳、外幣轉換與結算（開發中）。
+### 🗺️ 智慧行程與動態地圖
+- **單日行程地圖**：地圖 Marker 與行程列表實時聯動，支援高亮顯示與自動選中中心。
+- **全球地理服務**：整合 OpenCage 與 Nominatim，提供全球範圍的地址自動補完與精準地標檢索。
+- **拖曳排序**：極其流暢的 VueDraggable 景點排序，支援樂觀更新與失敗復原。
+- **地圖總覽模式**：快速切換天數，一目了然整場旅程的空間分佈。
 
----
+### 🤖 AI 行程助手
+- **智慧景點推薦**：基於 Google Gemini 2.5 Flash 模型，輸入目的地即可獲得 5 個必去景點建議。
+- **一鍵加入行程**：AI 推薦內容包含說明與圖示，點擊即可無縫插入您的每日規劃中。
 
-##  技術棧
+### 💰 協作記帳與匯率系統
+- **多幣值支援**：串接 ExchangeRate-API，提供全球主流貨幣的實時匯率（具備 24 小時快取機制）。
+- **共用與個人模式**：每筆支出皆可選擇「團隊分攤」或「個人自付」，確保私密性與公帳清晰。
+- **專業結算的對帳**：視覺化的債務/債權清冊，一鍵確認收款狀態，徹底告別旅途後的算帳煩惱。
 
-| 領域 | 技術 |
-| :--- | :--- |
-| **前端框架** | Vue 3 (Composition API + `<script setup>`) |
-| **語言** | TypeScript (Strict Mode) |
-| **狀態管理** | Pinia |
-| **CSS 框架** | Tailwind CSS |
-| **地圖服務** | Leaflet |
-| **AI 引擎** | Google Gemini AI (@google/genai) |
-| **後端 & 資料庫** | Supabase (Auth, DB, Storage, Realtime) |
-| **UI 組件** | Headless UI + Heroicons |
+### 🎒 準備清單與成員協作
+- **極簡記事本**：採用 UI/UX Pro Max 規範改版，移除 Emoji 全面改用 SVG，提供極簡且專業的備忘體驗。
+- **成員邀請系統**：透過專屬邀請碼連結，輕鬆邀請旅伴加入，支援 Supabase Realtime 即時同步。
+- **倒數計時器**：精緻的動態倒數組件，讓您隨時感受出發的脈動。
 
 ---
 
-## ⚡ 快速開始
+## 🚀 技術棧
+
+- **前端**：Vue 3 (Composition API) + TypeScript + Pinia
+- **樣式**：Tailwind CSS (自定義 UI/UX Pro Max 規範)
+- **地圖**：Leaflet.js
+- **後端**：Supabase (Auth, DB, Storage, Realtime)
+- **AI**：Google Gemini AI
+- **API**：OpenCage (Geocoding), ExchangeRate-API (Currency)
+
+---
+
+## 🛠️ 安裝與啟動
 
 ### 1. 複製專案
 ```bash
@@ -43,21 +49,21 @@ git clone https://github.com/unizalin/travelMate.git
 cd travelMate
 ```
 
-### 2. 安裝相依套件
+### 2. 安裝依賴
 ```bash
 npm install
 ```
 
 ### 3. 環境變數設定
-在根目錄建立 `.env.local` 檔案：
+請在根目錄建立 `.env` 檔案並填入以下資訊：
 ```env
-VITE_SUPABASE_URL=你的_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY=你的_SUPABASE_ANON_KEY
-VITE_GEMINI_API_KEY=你的_GEMINI_API_KEY
-VITE_OPENWEATHER_API_KEY=你的_WEATHER_API_KEY
+VITE_SUPABASE_URL=您的_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=您的_SUPABASE_ANON_KEY
+VITE_OPENCAGE_API_KEY=您的_OPENCAGE_API_KEY
+VITE_GEMINI_API_KEY=您的_GEMINI_API_KEY
 ```
 
-### 4. 啟動開發環境
+### 4. 啟動開發伺服器
 ```bash
 npm run dev
 ```
@@ -68,67 +74,45 @@ npm run dev
 
 ```text
 src/
-├── components/          # 組件分類
-│   ├── common/         # 通用小型組件 (如 WeatherTooltip)
-│   ├── trip/           # 行程業務組件 (如 AIAssistant, DayCard)
-│   ├── map/            # 地圖功能組件 (如 MapView)
-│   ├── ui/             # 基礎 UI 元素 (如 Button, Dialog)
-│   └── modals/         # 彈窗形式組件 (如 AddActivityModal)
-├── views/              # 頁面級組件
-├── services/           # API 封裝與第三方服務 (Supabase, Gemini)
-├── stores/             # Pinia 狀態管理
-├── composables/        # 封裝好的 Hooks
-├── types/              # TypeScript 型別定義
-└── utils/              # 通用工具函式
+├── assets/          # 靜態資源、CSS
+├── components/      # Vue 組件
+│   ├── common/      # 通用、小型組件
+│   ├── trip/        # 行程業務核心組件
+│   ├── map/         # Leaflet 地圖封裝
+│   ├── ui/          # Pro Max 標準化 UI 元素
+│   └── modals/      # 彈窗與表單
+├── composables/     # Hooks / 組件邏輯提取
+├── services/        # 外接 API 與 Supabase 服務層
+├── stores/          # Pinia 狀態管理
+├── views/           # 路由頁面主體
+└── types/           # 全域 TypeScript 型別
 ```
 
 ---
 
-## 📖 開發指南
+## � 功能進度 (Roadmap)
 
-### Import 路徑
-專案已設定路徑別名，請統一使用 `@`：
-```typescript
-import MapView from '@/components/map/MapView.vue';
-```
-
-### Git Workflow
-訊息請遵循 [Conventional Commits](https://www.conventionalcommits.org/) 格式：
-- `feat`: 新增功能
-- `fix`: 修復錯誤
-- `refactor`: 重構代碼
-- `docs`: 文檔更新
-- `style`: 格式調整
-
-### 常用命令
-- `npm run dev`: 啟動開發伺服器
-- `npm run build`: 進行類型檢查並打包專案
-- `npm run type-check`: 僅執行 TypeScript 檢查
-- `npm run lint`: 執行 ESLint 修復
+- [x] **Phase 1-2**: 認證系統與旅程 CRUD
+- [x] **Phase 3-4**: 地圖聯動與景點交互
+- [x] **Phase 5**: AI 助手與地理服務
+- [x] **Phase 6**: 分享碼與成員邀請
+- [x] **Phase 7**: 多幣值記帳與結算系統
+- [x] **Phase 8**: 極簡記事本 UI 重塑
+- [ ] **Next**: Supabase Storage 圖片上傳 (景點、收據)
+- [ ] **Next**: 多人即時共同編輯優化
 
 ---
 
-## 📊 功能進度表
+## � 常見問題 (FAQ)
 
-- [x] 基礎認證與個人資料管理
-- [x] 旅程建立與成員邀請碼
-- [x] 互動式地圖標記與行程整合
-- [x] AI 景點推薦助手
-- [x] 景點拖曳排序功能
-- [ ] 記帳系統與分帳計算 (進行中)
-- [ ] 全球城市即時天氣 (進行中)
-- [ ] 多人同時線上編輯 (進行中)
+**Q: 為什麼地圖 Marker 沒有顯示？**
+A: 請檢查該景點是否包含有效的座標（Latitude/Longitude），或者檢查 OpenCage API Key 是否正確。
+
+**Q: 匯率是實時的嗎？**
+A: 是的，我們串接了 ExchangeRate-API，並在本地端進行了 24 小時的智能快取，以平衡速度與準確度。
 
 ---
 
-## 📝 常見問題 (FAQ)
-
-**Q: 地圖無法正常載入景點？**
-A: 請確保該景點已透過地址自動完成功能正確取得緯度 (latitude) 與經度 (longitude)。
-
-**Q: AI 助手沒有回應？**
-A: 請檢查 `.env.local` 中的 `VITE_GEMINI_API_KEY` 是否有效。
-
----
-**版本**：v0.5.0
-**最後更新時間**：2026-01-09
+**最後更新**：2026-01-13
+**版本**：v1.5.0
+**作者**：Uniza Lin
