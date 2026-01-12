@@ -204,6 +204,7 @@ export interface Database {
           expense_id: string
           payer_id: string
           amount: number
+          status: 'unpaid' | 'pending' | 'settled'
           is_paid: boolean | null
           paid_at: string | null
         }
@@ -212,6 +213,7 @@ export interface Database {
           expense_id: string
           payer_id: string
           amount: number
+          status?: 'unpaid' | 'pending' | 'settled'
           is_paid?: boolean | null
           paid_at?: string | null
         }
@@ -220,6 +222,7 @@ export interface Database {
           expense_id?: string
           payer_id?: string
           amount?: number
+          status?: 'unpaid' | 'pending' | 'settled'
           is_paid?: boolean | null
           paid_at?: string | null
         }

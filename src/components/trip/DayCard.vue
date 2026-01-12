@@ -4,10 +4,7 @@
     hoverable
     body-class="p-0"
     @click="handleClick"
-    :class="[
-      'group transition-all duration-300 animate-fade-in flex flex-col h-full overflow-hidden rounded-2xl border-none',
-      { 'ring-2 ring-primary-500 ring-offset-2': isEditMode }
-    ]"
+    class="group transition-all duration-300 animate-fade-in flex flex-col h-full overflow-hidden rounded-2xl border-none"
   >
     <!-- Header: Sky Blue Gradient -->
     <div class="relative h-28 flex-shrink-0 bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400 p-5 flex flex-col justify-between items-start overflow-hidden">
@@ -25,17 +22,6 @@
         
         <div class="flex gap-2">
           <WeatherTooltip :weather="weather" class="text-white" />
-          <button 
-            v-if="!isEditMode"
-            @click.stop="isEditMode = true"
-            class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all border border-white/10"
-            title="編輯行程"
-          >
-            <PencilSquareIcon class="w-4 h-4" />
-          </button>
-          <UIButton v-else variant="ghost" size="sm" class="bg-white text-primary-600 hover:bg-primary-50" @click="isEditMode = false">
-            完成
-          </UIButton>
         </div>
       </div>
 
@@ -50,81 +36,120 @@
       </div>
     </div>
 
-    <!-- Body: Info Snapshot -->
-    <div class="flex-1 p-5 flex flex-col justify-between bg-white">
-      <div v-if="isEditMode" @click.stop>
-        <ActivityEditMode 
-          :itinerary="itinerary" 
-          @done="isEditMode = false"
-          @add-activity="$emit('add-activity', itinerary.id)" 
-        />
-      </div>
+    <!-- Body: Activity List -->
+    <div 
+      class="flex-1 p-5 flex flex-col bg-white overflow-hidden"
+      :class="{ 'bg-primary-50/30 ring-2 ring-inset ring-primary-100': isDragOver }"
+      @dragover.prevent="isDragOver = true"
+      @dragleave="isDragOver = false"
+      @drop="isDragOver = false"
+    >
+      <draggable 
+        v-model="localActivities" 
+        group="activities" 
+        item-key="id"
+        ghost-class="ghost-activity"
+        drag-class="drag-activity"
+        class="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-1 min-h-[100px]"
+        @change="onActivitiesChange"
+        @start="isDragging = true"
+        @end="onDragEnd"
+      >
+        <template #item="{ element: activity, index: idx }">
+          <div 
+            class="relative flex items-start gap-4 group/item cursor-move active:cursor-grabbing"
+          >
+            <!-- Progress Line (Decorative) -->
+            <div 
+              v-if="(idx as number) < localActivities.length - 1"
+              class="absolute left-[11px] top-6 bottom-[-16px] w-0.5 bg-secondary-50"
+            ></div>
 
-      <div v-else class="space-y-4">
-        <!-- Start/End Route Preview -->
-        <div v-if="activityCount > 0" class="relative pl-6 space-y-4 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-secondary-100 before:border-dashed before:border-l-2">
-          <!-- Start Activity -->
-          <div class="relative">
-            <div class="absolute -left-7 top-1 w-3 h-3 rounded-full bg-primary-500 ring-4 ring-primary-50"></div>
-            <p class="text-[10px] text-secondary-400 font-bold uppercase tracking-tighter mb-0.5">起點</p>
-            <p class="text-sm font-bold text-secondary-900 truncate">{{ firstActivityName }}</p>
+            <!-- Icon & Index -->
+            <div class="flex flex-col items-center flex-shrink-0 pt-0.5">
+              <div 
+                class="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold z-10 transition-colors"
+                :class="(idx as number) === 0 ? 'bg-primary-500 text-white shadow-sm' : 'bg-white border-2 border-primary-200 text-primary-500'"
+              >
+                {{ (idx as number) + 1 }}
+              </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0 pr-2 pb-2">
+              <div class="flex justify-between items-start mb-0.5">
+                <span class="text-[10px] font-bold text-secondary-400 uppercase tracking-tight">景點 {{ (idx as number) + 1 }}</span>
+                <button 
+                  @click.stop="handleEdit(activity)"
+                  class="p-1 -mr-1 hover:bg-primary-50 active:bg-primary-100 rounded-md transition-all text-secondary-300 hover:text-primary-600 opacity-0 group-hover/item:opacity-100 sm:opacity-0 lg:group-hover/item:opacity-100"
+                  :class="{ 'opacity-100': isMobile }"
+                  title="編輯景點"
+                >
+                  <PencilIcon class="w-3 h-3" />
+                </button>
+              </div>
+              <h4 class="text-sm font-bold text-secondary-900 truncate group-hover/item:text-primary-600 transition-colors">
+                {{ activity.name }}
+              </h4>
+              <p v-if="activity.start_time" class="text-[10px] text-secondary-400 font-medium mt-0.5">
+                {{ formatTime(activity.start_time) }}
+              </p>
+            </div>
           </div>
-          
-          <!-- End Activity (if multiple) -->
-          <div v-if="activityCount > 1" class="relative">
-            <div class="absolute -left-7 top-1 w-3 h-3 rounded-full bg-secondary-300 ring-4 ring-secondary-50"></div>
-            <p class="text-[10px] text-secondary-400 font-bold uppercase tracking-tighter mb-0.5">終點</p>
-            <p class="text-sm font-bold text-secondary-900 truncate">{{ lastActivityName }}</p>
-          </div>
-        </div>
+        </template>
 
-        <!-- Empty State -->
-        <div v-else class="py-6 flex flex-col items-center text-center">
-          <div class="w-12 h-12 bg-secondary-50 text-secondary-200 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-primary-50 group-hover:text-primary-200 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
+        <template #footer>
+          <!-- Empty State within Draggable to allow dropping on empty cards -->
+          <div v-if="localActivities.length === 0" class="py-12 flex flex-col items-center text-center">
+            <div class="w-12 h-12 bg-secondary-50 text-secondary-200 rounded-2xl flex items-center justify-center mb-3">
+              <MapPinIcon class="w-6 h-6" />
+            </div>
+            <p class="text-xs text-secondary-400 font-body">拖曳景點至此</p>
           </div>
-          <p class="text-xs text-secondary-400 font-body">尚未規劃行程</p>
-        </div>
-      </div>
+        </template>
+      </draggable>
 
-      <!-- Footer: Actions -->
-      <div class="mt-4 pt-4 border-t border-secondary-50 flex items-center justify-between">
-        <div class="flex items-center gap-1 text-[10px] text-secondary-400 font-medium">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{{ totalDuration }} min</span>
-        </div>
-        
-        <UIButton 
-          v-if="!isEditMode"
-          variant="ghost" 
-          size="sm" 
-          class="text-primary-600 hover:bg-primary-50 font-bold text-xs px-2"
-          @click.stop="$emit('add-activity', itinerary.id)"
-        >
-          <template #icon-left>
-            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-          </template>
-          新增
-        </UIButton>
-      </div>
+      <!-- Add Activity Button -->
+      <button 
+        @click.stop="handleAddActivity"
+        class="mt-4 w-full py-3 border-2 border-dashed border-secondary-100 rounded-xl text-secondary-400 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/50 transition-all flex items-center justify-center gap-2 group/add flex-shrink-0"
+      >
+        <PlusIcon class="w-4 h-4 transition-transform group-hover/add:scale-110" />
+        <span class="text-xs font-bold font-heading">新增景點</span>
+      </button>
     </div>
+
+    <!-- Modals -->
+    <AddActivityModal
+      v-if="isAddModalOpen"
+      :is-open="isAddModalOpen"
+      :itinerary-id="itinerary.id"
+      :trip-id="itinerary.trip_id"
+      :current-order="activityCount" 
+      @close="isAddModalOpen = false"
+      @success="handleSuccess"
+    />
+
+    <EditActivityModal
+      v-if="selectedActivity"
+      :is-open="!!selectedActivity"
+      :activity="selectedActivity"
+      @close="selectedActivity = null"
+      @success="handleSuccess"
+    />
   </UICard>
 </template>
 
 <script setup lang="ts">
-import { PencilSquareIcon } from '@heroicons/vue/24/outline';
-import { computed, ref } from 'vue';
-import ActivityEditMode from '@/components/trip/ActivityEditMode.vue';
+import { PencilIcon, PlusIcon, MapPinIcon } from '@heroicons/vue/24/solid';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import draggable from 'vuedraggable';
 import WeatherTooltip from '@/components/common/WeatherTooltip.vue';
 import UICard from '@/components/ui/Card.vue'
 import UIBadge from '@/components/ui/Badge.vue'
-import UIButton from '@/components/ui/Button.vue'
+import AddActivityModal from '@/components/modals/AddActivityModal.vue';
+import EditActivityModal from '@/components/modals/EditActivityModal.vue';
+import { useItineraryStore } from '@/stores/itinerary';
 
 const props = defineProps<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,19 +159,65 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'add-activity', itineraryId: string): void
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (e: 'edit-activity', activity: any): void
     (e: 'click'): void
 }>()
 
-const isEditMode = ref(false)
+const itineraryStore = useItineraryStore()
+const isAddModalOpen = ref(false)
+const selectedActivity = ref<any>(null)
+const isMobile = ref(false)
+
+// Draggable state
+const localActivities = ref([...(props.itinerary.activities || [])]);
+const isDragging = ref(false);
+const isDragOver = ref(false);
+
+watch(() => props.itinerary.activities, (newVal) => {
+  if (!isDragging.value) {
+    localActivities.value = [...(newVal || [])];
+  }
+}, { deep: true });
+
+function onActivitiesChange(evt: any) {
+  // We care about 'added', 'removed', or 'moved' events to trigger a save
+  if (evt.added || evt.removed || evt.moved) {
+    saveNewOrder();
+  }
+}
+
+async function saveNewOrder() {
+  try {
+    await itineraryStore.updateActivitiesBatch(props.itinerary.id, localActivities.value);
+  } catch (error) {
+    console.error('Failed to save activity order:', error);
+    // Optionally revert state on failure
+  }
+}
+
+function onDragEnd() {
+  isDragging.value = false;
+  isDragOver.value = false;
+}
 
 function handleClick() {
-    if (!isEditMode.value) {
-        emit('click')
-    }
+    emit('click')
 }
+
+function handleEdit(activity: any) {
+    selectedActivity.value = activity
+}
+
+function handleAddActivity() {
+    isAddModalOpen.value = true
+}
+
+function handleSuccess() {
+    itineraryStore.fetchItineraries(props.itinerary.trip_id)
+    isAddModalOpen.value = false
+    selectedActivity.value = null
+}
+
+const formatTime = (time: string) => time?.substring(0, 5)
 
 const formattedDate = computed(() => {
     if (!props.itinerary.date) return ''
@@ -158,19 +229,54 @@ const formattedDate = computed(() => {
     }).format(date)
 })
 
-const activityCount = computed(() => props.itinerary.activities?.length || 0)
+const activityCount = computed(() => localActivities.value.length)
 
-const firstActivityName = computed(() => {
-  return props.itinerary.activities?.[0]?.name || '未設定名稱'
+// Responsive check
+const checkMobile = () => {
+    isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
 })
 
-const lastActivityName = computed(() => {
-  if (activityCount.value <= 1) return null
-  return props.itinerary.activities[activityCount.value - 1]?.name || '未設定名稱'
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile)
 })
-
-const totalDuration = computed(() => {
-  return props.itinerary.activities?.reduce((acc: number, act: any) => acc + (Number(act.duration) || 0), 0) || 0
-})
-
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+/* Draggable visual effects */
+.ghost-activity {
+  opacity: 0.3;
+  box-shadow: inset 0 0 0 2px #3b82f6;
+  border-radius: 0.75rem;
+  background-color: #eff6ff;
+}
+
+.drag-activity {
+  opacity: 1 !important;
+  transform: scale(1.05);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 1px rgba(226, 232, 240, 1), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+</style>
+

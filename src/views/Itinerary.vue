@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AddActivityModal from '@/components/modals/AddActivityModal.vue'
-import CountdownTimer from '@/components/trip/CountdownTimer.vue'
 import DayCard from '@/components/trip/DayCard.vue'
 import EditActivityModal from '@/components/modals/EditActivityModal.vue'
+import UIBadge from '@/components/ui/Badge.vue'
 import { weatherService } from '@/services/weatherService'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
@@ -31,7 +31,7 @@ function handleAddActivity(itineraryId: string) {
 
   // Find current max order index
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const itinerary = itineraries.value.find((i: any) => i.id === itineraryId)
+  const itinerary = itineraries.value.find((i: any = null) => i && i.id === itineraryId)
   const maxOrder = itinerary?.activities?.length
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? Math.max(...itinerary.activities.map((a: any) => a.order_index))
@@ -96,10 +96,6 @@ watch(() => currentTrip.value, (newTrip) => {
 
 <template>
   <div class="space-y-6">
-    <!-- Countdown Section -->
-    <div v-if="currentTrip" class="mb-8">
-      <CountdownTimer :target-date="currentTrip.start_date" :end-date="currentTrip.end_date" />
-    </div>
 
     <!-- Weather & Destination Info -->
     <div v-if="currentTrip" class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -121,7 +117,7 @@ watch(() => currentTrip.value, (newTrip) => {
     </div>
 
     <!-- Itinerary Grid -->
-    <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+    <div v-if="itineraries.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6 xl:gap-8">
       <DayCard v-for="itinerary in itineraries" :key="itinerary.id" :itinerary="itinerary"
         :weather="weatherData[itinerary.date]" @add-activity="handleAddActivity" @edit-activity="handleEditActivity"
         @click="router.push(`/trips/${currentTrip?.id}/itinerary/${itinerary.day_number}`)" />

@@ -112,6 +112,70 @@ export const useItineraryStore = defineStore('itinerary', () => {
     }
   }
 
+  async function updateActivitiesBatch(itineraryId: string, activities: any[]) {
+    try {
+      loading.value = true
+
+      const updates = activities.map((activity, index) => ({
+        ...activity,
+        itinerary_id: itineraryId,
+        order_index: index + 1
+      }))
+
+      await activityService.updateActivitiesBatch(updates)
+
+      // Update local state for this itinerary
+      const itinerary = itineraries.value.find((i: any) => i.id === itineraryId)
+      if (itinerary) {
+        itinerary.activities = activities.map((a, index) => ({
+          ...a,
+          itinerary_id: itineraryId,
+          order_index: index + 1
+        }))
+      }
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function reorderItineraries(tripId: string, newItineraries: any[], startDateStr: string) {
+    try {
+      loading.value = true
+      const startDate = new Date(startDateStr)
+
+      const updates = newItineraries.map((itinerary, index) => {
+        const dayNumber = index + 1
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + index)
+
+        return {
+          id: itinerary.id,
+          trip_id: tripId,
+          day_number: dayNumber,
+          date: date.toISOString().split('T')[0]
+        }
+      })
+
+      await itineraryService.updateItinerariesBatch(updates)
+
+      // Update local state and sort properly
+      itineraries.value = newItineraries.map((itinerary, index) => ({
+        ...itinerary,
+        day_number: index + 1,
+        date: updates[index].date
+      }))
+
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     itineraries,
     loading,
@@ -119,6 +183,8 @@ export const useItineraryStore = defineStore('itinerary', () => {
     fetchItineraries,
     createActivity,
     updateActivity,
-    deleteActivity
+    deleteActivity,
+    reorderItineraries,
+    updateActivitiesBatch
   }
 })

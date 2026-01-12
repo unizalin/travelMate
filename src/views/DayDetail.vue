@@ -2,6 +2,7 @@
 import AIAssistant from '@/components/trip/AIAssistant.vue';
 import AddActivityModal from '@/components/modals/AddActivityModal.vue';
 import EditActivityModal from '@/components/modals/EditActivityModal.vue';
+import EditableActivityCard from '@/components/trip/EditableActivityCard.vue';
 import MapView from '@/components/map/MapView.vue';
 import type { ActivitySuggestion } from '@/services/geminiService';
 import { useItineraryStore } from '@/stores/itinerary';
@@ -40,6 +41,7 @@ const isEditModalOpen = ref(false);
 const isAISidebarOpen = ref(true);
 const activeMobileTab = ref<'itinerary' | 'ai'>('itinerary');
 const selectedActivity = ref<any>(null);
+const isEditMode = ref(false);
 const highlightedActivityId = ref<string | null>(null);
 
 // Refs
@@ -126,6 +128,15 @@ function handleEdit(activity: any) {
 }
 
 async function handleDelete(id: string) {
+  if (isEditMode.value) {
+     try {
+      await itineraryStore.deleteActivity(id, currentItinerary.value!.id);
+      showToast('刪除成功', 'success');
+    } catch (e) {
+      showToast('刪除失敗', 'error');
+    }
+    return;
+  }
   const confirmed = await openDeleteDialog('刪除行程', '確定要刪除此行程嗎？');
   if (!confirmed) return;
   
@@ -136,6 +147,23 @@ async function handleDelete(id: string) {
     } catch (e) {
       showToast('刪除失敗', 'error');
     }
+  }
+}
+
+async function handleUpdate(activity: any) {
+  try {
+    await itineraryStore.updateActivity(activity.id, {
+      name: activity.name,
+      location: activity.location,
+      duration: activity.duration,
+      start_time: activity.start_time,
+      end_time: activity.end_time,
+      notes: activity.notes,
+      latitude: activity.latitude,
+      longitude: activity.longitude
+    });
+  } catch (e) {
+    showToast('更新失敗', 'error');
   }
 }
 
@@ -289,13 +317,28 @@ function setActivityRef(id: string, el: any) {
               </span>
             </div>
             
-            <button 
-              @click="isAddModalOpen = true"
-              class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
-            >
-              <PlusIcon class="w-4 h-4" />
-              新增景點
-            </button>
+            <div class="flex items-center gap-2">
+              <button 
+                @click="isEditMode = !isEditMode"
+                :class="[
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border',
+                  isEditMode 
+                    ? 'bg-primary-50 text-primary-700 border-primary-200 shadow-inner' 
+                    : 'bg-white text-secondary-600 border-secondary-200 hover:bg-secondary-50'
+                ]"
+              >
+                <PencilSquareIcon class="w-4 h-4" />
+                {{ isEditMode ? '停止編輯' : '快速編輯' }}
+              </button>
+
+              <button 
+                @click="isAddModalOpen = true"
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+              >
+                <PlusIcon class="w-4 h-4" />
+                新增景點
+              </button>
+            </div>
           </div>
 
           <!-- Draggable List -->
@@ -311,94 +354,105 @@ function setActivityRef(id: string, el: any) {
                 class="space-y-4"
               >
                 <template #item="{ element: activity, index }">
-                  <div
-                    :ref="(el) => setActivityRef(activity.id, el)"
-                    @click="handleCardClick(activity)"
-                    class="bg-white rounded-xl p-4 border-2 transition-all duration-200 flex gap-4 group cursor-pointer relative overflow-hidden"
-                    :class="[
-                      highlightedActivityId === activity.id 
-                        ? 'border-blue-500 shadow-lg shadow-blue-100 scale-[1.01] z-10' 
-                        : 'border-transparent hover:border-gray-200 hover:shadow-md'
-                    ]"
-                  >
-                    <!-- Highlight Indicator -->
-                    <div 
-                      v-if="highlightedActivityId === activity.id"
-                      class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"
-                    ></div>
+                  <div class="relative group">
+                    <EditableActivityCard 
+                      v-if="isEditMode"
+                      :activity="activity"
+                      :index="index"
+                      @update="handleUpdate"
+                      @delete="handleDelete"
+                    />
                     
-                    <!-- Index Badge -->
-                    <div class="flex-shrink-0 flex flex-col items-center pt-1">
+                    <div
+                      v-else
+                      :ref="(el) => setActivityRef(activity.id, el)"
+                      @click="handleCardClick(activity)"
+                      class="bg-white rounded-xl p-4 border-2 transition-all duration-200 flex gap-4 group cursor-pointer relative overflow-hidden"
+                      :class="[
+                        highlightedActivityId === activity.id 
+                          ? 'border-blue-500 shadow-lg shadow-blue-100 scale-[1.01] z-10' 
+                          : 'border-transparent hover:border-gray-200 hover:shadow-md'
+                      ]"
+                    >
+                      <!-- Highlight Indicator -->
                       <div 
-                        class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-all duration-300"
-                        :class="[
-                          highlightedActivityId === activity.id 
-                            ? 'bg-blue-600 text-white scale-110' 
-                            : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
-                        ]"
-                      >
-                        {{ index + 1 }}
-                      </div>
-                      <div 
-                        v-if="index < localActivities.length - 1" 
-                        class="w-0.5 flex-1 bg-gray-100 my-2 rounded-full"
+                        v-if="highlightedActivityId === activity.id"
+                        class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"
                       ></div>
-                    </div>
+                      
+                      <!-- Index Badge -->
+                      <div class="flex-shrink-0 flex flex-col items-center pt-1">
+                        <div 
+                          class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-all duration-300"
+                          :class="[
+                            highlightedActivityId === activity.id 
+                              ? 'bg-blue-600 text-white scale-110' 
+                              : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
+                          ]"
+                        >
+                          {{ index + 1 }}
+                        </div>
+                        <div 
+                          v-if="index < localActivities.length - 1" 
+                          class="w-0.5 flex-1 bg-gray-100 my-2 rounded-full"
+                        ></div>
+                      </div>
 
-                    <!-- Content -->
-                    <div class="flex-1 min-w-0">
-                      <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-gray-900 text-base leading-tight group-hover:text-blue-700 transition-colors">
-                          {{ activity.name }}
-                        </h4>
-                        
-                        <!-- Actions -->
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          <button 
-                            @click.stop="handleEdit(activity)" 
-                            class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="編輯"
-                          >
-                            <PencilSquareIcon class="w-4 h-4" />
-                          </button>
-                          <button 
-                            @click.stop="handleDelete(activity.id)" 
-                            class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="刪除"
-                          >
-                            <TrashIcon class="w-4 h-4" />
-                          </button>
-                          <div class="drag-handle cursor-move p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
+                      <!-- Content -->
+                      <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-2">
+                          <h4 class="font-bold text-gray-900 text-base leading-tight group-hover:text-blue-700 transition-colors">
+                            {{ activity.name }}
+                          </h4>
+                          
+                          <!-- Actions -->
+                          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                            <button 
+                              @click.stop="handleEdit(activity)" 
+                              class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="編輯"
+                            >
+                              <PencilSquareIcon class="w-4 h-4" />
+                            </button>
+                            <button 
+                              @click.stop="handleDelete(activity.id)" 
+                              class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="刪除"
+                            >
+                              <TrashIcon class="w-4 h-4" />
+                            </button>
+                            <div class="drag-handle cursor-move p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors">
+                              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <!-- Metadata -->
-                      <div class="flex items-center gap-3 text-sm mb-2 flex-wrap">
-                        <div v-if="activity.start_time" class="flex items-center gap-1.5 text-gray-700 font-medium">
-                          <ClockIcon class="w-4 h-4 text-blue-500" />
-                          <span>{{ activity.start_time?.substring(0, 5) }}</span>
-                          <span v-if="activity.end_time" class="text-gray-400">-</span>
-                          <span v-if="activity.end_time">{{ activity.end_time?.substring(0, 5) }}</span>
+                        <!-- Metadata -->
+                        <div class="flex items-center gap-3 text-sm mb-2 flex-wrap">
+                          <div v-if="activity.start_time" class="flex items-center gap-1.5 text-gray-700 font-medium">
+                            <ClockIcon class="w-4 h-4 text-blue-500" />
+                            <span>{{ activity.start_time?.substring(0, 5) }}</span>
+                            <span v-if="activity.end_time" class="text-gray-400">-</span>
+                            <span v-if="activity.end_time">{{ activity.end_time?.substring(0, 5) }}</span>
+                          </div>
+                          
+                          <div v-if="activity.duration" class="flex items-center gap-1.5 text-gray-500 text-xs">
+                            <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                            停留 {{ activity.duration }} 分鐘
+                          </div>
+                        </div>
+
+                        <div v-if="activity.location" class="flex items-start gap-1.5 text-sm text-gray-600 mb-2 group-hover:text-gray-900 transition-colors">
+                          <MapPinIcon class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          <span class="line-clamp-1">{{ activity.location }}</span>
                         </div>
                         
-                        <div v-if="activity.duration" class="flex items-center gap-1.5 text-gray-500 text-xs">
-                          <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                          停留 {{ activity.duration }} 分鐘
-                        </div>
+                        <p v-if="activity.notes" class="text-sm text-gray-500 line-clamp-2 bg-gray-50 rounded-lg px-3 py-2 italic border border-gray-100">
+                          {{ activity.notes }}
+                        </p>
                       </div>
-
-                      <div v-if="activity.location" class="flex items-start gap-1.5 text-sm text-gray-600 mb-2 group-hover:text-gray-900 transition-colors">
-                        <MapPinIcon class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                        <span class="line-clamp-1">{{ activity.location }}</span>
-                      </div>
-                      
-                      <p v-if="activity.notes" class="text-sm text-gray-500 line-clamp-2 bg-gray-50 rounded-lg px-3 py-2 italic border border-gray-100">
-                        {{ activity.notes }}
-                      </p>
                     </div>
                   </div>
                 </template>
