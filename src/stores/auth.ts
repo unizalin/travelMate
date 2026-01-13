@@ -39,21 +39,31 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function signInWithEmail(email: string) {
+    const redirectTo = new URL(`${window.location.origin}/auth/callback`)
+    if (redirectAfterLogin.value) {
+      redirectTo.searchParams.set('next', redirectAfterLogin.value)
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectTo.toString(),
       },
     })
     if (error) throw error
   }
 
   async function signInWithOAuth(provider: 'google' | 'line' | 'facebook') {
+    const redirectTo = new URL(`${window.location.origin}/auth/callback`)
+    if (redirectAfterLogin.value) {
+      redirectTo.searchParams.set('next', redirectAfterLogin.value)
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider as any,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectTo.toString(),
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -90,10 +100,12 @@ export const useAuthStore = defineStore('auth', () => {
         .from('profiles')
         .select('display_name')
         .eq('id', user.id)
-        .single() as { data: { display_name: string | null } | null }
+        .maybeSingle()
+
+      const profileData = profile as { display_name: string | null } | null
 
       // If profile exists but name is email or empty, try metadata
-      const currentName = profile?.display_name
+      const currentName = profileData?.display_name
       const metadataName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name
 
       if (metadataName && (!currentName || currentName === user.email)) {

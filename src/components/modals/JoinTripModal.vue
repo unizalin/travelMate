@@ -18,43 +18,30 @@ const authStore = useAuthStore()
 const tripStore = useTripStore()
 const { user } = storeToRefs(authStore)
 
-const name = ref('')
-const destination = ref('')
-const startDate = ref('')
-const endDate = ref('')
+const inviteCode = ref('')
 const loading = ref(false)
 const error = ref('')
 
 async function handleSubmit() {
-  if (!user.value) return
-  if (new Date(endDate.value) < new Date(startDate.value)) {
-    error.value = '結束日期不能早於開始日期'
-    return
-  }
+  if (!user.value || !inviteCode.value) return
 
   try {
     loading.value = true
     error.value = ''
 
-    const newTrip = await tripStore.createTrip({
-      name: name.value,
-      destination: destination.value,
-      start_date: startDate.value,
-      end_date: endDate.value,
-      created_by: user.value.id
-    })
+    const tripId = await tripStore.joinTrip(inviteCode.value, user.value.id)
 
     // Reset form
-    name.value = ''
-    destination.value = ''
-    startDate.value = ''
-    endDate.value = ''
+    inviteCode.value = ''
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    emit('success', (newTrip as any).id)
+    emit('success', tripId)
     emit('close')
   } catch (e: any) {
-    error.value = e.message
+    if (e.message?.includes('already a member')) {
+        error.value = '您已經是這個旅程的成員了'
+    } else {
+        error.value = '無法加入旅程，請檢查邀請碼是否正確'
+    }
   } finally {
     loading.value = false
   }
@@ -76,36 +63,18 @@ async function handleSubmit() {
             leave-to="opacity-0 scale-95">
             <DialogPanel
               class="w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-6 md:p-8 text-left align-middle shadow-2xl transition-all">
-              <DialogTitle as="h3" class="text-2xl font-black leading-6 text-gray-900 mb-6">
-                建立新旅程
+              <DialogTitle as="h3" class="text-2xl font-black leading-6 text-gray-900 mb-2">
+                加入旅程
               </DialogTitle>
+              <p class="text-sm text-gray-500 mb-6 font-medium">請輸入朋友分享給您的 6 位數邀請碼</p>
 
               <form @submit.prevent="handleSubmit" class="space-y-4">
                 <div v-if="error" class="p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100">{{ error }}</div>
 
                 <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-1">旅程名稱</label>
-                  <input v-model="name" type="text" required placeholder="例如：東京賞櫻"
-                    class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-1">目的地</label>
-                  <input v-model="destination" type="text" required placeholder="例如：東京, 日本"
-                    class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">開始日期</label>
-                    <input v-model="startDate" type="date" required
-                      class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">結束日期</label>
-                    <input v-model="endDate" type="date" required
-                      class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
-                  </div>
+                  <label class="block text-sm font-bold text-gray-700 mb-1">邀請碼</label>
+                  <input v-model="inviteCode" type="text" required placeholder="例如：ABC123" maxlength="6"
+                    class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all font-mono text-lg uppercase tracking-widest text-center" />
                 </div>
 
                 <div class="mt-8 flex justify-end space-x-3">
@@ -114,9 +83,9 @@ async function handleSubmit() {
                     @click="emit('close')">
                     取消
                   </button>
-                  <button type="submit" :disabled="loading"
+                  <button type="submit" :disabled="loading || !inviteCode"
                     class="rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-200 hover:bg-primary-500 hover:shadow-primary-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 transition-all transform active:scale-95">
-                    {{ loading ? '建立中...' : '建立旅程' }}
+                    {{ loading ? '加入中...' : '加入旅程' }}
                   </button>
                 </div>
               </form>

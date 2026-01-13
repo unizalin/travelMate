@@ -25,7 +25,7 @@ export const tripService = {
         )
       `)
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     return data
