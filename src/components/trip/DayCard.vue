@@ -6,43 +6,50 @@
     @click="handleClick"
     class="group transition-all duration-300 animate-fade-in flex flex-col h-full overflow-hidden rounded-2xl border-none"
   >
-    <!-- Header: Sky Blue Gradient -->
-    <div class="relative h-28 flex-shrink-0 bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400 p-5 flex flex-col justify-between items-start overflow-hidden">
-      <!-- Decorative Background Icon -->
-      <div class="absolute -right-4 -bottom-4 text-white/10 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
-        </svg>
-      </div>
+    <!-- Header: Full Plate Banner -->
+    <div class="relative h-28 flex-shrink-0 overflow-hidden bg-secondary-900">
+      <!-- Background Image with Parallax-like effect -->
+      <img 
+        :src="dayImage" 
+        class="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700" 
+        alt="Day background"
+      />
+      <!-- Gradient Overlay Layered -->
+      <div class="absolute inset-0 bg-gradient-to-t from-secondary-900/90 via-secondary-900/40 to-secondary-900/20"></div>
+      
+      <!-- Content: Absolutely positioned and padded internally -->
+      <div class="absolute inset-0 p-5 flex flex-col justify-between z-10">
+        <div class="flex justify-between w-full items-start">
+          <div class="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm">
+            <span class="text-white text-[10px] font-black font-heading uppercase tracking-[0.2em]">Day {{ itinerary.day_number }}</span>
+          </div>
+          <WeatherTooltip :weather="weather" class="text-white drop-shadow-lg" />
+        </div>
 
-      <div class="flex justify-between w-full items-start relative z-10">
-        <div class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30">
-          <span class="text-white text-xs font-bold font-heading uppercase tracking-wider">Day {{ itinerary.day_number }}</span>
+        <div class="w-full flex justify-between items-end">
+          <div>
+            <h3 class="text-xl font-black text-white tracking-tight leading-none mb-1.5 drop-shadow-md">
+              行程摘要
+            </h3>
+            <p class="text-[10px] font-black text-white/70 tracking-[0.15em] font-body uppercase drop-shadow-sm">
+              {{ formattedDate }}
+            </p>
+          </div>
+          <div class="flex items-center gap-2 px-3.5 py-1.5 bg-white/10 backdrop-blur-lg rounded-xl border border-white/10 shadow-lg group-hover:bg-white/20 transition-colors">
+            <div class="w-1.5 h-1.5 rounded-full bg-primary-400 shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>
+            <span class="text-[10px] font-black text-white uppercase tracking-[0.2em]">{{ activityCount }} 景點</span>
+          </div>
         </div>
-        
-        <div class="flex gap-2">
-          <WeatherTooltip :weather="weather" class="text-white" />
-        </div>
-      </div>
-
-      <div class="relative z-10 w-full flex justify-between items-end">
-        <div>
-          <h3 class="text-lg font-heading font-bold text-white leading-tight">行程安排</h3>
-          <p class="text-xs text-white/80 font-body">{{ formattedDate }}</p>
-        </div>
-        <UIBadge variant="success" size="xs" class="bg-emerald-400 text-white border-none shadow-sm">
-          {{ activityCount }} 景點
-        </UIBadge>
       </div>
     </div>
 
     <!-- Body: Activity List -->
     <div 
       class="flex-1 p-5 flex flex-col bg-white overflow-hidden"
-      :class="{ 'bg-primary-50/30 ring-2 ring-inset ring-primary-100': isDragOver }"
+      :class="{ 'bg-primary-50/30 ring-4 ring-primary-500 ring-offset-2': isDragOver }"
       @dragover.prevent="isDragOver = true"
       @dragleave="isDragOver = false"
-      @drop="isDragOver = false"
+      @drop="handleDrop"
     >
       <draggable 
         v-model="localActivities" 
@@ -146,10 +153,23 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import draggable from 'vuedraggable';
 import WeatherTooltip from '@/components/common/WeatherTooltip.vue';
 import UICard from '@/components/ui/Card.vue'
-import UIBadge from '@/components/ui/Badge.vue'
 import AddActivityModal from '@/components/modals/AddActivityModal.vue';
 import EditActivityModal from '@/components/modals/EditActivityModal.vue';
 import { useItineraryStore } from '@/stores/itinerary';
+import { candidateService } from '@/services/candidateService';
+import { useToast } from '@/composables/useToast';
+
+const dayImages = [
+  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop', // Lake/Boat
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop', // Yosemite
+  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop', // Desert Road
+  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop', // Mountain Lake
+  'https://images.unsplash.com/photo-1493246507139-91e8bef99c02?q=80&w=2070&auto=format&fit=crop', // Snowy Peak
+  'https://images.unsplash.com/photo-1530789253388-582c481c54b0?q=80&w=2070&auto=format&fit=crop', // City View
+  'https://images.unsplash.com/photo-1472396961699-1bd220ef738c?q=80&w=2070&auto=format&fit=crop'  // Forest
+]
+
+const dayImage = computed(() => dayImages[(props.itinerary.day_number - 1) % dayImages.length])
 
 const props = defineProps<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,6 +217,39 @@ async function saveNewOrder() {
 function onDragEnd() {
   isDragging.value = false;
   isDragOver.value = false;
+}
+
+const { showToast } = useToast()
+
+async function handleDrop(e: DragEvent) {
+  isDragOver.value = false
+  const data = e.dataTransfer?.getData('application/json')
+  if (!data) return
+
+  try {
+    const candidate = JSON.parse(data)
+    // Only handle if it's a candidate activity (has no itinerary_id)
+    if (candidate.id && !candidate.itinerary_id) {
+       await itineraryStore.createActivity({
+         itinerary_id: props.itinerary.id,
+         name: candidate.name,
+         location: candidate.location,
+         notes: candidate.description,
+         order_index: activityCount.value
+       })
+       
+       await candidateService.updateCandidate(candidate.id, {
+         status: 'added',
+         added_to_day: props.itinerary.day_number,
+         added_at: new Date().toISOString()
+       })
+       
+       showToast(`已將 ${candidate.name} 加入第 ${props.itinerary.day_number} 天`, 'success')
+       handleSuccess()
+    }
+  } catch (error) {
+    console.error('Drop error:', error)
+  }
 }
 
 function handleClick() {

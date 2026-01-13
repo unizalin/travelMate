@@ -1,33 +1,42 @@
 import { reactive } from 'vue';
 
-interface ToastState {
-    show: boolean;
+export interface ToastMessage {
+    id: string;
     message: string;
     type: 'success' | 'error' | 'warning' | 'info';
+    duration?: number;
 }
 
-const state = reactive<ToastState>({
-    show: false,
-    message: '',
-    type: 'info'
+const state = reactive<{
+    toasts: ToastMessage[];
+}>({
+    toasts: []
 });
 
 export function useToast() {
-    const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-        state.message = message;
-        state.type = type;
-        state.show = true;
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration = 3000) => {
+        const id = Math.random().toString(36).substring(2, 9);
+        const toast: ToastMessage = { id, message, type, duration };
 
-        // Auto hide is handled by component watch, but we can also reset state here if multiple rapid calls
-        // For simplicity, relying on component timer or overlapping is fine for simple toast.
-        // A queue system is better for production, but single toast is requested.
-        setTimeout(() => {
-            state.show = false;
-        }, 3000);
+        state.toasts.push(toast);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                removeToast(id);
+            }, duration);
+        }
+    };
+
+    const removeToast = (id: string) => {
+        const index = state.toasts.findIndex(t => t.id === id);
+        if (index !== -1) {
+            state.toasts.splice(index, 1);
+        }
     };
 
     return {
-        state,
-        showToast
+        toasts: state.toasts,
+        showToast,
+        removeToast
     };
 }

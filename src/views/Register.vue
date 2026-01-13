@@ -33,7 +33,7 @@ async function handleRegister() {
       password: password.value,
       options: {
         data: {
-          full_name: fullName.value,
+          display_name: fullName.value,
         },
       },
     })

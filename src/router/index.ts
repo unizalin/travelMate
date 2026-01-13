@@ -93,9 +93,15 @@ router.beforeEach(async (to, _from, next) => {
   const isAuthenticated = !!authStore.user
 
   if (requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
-    next('/trips')
+    authStore.openAuthModal('login', to.fullPath)
+    next('/')
+  } else if (to.path === '/login' || to.path === '/register') {
+    if (isAuthenticated) {
+      next('/trips')
+    } else {
+      authStore.openAuthModal(to.path === '/login' ? 'login' : 'register')
+      next('/')
+    }
   } else if (to.path === '/' && isAuthenticated) {
     next('/trips')
   } else {

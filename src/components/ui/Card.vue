@@ -10,7 +10,7 @@
     <div v-if="$slots.header" class="px-5 py-4 border-b border-secondary-50">
       <slot name="header"></slot>
     </div>
-    <div :class="['px-5 py-4', bodyClass]">
+    <div :class="[bodyClass ? bodyClass : 'px-5 py-4']">
       <slot></slot>
     </div>
     <div v-if="$slots.footer" class="px-5 py-3 bg-secondary-50/50 border-t border-secondary-50 rounded-b-xl">

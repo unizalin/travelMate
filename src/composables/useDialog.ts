@@ -43,32 +43,26 @@ export function useDialog() {
         state.type = 'alert';
         state.title = title;
         state.message = message;
-        state.dialogType = type; // map 'info'|'success'|'warning' to 'info'|'success'|'warning'|'error' logic if needed, but AlertDialog supports subset
+        state.dialogType = type as any;
         state.isOpen = true;
 
         return new Promise((resolve) => {
-            const oldResolve = state.resolve;
-            state.resolve = (val) => {
-                if (oldResolve) oldResolve(val);
-                resolve();
-            }
+            state.resolve = () => resolve();
         });
     }
 
     const handleConfirm = () => {
+        const resolve = state.resolve;
         state.isOpen = false;
-        if (state.resolve) {
-            state.resolve(true);
-            state.resolve = null;
-        }
+        state.resolve = null;
+        if (resolve) resolve(true);
     };
 
     const handleCancel = () => {
+        const resolve = state.resolve;
         state.isOpen = false;
-        if (state.resolve) {
-            state.resolve(false);
-            state.resolve = null;
-        }
+        state.resolve = null;
+        if (resolve) resolve(false);
     };
 
     return {

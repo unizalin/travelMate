@@ -174,6 +174,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 10. Profiles Policy
 CREATE POLICY "Users can view all profiles" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- 11. Trips Policies (使用函數)
 CREATE POLICY "Users can view trips they are members of"
@@ -339,6 +340,117 @@ CREATE POLICY "Users can create ai suggestions"
 ALTER PUBLICATION supabase_realtime ADD TABLE activities;
 ALTER PUBLICATION supabase_realtime ADD TABLE expenses;
 ALTER PUBLICATION supabase_realtime ADD TABLE expense_payments;
+ALTER PUBLICATION supabase_realtime ADD TABLE preparation_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE preparation_item_completions;
+ALTER PUBLICATION supabase_realtime ADD TABLE candidate_activities;
+ALTER PUBLICATION supabase_realtime ADD TABLE candidate_likes;
+
+-- 21. Candidate Activities
+CREATE TABLE candidate_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  location TEXT NOT NULL,
+  latitude DECIMAL(10, 8),
+  longitude DECIMAL(11, 8),
+  description TEXT,
+  created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  creator_name VARCHAR NOT NULL,
+  status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'added', 'rejected')),
+  google_maps_url TEXT,
+  added_to_day INTEGER,
+  added_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 22. Candidate Likes
+CREATE TABLE candidate_likes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  candidate_id UUID NOT NULL REFERENCES candidate_activities(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(candidate_id, user_id)
+);
+
+ALTER TABLE candidate_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE candidate_likes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view candidate activities for their trips"
+  ON candidate_activities FOR SELECT
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can manage candidate activities for their trips"
+  ON candidate_activities FOR ALL
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can view candidate likes"
+  ON candidate_likes FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM candidate_activities
+      WHERE id = candidate_likes.candidate_id
+      AND public.is_trip_member(trip_id, auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can manage own likes"
+  ON candidate_likes FOR ALL
+  USING (user_id = auth.uid());
+ALTER PUBLICATION supabase_realtime ADD TABLE preparation_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE preparation_item_completions;
+
+-- 19. Preparation Items
+CREATE TABLE preparation_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id UUID REFERENCES trips(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  is_shared BOOLEAN DEFAULT FALSE,
+  category TEXT DEFAULT '其他',
+  title TEXT NOT NULL,
+  description TEXT,
+  is_completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  completed_by_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  order_index INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 20. Preparation Item Completions (Multi-user tracking)
+CREATE TABLE preparation_item_completions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  item_id UUID REFERENCES preparation_items(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(item_id, user_id)
+);
+
+ALTER TABLE preparation_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE preparation_item_completions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view preparation items"
+  ON preparation_items FOR SELECT
+  USING (
+    is_shared = true AND public.is_trip_member(trip_id, auth.uid())
+    OR user_id = auth.uid()
+  );
+
+CREATE POLICY "Users can manage preparation items"
+  ON preparation_items FOR ALL
+  USING (public.is_trip_member(trip_id, auth.uid()));
+
+CREATE POLICY "Users can view completions"
+  ON preparation_item_completions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM preparation_items
+      WHERE id = preparation_item_completions.item_id
+      AND (is_shared = true AND public.is_trip_member(trip_id, auth.uid()) OR user_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can manage own completions"
+  ON preparation_item_completions FOR ALL
+  USING (user_id = auth.uid());
 
 -- 18-21. Triggers & Functions (維持原樣)
 CREATE OR REPLACE FUNCTION update_updated_at_column()

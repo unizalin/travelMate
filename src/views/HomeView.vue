@@ -34,13 +34,18 @@ function goToTrips() {
         </div>
       </div>
       <div v-else class="space-x-4">
-        <router-link to="/login" class="rounded bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">
-          Sign In
-        </router-link>
-        <router-link to="/register"
-          class="rounded bg-white px-4 py-2 text-primary-600 border border-primary-600 hover:bg-gray-50">
-          Register
-        </router-link>
+        <button 
+          @click="authStore.openAuthModal('login')" 
+          class="rounded-2xl bg-secondary-900 px-8 py-3 text-sm font-black text-white hover:bg-black transition-all active:scale-95 uppercase tracking-widest"
+        >
+          登入
+        </button>
+        <button 
+          @click="authStore.openAuthModal('register')"
+          class="rounded-2xl bg-white px-8 py-3 text-sm font-black text-secondary-900 border-2 border-secondary-900 hover:bg-secondary-50 transition-all active:scale-95 uppercase tracking-widest"
+        >
+          註冊
+        </button>
       </div>
     </div>
   </main>

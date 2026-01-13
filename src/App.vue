@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import GlobalDialog from '@/components/common/GlobalDialog.vue'
-import GlobalToast from '@/components/common/GlobalToast.vue'
+import GlobalUIContainer from '@/components/common/GlobalUIContainer.vue'
+import { useAuthStore } from '@/stores/auth'
+import { onMounted } from 'vue'
+
+const authStore = useAuthStore()
+
+onMounted(() => {
+  authStore.initializeAuth()
+})
 </script>
 
 <template>
   <div class="font-body text-secondary-900 antialiased">
     <RouterView />
-    <GlobalDialog />
-    <GlobalToast />
+    <GlobalUIContainer />
   </div>
 </template>

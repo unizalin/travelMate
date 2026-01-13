@@ -5,6 +5,7 @@ import { ChevronUpIcon } from '@heroicons/vue/20/solid'
 import { ref } from 'vue'
 import ActivityItem from '@/components/trip/ActivityItem.vue'
 import AddActivityModal from '@/components/modals/AddActivityModal.vue'
+import { useDialog } from '@/composables/useDialog'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 defineProps<{
@@ -13,6 +14,7 @@ defineProps<{
 }>()
 
 const itineraryStore = useItineraryStore()
+const { openDeleteDialog } = useDialog()
 const isModalOpen = ref(false)
 const selectedItineraryId = ref('')
 const selectedMaxOrder = ref(0)
@@ -25,8 +27,9 @@ function openAddModal(itineraryId: string, activities: any[]) {
   isModalOpen.value = true
 }
 
-function handleDeleteActivity(id: string, itineraryId: string) {
-  if (confirm('Delete this activity?')) {
+async function handleDeleteActivity(id: string, itineraryId: string) {
+  const confirmed = await openDeleteDialog('刪除行程項', '確定要刪除這個行程活動嗎？')
+  if (confirmed) {
     itineraryStore.deleteActivity(id, itineraryId)
   }
 }
