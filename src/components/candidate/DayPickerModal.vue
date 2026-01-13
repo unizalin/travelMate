@@ -2,7 +2,7 @@
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { CalendarIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
-const props = defineProps<{
+defineProps<{
   isOpen: boolean
   totalDays: number
   candidateName: string

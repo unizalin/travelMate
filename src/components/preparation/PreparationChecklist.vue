@@ -5,13 +5,11 @@ import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { tripService } from '@/services/tripService'
 import { 
-  CheckCircleIcon, 
   PlusIcon, 
   PencilSquareIcon, 
   TrashIcon, 
   UserIcon, 
   UsersIcon,
-  ChevronRightIcon,
   DocumentTextIcon,
   PaperAirplaneIcon,
   CheckIcon

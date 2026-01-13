@@ -53,7 +53,8 @@ export const expenseService = {
     async updateExpense(id: string, updates: ExpenseUpdate) {
         const { data, error } = await supabase
             .from('expenses')
-            .update(updates as any)
+            // @ts-ignore - Supabase type inference issue with 'never' on update
+            .update(updates)
             .eq('id', id)
             .select()
             .single()
