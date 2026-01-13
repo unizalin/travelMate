@@ -4,12 +4,14 @@ import ShareDialog from '@/components/modals/ShareDialog.vue'
 import CountdownTimer from '@/components/trip/CountdownTimer.vue'
 import ItineraryView from '@/views/Itinerary.vue'
 import ExpenseView from '@/components/trip/ExpenseView.vue'
+import CandidateActivitiesView from '@/views/CandidateActivitiesView.vue'
 import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useItineraryStore } from '@/stores/itinerary'
 import { useTripStore } from '@/stores/trip'
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -17,11 +19,18 @@ const router = useRouter()
 const tripStore = useTripStore()
 const itineraryStore = useItineraryStore()
 const { currentTrip, loading, error } = storeToRefs(tripStore)
-// const { itineraries } = storeToRefs(itineraryStore)
+const { itineraries } = storeToRefs(itineraryStore)
+const authStore = useAuthStore()
+const tripId = route.params.id as string
 const isInviteModalOpen = ref(false)
 const isShareModalOpen = ref(false)
 
-const tripId = route.params.id as string
+const isOrganizer = computed(() => {
+  if (!currentTrip.value || !authStore.user) return false
+  return currentTrip.value.trip_members?.some(
+    (m: any) => m.user_id === authStore.user!.id && m.role === 'organizer'
+  )
+})
 
 onMounted(async () => {
   await tripStore.fetchTripById(tripId)
@@ -112,7 +121,7 @@ async function handleDelete() {
                   class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-secondary-700 shadow-sm ring-1 ring-inset ring-secondary-200 hover:bg-secondary-50 hover:ring-secondary-300 transition-all">
                   分享
                 </button>
-                <button @click="handleDelete"
+                <button v-if="isOrganizer" @click="handleDelete"
                   class="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm hover:bg-red-100 transition-all">
                   刪除
                 </button>
@@ -137,7 +146,7 @@ async function handleDelete() {
              title="邀請成員">
              <span class="text-xs font-bold">邀請</span>
           </button>
-           <button @click="handleDelete" 
+           <button v-if="isOrganizer" @click="handleDelete" 
              class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 ring-1 ring-gray-200 transition-all"
              title="刪除行程">
              <span class="text-xs font-bold">刪除</span>
@@ -154,7 +163,7 @@ async function handleDelete() {
       <div class="mx-auto max-w-[1440px] 2xl:max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
         <TabGroup>
           <TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
-            <Tab v-for="category in ['行程', '費用', '成員']" as="template" :key="category"
+            <Tab v-for="category in ['行程', '費用', '願望清單', '成員']" as="template" :key="category"
               v-slot="{ selected }">
               <button :class="[
                 'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
@@ -178,6 +187,18 @@ async function handleDelete() {
               <ExpenseView 
                 :trip-id="tripId" 
                 :members="currentTrip.trip_members" 
+              />
+            </TabPanel>
+
+            <TabPanel class="rounded-xl bg-white p-6 shadow-none">
+              <CandidateActivitiesView 
+                :trip-id="tripId"
+                :trip-info="{
+                  destination: currentTrip.destination,
+                  startDate: currentTrip.start_date,
+                  endDate: currentTrip.end_date,
+                  totalDays: itineraries.length || 1
+                }"
               />
             </TabPanel>
 

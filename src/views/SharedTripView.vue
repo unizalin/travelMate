@@ -17,9 +17,9 @@ const selectedDay = ref(1);
 
 onMounted(async () => {
   await tripStore.fetchTripById(tripId);
-  if (currentTrip.value) {
-    await itineraryStore.fetchItineraries(tripId, currentTrip.value.start_date, currentTrip.value.end_date);
-  }
+  // Do NOT pass start_date/end_date to avoid triggering ensureItineraries (database write)
+  // Public viewers don't have write access, and this view is for existing itineraries only.
+  await itineraryStore.fetchItineraries(tripId);
 });
 
 const currentItinerary = ref<any>(null);
@@ -62,15 +62,15 @@ import { watch } from 'vue';
       </div>
     </nav>
 
-    <div v-if="loading" class="flex justify-center py-20">
+    <div v-if="loading || itineraryStore.loading" class="flex justify-center py-20">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
     </div>
 
-    <div v-else-if="error" class="flex flex-col items-center justify-center py-20 px-4 text-center">
+    <div v-else-if="error || itineraryStore.error" class="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div class="bg-red-50 p-6 rounded-2xl max-w-md">
         <span class="text-4xl mb-4 block">🚫</span>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">抱歉，找不到此行程</h2>
-        <p class="text-gray-600 mb-6">可能連結已失效，或您沒有存取權限。</p>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">抱歉，載入行程時出錯</h2>
+        <p class="text-gray-600 mb-6">{{ error || itineraryStore.error || '可能連結已失效，或您沒有存取權限。' }}</p>
         <button
           @click="router.push('/')"
           class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-500 transition-all"
@@ -89,7 +89,7 @@ import { watch } from 'vue';
               <div class="flex items-center gap-2 mb-2">
                 <span class="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full">共享視圖</span>
                 <span class="text-gray-300">•</span>
-                <span class="text-sm text-gray-500">來自 {{ currentTrip.profiles?.display_name || '好友' }} 的分享</span>
+                <span class="text-sm text-gray-500">來自旅伴的分享</span>
               </div>
               <h1 class="text-3xl font-bold text-gray-900">{{ currentTrip.name }}</h1>
               <div class="mt-3 flex flex-wrap items-center gap-4 text-gray-600">

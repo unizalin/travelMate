@@ -15,6 +15,9 @@ export interface PreparationItem {
         display_name: string
         avatar_url: string
     }
+    completions?: {
+        user_id: string
+    }[]
     order_index: number
     created_at: string
 }
@@ -32,6 +35,9 @@ export const preparationService = {
                 completed_by:completed_by_id (
                     display_name,
                     avatar_url
+                ),
+                completions:preparation_item_completions (
+                    user_id
                 )
             `)
             .eq('trip_id', tripId)
@@ -42,20 +48,33 @@ export const preparationService = {
         return data as PreparationItem[]
     },
 
-    async toggleItem(itemId: string, isCompleted: boolean) {
+    async toggleItem(item: PreparationItem, isCompleted: boolean) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
 
-        const { error } = await (supabase
-            .from('preparation_items' as any) as any)
-            .update({
-                is_completed: isCompleted,
-                completed_at: isCompleted ? new Date().toISOString() : null,
-                completed_by_id: isCompleted ? user.id : null
-            })
-            .eq('id', itemId)
-
-        if (error) throw error
+        if (item.is_shared) {
+            if (isCompleted) {
+                const { error } = await (supabase.from('preparation_item_completions' as any) as any)
+                    .insert({ item_id: item.id, user_id: user.id })
+                if (error && error.code !== '23505') throw error
+            } else {
+                const { error } = await (supabase.from('preparation_item_completions' as any) as any)
+                    .delete()
+                    .eq('item_id', item.id)
+                    .eq('user_id', user.id)
+                if (error) throw error
+            }
+        } else {
+            const { error } = await (supabase
+                .from('preparation_items' as any) as any)
+                .update({
+                    is_completed: isCompleted,
+                    completed_at: isCompleted ? new Date().toISOString() : null,
+                    completed_by_id: isCompleted ? user.id : null
+                })
+                .eq('id', item.id)
+            if (error) throw error
+        }
     },
 
     async updateItem(itemId: string, updates: Partial<PreparationItem>) {

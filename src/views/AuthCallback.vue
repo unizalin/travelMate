@@ -2,8 +2,10 @@
 import { supabase } from '@/services/supabase'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 onMounted(async () => {
   const { error } = await supabase.auth.getSession()
@@ -11,7 +13,9 @@ onMounted(async () => {
     console.error('Error during auth callback:', error)
     router.push('/login')
   } else {
-    router.push('/')
+    const redirectPath = authStore.redirectAfterLogin || '/trips'
+    authStore.closeAuthModal() // Just in case
+    router.push(redirectPath)
   }
 })
 </script>

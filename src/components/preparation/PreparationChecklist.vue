@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { preparationService, type PreparationItem } from '@/services/preparationService'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
+import { tripService } from '@/services/tripService'
 import { 
   CheckCircleIcon, 
   PlusIcon, 
@@ -11,7 +13,8 @@ import {
   UsersIcon,
   ChevronRightIcon,
   DocumentTextIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  CheckIcon
 } from '@heroicons/vue/24/outline'
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/vue/24/solid'
 
@@ -20,18 +23,31 @@ const props = defineProps<{
 }>()
 
 const { showToast } = useToast()
+const authStore = useAuthStore()
 const items = ref<PreparationItem[]>([])
+const tripMembers = ref<any[]>([])
 const loading = ref(true)
 const activeMode = ref<'personal' | 'shared'>('personal')
 const editingItemId = ref<string | null>(null)
 const editTitle = ref('')
 const newItemTitle = ref('')
+const filterStatus = ref<'pending' | 'completed'>('pending')
 
 const filteredItems = computed(() => {
   return items.value
-    .filter(item => activeMode.value === 'shared' ? item.is_shared : !item.is_shared)
+    .filter(item => {
+      const modeMatch = activeMode.value === 'shared' ? item.is_shared : !item.is_shared
+      
+      let isItemCompleted = item.is_completed
+      if (item.is_shared && tripMembers.value.length > 0) {
+        const completionUserIds = item.completions?.map(c => c.user_id) || []
+        isItemCompleted = tripMembers.value.every(m => completionUserIds.includes(m.user_id))
+      }
+
+      const statusMatch = filterStatus.value === 'completed' ? isItemCompleted : !isItemCompleted
+      return modeMatch && statusMatch
+    })
     .sort((a, b) => {
-      if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
       return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
     })
 })
@@ -39,8 +55,18 @@ const filteredItems = computed(() => {
 const modeProgress = computed(() => {
   const modeItems = items.value.filter(item => activeMode.value === 'shared' ? item.is_shared : !item.is_shared)
   if (modeItems.length === 0) return 0
-  const completed = modeItems.filter(i => i.is_completed).length
-  return Math.round((completed / modeItems.length) * 100)
+  
+  let completedCount = 0
+  modeItems.forEach(item => {
+    if (item.is_shared && tripMembers.value.length > 0) {
+       const completionUserIds = item.completions?.map(c => c.user_id) || []
+       if (tripMembers.value.every(m => completionUserIds.includes(m.user_id))) completedCount++
+    } else if (item.is_completed) {
+      completedCount++
+    }
+  })
+
+  return Math.round((completedCount / modeItems.length) * 100)
 })
 
 async function fetchItems() {
@@ -48,6 +74,10 @@ async function fetchItems() {
     loading.value = true
     await preparationService.initializeDefaults(props.tripId)
     items.value = await preparationService.getItems(props.tripId)
+    
+    // Fetch trip members for status tracking
+    const trip = await tripService.getTripById(props.tripId) as any
+    tripMembers.value = trip.trip_members
   } catch (error) {
     showToast('無法獲取清單', 'error')
   } finally {
@@ -55,19 +85,26 @@ async function fetchItems() {
   }
 }
 
+function isUserCompleted(item: PreparationItem) {
+  if (!authStore.user) return false
+  if (!item.is_shared) return item.is_completed
+  return item.completions?.some(c => c.user_id === authStore.user!.id) || false
+}
+
+function isMemberCompleted(item: PreparationItem, userId: string) {
+  return item.completions?.some(c => c.user_id === userId) || false
+}
+
 async function toggleItem(item: PreparationItem) {
   if (editingItemId.value === item.id) return
   try {
-    const newStatus = !item.is_completed
-    await preparationService.toggleItem(item.id, newStatus)
+    const isCompleted = isUserCompleted(item)
+    const newStatus = !isCompleted
     
-    item.is_completed = newStatus
-    if (newStatus && activeMode.value === 'shared') {
-      items.value = await preparationService.getItems(props.tripId)
-    } else if (!newStatus) {
-      item.completed_by = undefined
-      item.completed_by_id = null
-    }
+    await preparationService.toggleItem(item, newStatus)
+    
+    // Refresh items to get updated completions from server
+    items.value = await preparationService.getItems(props.tripId)
   } catch (error) {
     showToast('更新失敗', 'error')
   }
@@ -135,16 +172,9 @@ const vFocus = {
     <!-- Premium Header Area -->
     <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between mb-12 gap-8">
       <div class="space-y-4">
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] animate-slide-right">
-          <DocumentTextIcon class="w-3 h-3" />
-          Departure Logistics
-        </div>
         <h3 class="text-4xl font-black text-secondary-900 tracking-tighter leading-none">
           出發記事本
         </h3>
-        <p class="text-sm text-secondary-400 font-bold max-w-md leading-relaxed">
-          {{ activeMode === 'personal' ? '您的私人準備清單，僅供個人瀏覽。' : '與全體旅伴共同維護的物資與事項清單。' }}
-        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-6">
@@ -165,29 +195,50 @@ const vFocus = {
             </div>
           </div>
           <div class="pr-2">
-            <p class="text-[9px] font-black text-secondary-300 uppercase tracking-widest leading-none mb-1">Total Progress</p>
             <p class="text-xs font-black text-secondary-900">完成進度</p>
           </div>
         </div>
 
         <!-- Mode Toggle Switch (iOS Style) -->
-        <div class="flex bg-secondary-50 p-1.5 rounded-[1.5rem] border border-secondary-100 shadow-inner">
-          <button 
-            @click="activeMode = 'personal'"
-            class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
-            :class="activeMode === 'personal' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
-          >
-            <UserIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
-            個人私有
-          </button>
-          <button 
-            @click="activeMode = 'shared'"
-            class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
-            :class="activeMode === 'shared' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
-          >
-            <UsersIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
-            團體共用
-          </button>
+        <div class="flex flex-col gap-4">
+          <div class="flex bg-secondary-50 p-1.5 rounded-[1.5rem] border border-secondary-100 shadow-inner">
+            <button 
+              @click="activeMode = 'personal'"
+              class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
+              :class="activeMode === 'personal' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
+            >
+              <UserIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+              個人私有
+            </button>
+            <button 
+              @click="activeMode = 'shared'"
+              class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
+              :class="activeMode === 'shared' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
+            >
+              <UsersIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+              團體共用
+            </button>
+          </div>
+
+          <!-- Status Filter Tabs -->
+          <div class="flex justify-center lg:justify-end gap-6 px-2">
+            <button 
+              @click="filterStatus = 'pending'"
+              class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
+              :class="filterStatus === 'pending' ? 'text-primary-600' : 'text-secondary-300 hover:text-secondary-500'"
+            >
+              未完成
+              <div v-if="filterStatus === 'pending'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
+            </button>
+            <button 
+              @click="filterStatus = 'completed'"
+              class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
+              :class="filterStatus === 'completed' ? 'text-primary-600' : 'text-secondary-300 hover:text-secondary-500'"
+            >
+              已完成
+              <div v-if="filterStatus === 'completed'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -216,11 +267,6 @@ const vFocus = {
           </button>
         </div>
       </div>
-      <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[9px] font-black text-secondary-300 uppercase tracking-widest animate-pulse">
-        <span>Press Enter to Save</span>
-        <span class="w-1 h-1 rounded-full bg-secondary-200"></span>
-        <span>Minimal Layout V3.0</span>
-      </div>
     </div>
 
     <!-- List Layout (Note-Item Design) -->
@@ -234,7 +280,6 @@ const vFocus = {
            <DocumentTextIcon class="w-10 h-10 text-secondary-300" />
          </div>
          <h4 class="text-xl font-black text-secondary-900 tracking-tight">記事本目前空空如也</h4>
-         <p class="text-xs font-bold text-secondary-400 mt-2 uppercase tracking-widest">Your list is clear and ready.</p>
       </div>
 
       <div v-else class="grid gap-3 animate-fade-in">
@@ -250,9 +295,9 @@ const vFocus = {
             <button 
               @click="toggleItem(item)"
               class="w-8 h-8 flex-shrink-0 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center relative"
-              :class="item.is_completed ? 'bg-emerald-500 border-emerald-500 scale-100 shadow-lg shadow-emerald-100' : 'bg-white border-secondary-100 group-hover/item:border-primary-400 scale-95 hover:scale-105'"
+              :class="isUserCompleted(item) ? 'bg-emerald-500 border-emerald-500 scale-100 shadow-lg shadow-emerald-100' : 'bg-white border-secondary-100 group-hover/item:border-primary-400 scale-95 hover:scale-105'"
             >
-              <CheckCircleSolid v-if="item.is_completed" class="w-5 h-5 text-white animate-pop-in" />
+              <CheckCircleSolid v-if="isUserCompleted(item)" class="w-5 h-5 text-white animate-pop-in" />
               <div v-else class="w-1.5 h-1.5 rounded-full bg-secondary-100 group-hover/item:bg-primary-300 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
             </button>
 
@@ -270,41 +315,32 @@ const vFocus = {
               <div v-else class="flex flex-col group/text" @click="toggleItem(item)">
                 <span 
                   class="text-base font-black transition-all cursor-pointer truncate tracking-tight pr-4"
-                  :class="item.is_completed ? 'text-secondary-300 line-through decoration-secondary-200/50 decoration-[2px]' : 'text-secondary-800'"
+                  :class="isUserCompleted(item) ? 'text-secondary-300 line-through decoration-secondary-200/50 decoration-[2px]' : 'text-secondary-800'"
                 >
                   {{ item.title }}
                 </span>
-                <div class="flex items-center gap-3 mt-1.5">
-                   <span class="flex items-center gap-1 text-[9px] font-black text-secondary-300 uppercase tracking-widest">
-                     <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                     {{ new Date(item.created_at || '').toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) }}
-                   </span>
-                   <span v-if="item.category !== '其他'" class="text-[9px] font-black text-primary-400 uppercase tracking-widest bg-primary-50 px-2 py-0.5 rounded-md">
-                     {{ item.category }}
-                   </span>
+
+                <!-- Member Completion Avatars (Shared Only) -->
+                <div v-if="activeMode === 'shared' && tripMembers.length > 0" class="flex items-center gap-1.5 mt-2.5">
+                   <div v-for="member in tripMembers" :key="member.user_id" class="relative">
+                      <img 
+                        :src="member.profiles.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.profiles.display_name)}&background=random`"
+                        class="w-6 h-6 rounded-full border-2 transition-all duration-500"
+                        :class="isMemberCompleted(item, member.user_id) ? 'border-primary-400 scale-110 shadow-sm' : 'border-secondary-50 grayscale opacity-30 scale-90'"
+                        :title="member.profiles.display_name"
+                      />
+                      <div v-if="isMemberCompleted(item, member.user_id)" class="absolute -top-1 -right-1 bg-primary-500 rounded-full p-0.5 shadow-sm border border-white">
+                        <CheckIcon class="w-1.5 h-1.5 text-white" />
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Right side: Avatars and Actions -->
+          <!-- Right side: Actions -->
           <div class="flex items-center gap-4 relative z-10 flex-shrink-0">
-            <!-- User Status (Shared) -->
-            <div v-if="activeMode === 'shared'" class="flex items-center">
-               <div v-if="item.is_completed && item.completed_by" class="flex items-center gap-2 group/avatar">
-                 <div class="flex flex-col items-end opacity-0 group-hover/avatar:opacity-100 transition-opacity translate-x-1 group-hover/avatar:translate-x-0">
-                   <span class="text-[9px] font-black text-secondary-400 leading-none">Completed by</span>
-                   <span class="text-[10px] font-black text-secondary-900 leading-none mt-0.5">{{ item.completed_by.display_name }}</span>
-                 </div>
-                 <img 
-                   :src="item.completed_by.avatar_url || 'https://via.placeholder.com/32'"
-                   class="w-8 h-8 rounded-full border-2 border-white ring-2 ring-primary-50 shadow-sm object-cover"
-                 />
-               </div>
-               <div v-else class="w-8 h-8 rounded-full border-2 border-dashed border-secondary-100 flex items-center justify-center">
-                 <UsersIcon class="w-3.5 h-3.5 text-secondary-200" />
-               </div>
-            </div>
+            <!-- User Status (Shared) - Removed old logic as we now show all members -->
 
             <!-- Action Menu -->
             <div class="flex items-center gap-2 transition-all translate-x-4 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100">
