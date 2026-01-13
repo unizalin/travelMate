@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { supabase } from '@/services/supabase'
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 onMounted(async () => {
@@ -13,7 +14,10 @@ onMounted(async () => {
     console.error('Error during auth callback:', error)
     router.push('/login')
   } else {
-    const redirectPath = authStore.redirectAfterLogin || '/trips'
+    // Check for 'next' parameter in the URL
+    const nextRoute = route.query.next as string
+    const redirectPath = nextRoute || authStore.redirectAfterLogin || '/trips'
+    
     authStore.closeAuthModal() // Just in case
     router.push(redirectPath)
   }

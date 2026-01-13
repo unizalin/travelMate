@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InviteModal from '@/components/modals/InviteModal.vue'
 import ShareDialog from '@/components/modals/ShareDialog.vue'
+import UserMenu from '@/components/common/UserMenu.vue'
 import CountdownTimer from '@/components/trip/CountdownTimer.vue'
 import ItineraryView from '@/views/Itinerary.vue'
 import ExpenseView from '@/components/trip/ExpenseView.vue'
@@ -32,16 +33,11 @@ const isOrganizer = computed(() => {
   )
 })
 
-onMounted(async () => {
-  await tripStore.fetchTripById(tripId)
-  if (currentTrip.value) {
-    await itineraryStore.fetchItineraries(tripId, currentTrip.value.start_date, currentTrip.value.end_date)
-  }
-})
-
 import { useDialog } from '@/composables/useDialog';
+import { useToast } from '@/composables/useToast';
 
 const { openDeleteDialog } = useDialog()
+const { showToast } = useToast()
 
 async function handleDelete() {
   const confirmed = await openDeleteDialog('刪除行程', '確定要刪除此行程嗎？此動作無法復原。')
@@ -50,6 +46,32 @@ async function handleDelete() {
       .then(() => router.push('/trips'))
   }
 }
+
+onMounted(async () => {
+  await tripStore.fetchTripById(tripId)
+
+  // Auto-join if user has no access but has an invite code
+  const inviteCode = route.query.invite as string
+  if (!currentTrip.value && inviteCode && authStore.user) {
+    try {
+      await tripStore.joinTrip(inviteCode, authStore.user.id)
+      showToast('已成功加入行程！', 'success')
+      // Retry fetching after joining
+      await tripStore.fetchTripById(tripId)
+    } catch (e: any) {
+      // If error is "already member", we can ignore it and try fetching again
+      if (e.message?.includes('already a member')) {
+        await tripStore.fetchTripById(tripId)
+      } else {
+        showToast('無法加入行程：' + (e.message || '邀請碼無效'), 'error')
+      }
+    }
+  }
+
+  if (currentTrip.value) {
+    await itineraryStore.fetchItineraries(tripId, currentTrip.value.start_date, currentTrip.value.end_date)
+  }
+})
 </script>
 
 <template>
@@ -60,6 +82,23 @@ async function handleDelete() {
 
     <div v-else-if="error" class="flex justify-center py-20">
       <p class="text-red-500">{{ error }}</p>
+    </div>
+
+    <!-- Empty/Unauthorized State -->
+    <div v-else-if="!currentTrip && !loading" class="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
+      <div class="mb-6 rounded-full bg-gray-100 p-6">
+        <span class="text-4xl">🔒</span>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900 mb-2">無法存取此行程</h2>
+      <p class="text-gray-500 max-w-md mb-8">
+        您可能沒有權限查看此行程，或是該行程不存在。如果您是被邀請加入此行程，請檢查您的邀請連結。
+      </p>
+      <button 
+        @click="router.push('/trips')"
+        class="inline-flex items-center justify-center rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-primary-700 hover:shadow-primary-100 transition-all"
+      >
+        返回我的行程
+      </button>
     </div>
 
     <div v-else-if="currentTrip">
@@ -126,6 +165,9 @@ async function handleDelete() {
                   刪除
                 </button>
               </div>
+              
+              <div class="h-8 w-px bg-gray-200 mx-2"></div>
+              <UserMenu />
             </div>
           </div>
         </div>
@@ -221,8 +263,12 @@ async function handleDelete() {
         </TabGroup>
       </div>
 
-      <InviteModal :is-open="isInviteModalOpen" :invite-code="currentTrip.invite_code"
-        @close="isInviteModalOpen = false" />
+      <InviteModal 
+        :is-open="isInviteModalOpen" 
+        :invite-code="currentTrip.invite_code"
+        :trip-id="tripId"
+        @close="isInviteModalOpen = false" 
+      />
 
       <ShareDialog 
         :is-open="isShareModalOpen" 
