@@ -12,6 +12,7 @@ interface ExchangeRateData {
 
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const STORAGE_KEY_PREFIX = 'travelmate_exchange_rates_';
+const MAX_CACHE_ENTRIES = 20; // Limit cache entries to prevent localStorage overflow
 
 // Memory cache for performance
 const memoryCache: Record<string, { data: ExchangeRateData; timestamp: number }> = {};
@@ -57,6 +58,9 @@ export const currencyService = {
 
             const data: ExchangeRateData = await response.json();
 
+            // Clean old cache entries before saving new one
+            this.cleanOldCacheEntries();
+
             // Save to cache
             const cacheValue = { data, timestamp: now };
             localStorage.setItem(storageKey, JSON.stringify(cacheValue));
@@ -66,6 +70,33 @@ export const currencyService = {
         } catch (error) {
             console.warn(`Falling back to hardcoded rates for ${baseCurrency}`, error);
             return this.getFallbackRates(baseCurrency);
+        }
+    },
+
+    /**
+     * Clean oldest cache entries to prevent localStorage overflow
+     */
+    cleanOldCacheEntries() {
+        try {
+            const cacheKeys = Object.keys(localStorage)
+                .filter(key => key.startsWith(STORAGE_KEY_PREFIX))
+                .map(key => {
+                    try {
+                        const cached = JSON.parse(localStorage.getItem(key) || '{}');
+                        return { key, timestamp: cached.timestamp || 0 };
+                    } catch {
+                        return { key, timestamp: 0 };
+                    }
+                })
+                .sort((a, b) => a.timestamp - b.timestamp);
+
+            // Remove oldest entries if exceeding limit
+            if (cacheKeys.length >= MAX_CACHE_ENTRIES) {
+                const toRemove = cacheKeys.slice(0, cacheKeys.length - MAX_CACHE_ENTRIES + 1);
+                toRemove.forEach(({ key }) => localStorage.removeItem(key));
+            }
+        } catch (e) {
+            console.error('Failed to clean cache entries', e);
         }
     },
 

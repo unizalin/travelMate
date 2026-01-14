@@ -38,6 +38,26 @@ TravelMate 是一款專為現代旅人打造的跨平台、高性能旅程規劃
 - **後端**：Supabase (Auth, DB, Storage, Realtime)
 - **AI**：Google Gemini AI
 - **API**：OpenCage (Geocoding), ExchangeRate-API (Currency)
+- **安全性**：DOMPurify (XSS 防護)
+
+---
+
+## 🔒 安全性與性能優化
+
+### 安全性增強
+- ✅ **XSS 防護**：使用 DOMPurify 淨化 AI 生成的 HTML 內容
+- ✅ **HTTPS 強制**：所有 API 請求使用 HTTPS 協議
+- ✅ **環境變數保護**：API 密鑰通過環境變數管理，不提交至版本控制
+- ✅ **OAuth 錯誤處理**：完善的第三方登入錯誤處理機制
+
+### 性能優化
+- ✅ **智能快取管理**：
+  - 匯率數據 24 小時快取
+  - 天氣數據 3 小時快取
+  - 自動清理過期快取，防止 localStorage 溢出
+  - 記憶體快取層提升響應速度
+- ✅ **事件監聽器管理**：防止記憶體洩漏
+- ✅ **最大快取條目限制**：防止儲存空間耗盡
 
 ---
 
@@ -55,13 +75,17 @@ npm install
 ```
 
 ### 3. 環境變數設定
-請在根目錄建立 `.env` 檔案並填入以下資訊：
+請在根目錄建立 `.env` 檔案並填入以下資訊（參考 `.env.example`）：
 ```env
 VITE_SUPABASE_URL=您的_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY=您的_SUPABASE_ANON_KEY
 VITE_OPENCAGE_API_KEY=您的_OPENCAGE_API_KEY
 VITE_GEMINI_API_KEY=您的_GEMINI_API_KEY
+VITE_OPENWEATHER_API_KEY=您的_OPENWEATHER_API_KEY
+VITE_MAPBOX_TOKEN=您的_MAPBOX_TOKEN
 ```
+
+⚠️ **重要**：請勿將 `.env` 檔案提交至版本控制系統。該檔案已包含在 `.gitignore` 中。
 
 ### 4. 啟動開發伺服器
 ```bash
@@ -111,8 +135,28 @@ A: 請檢查該景點是否包含有效的座標（Latitude/Longitude），或�
 **Q: 匯率是實時的嗎？**
 A: 是的，我們串接了 ExchangeRate-API，並在本地端進行了 24 小時的智能快取，以平衡速度與準確度。
 
+**Q: Google 第三方登入無法使用？**
+A: 請參考 `docs/Google-OAuth-Checklist.md` 檢查 Supabase 和 Google Cloud Console 的設定。
+
+**Q: 如何清除快取？**
+A: 開啟瀏覽器開發者工具，在 Console 執行：
+```javascript
+localStorage.clear()
+```
+
 ---
 
-**最後更新**：2026-01-13
-**版本**：v1.5.0
+## 🔐 安全性說明
+
+本專案採用多層安全措施：
+1. **環境變數隔離**：所有 API 密鑰通過環境變數管理
+2. **XSS 防護**：使用 DOMPurify 淨化用戶輸入和 AI 生成內容
+3. **HTTPS 強制**：所有外部 API 請求使用 HTTPS
+4. **Row Level Security**：Supabase 資料庫層級的權限控制
+5. **OAuth 安全**：完善的第三方登入錯誤處理
+
+---
+
+**最後更新**：2026-01-14
+**版本**：v1.6.0
 **作者**：Uniza Lin

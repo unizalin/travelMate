@@ -1,10 +1,37 @@
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
+const CACHE_KEY_PREFIX = 'weather_'
+const GEO_CACHE_KEY_PREFIX = 'geo_'
+const MAX_CACHE_ENTRIES = 30 // Limit cache entries
 
 interface WeatherData {
     temp: number
     description: string
     icon: string
+}
+
+// Helper function to clean old cache entries
+function cleanOldCacheEntries(prefix: string) {
+    try {
+        const cacheKeys = Object.keys(localStorage)
+            .filter(key => key.startsWith(prefix))
+            .map(key => {
+                try {
+                    const cached = JSON.parse(localStorage.getItem(key) || '{}');
+                    return { key, timestamp: cached.timestamp || 0 };
+                } catch {
+                    return { key, timestamp: 0 };
+                }
+            })
+            .sort((a, b) => a.timestamp - b.timestamp);
+
+        if (cacheKeys.length >= MAX_CACHE_ENTRIES) {
+            const toRemove = cacheKeys.slice(0, cacheKeys.length - MAX_CACHE_ENTRIES + 1);
+            toRemove.forEach(({ key }) => localStorage.removeItem(key));
+        }
+    } catch (e) {
+        console.error('Failed to clean weather cache', e);
+    }
 }
 
 export const weatherService = {
@@ -15,7 +42,7 @@ export const weatherService = {
         }
 
         // Check cache first (3 hours)
-        const cacheKey = `weather_${lat}_${lon}`
+        const cacheKey = `${CACHE_KEY_PREFIX}${lat}_${lon}`
         const cached = localStorage.getItem(cacheKey)
         if (cached) {
             const { timestamp, data } = JSON.parse(cached)
@@ -50,6 +77,9 @@ export const weatherService = {
                 }
             })
 
+            // Clean old cache entries before saving
+            cleanOldCacheEntries(CACHE_KEY_PREFIX)
+
             // Cache result
             localStorage.setItem(cacheKey, JSON.stringify({
                 timestamp: Date.now(),
@@ -67,13 +97,13 @@ export const weatherService = {
         if (!API_KEY) return null
 
         // Simple cache for geocoding
-        const cacheKey = `geo_${city}`
+        const cacheKey = `${GEO_CACHE_KEY_PREFIX}${city}`
         const cached = localStorage.getItem(cacheKey)
         if (cached) return JSON.parse(cached)
 
         try {
             const response = await fetch(
-                `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`
+                `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`
             )
             if (!response.ok) return null
 
@@ -81,6 +111,10 @@ export const weatherService = {
             if (data.length === 0) return null
 
             const result = { lat: data[0].lat, lon: data[0].lon }
+            
+            // Clean old cache entries before saving
+            cleanOldCacheEntries(GEO_CACHE_KEY_PREFIX)
+            
             localStorage.setItem(cacheKey, JSON.stringify(result))
             return result
         } catch (e) {

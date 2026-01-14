@@ -12,6 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
   const authMode = ref<'login' | 'register'>('login')
   const redirectAfterLogin = ref<string | null>(null)
   const router = useRouter()
+  
+  // Store the unsubscribe function to prevent memory leaks
+  let authStateUnsubscribe: (() => void) | null = null
 
   const isAuthenticated = computed(() => !!user.value)
 
@@ -21,7 +24,13 @@ export const useAuthStore = defineStore('auth', () => {
     session.value = data.session
     user.value = data.session?.user ?? null
 
-    supabase.auth.onAuthStateChange(async (_event, _session) => {
+    // Clean up previous subscription if exists
+    if (authStateUnsubscribe) {
+      authStateUnsubscribe()
+    }
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, _session) => {
       session.value = _session
       user.value = _session?.user ?? null
 
@@ -35,6 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
         router.push('/login')
       }
     })
+    
+    // Store unsubscribe function
+    authStateUnsubscribe = () => subscription.unsubscribe()
+    
     loading.value = false
   }
 

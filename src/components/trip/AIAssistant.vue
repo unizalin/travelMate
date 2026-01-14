@@ -3,6 +3,7 @@ import { geminiService, type ActivitySuggestion } from '@/services/geminiService
 import { PaperAirplaneIcon, PlusIcon, SparklesIcon, XMarkIcon } from '@heroicons/vue/24/solid';
 import { nextTick, ref, watch } from 'vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
+import DOMPurify from 'dompurify';
 
 const props = defineProps<{
   destination: string
@@ -107,6 +108,14 @@ function handleKeydown(e: KeyboardEvent) {
 function handleAdd(suggestion: ActivitySuggestion) {
   emit('add-activity', suggestion)
 }
+
+// Sanitize HTML content to prevent XSS attacks
+function sanitizeHTML(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'b', 'i', 'u', 'br', 'p', 'span'],
+    ALLOWED_ATTR: []
+  })
+}
 </script>
 
 <template>
@@ -147,7 +156,7 @@ function handleAdd(suggestion: ActivitySuggestion) {
                       <div class="max-w-[85%] rounded-2xl px-4 py-3 shadow-sm text-sm leading-relaxed" :class="msg.role === 'user'
                         ? 'bg-primary-600 text-white rounded-br-none'
                         : 'bg-white text-gray-700 border border-gray-200 rounded-bl-none'">
-                        <div v-if="msg.role === 'assistant'" v-html="msg.content"></div>
+                        <div v-if="msg.role === 'assistant'" v-html="sanitizeHTML(msg.content)"></div>
                         <div v-else>{{ msg.content }}</div>
                       </div>
 
