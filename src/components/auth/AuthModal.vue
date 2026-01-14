@@ -45,8 +45,11 @@ async function handleSocialLogin(provider: 'google' | 'facebook') {
   try {
     loading.value = true
     await authStore.signInWithOAuth(provider)
+    // Note: The actual redirect happens via Supabase, so we won't reach here immediately
+    // The loading state will persist until the browser redirects to the OAuth provider
   } catch (e: any) {
-    showToast(e.message || '登入失敗', 'error')
+    console.error('OAuth login error:', e)
+    showToast(e.message || `${provider} 登入失敗，請稍後再試`, 'error')
     loading.value = false
   }
 }
