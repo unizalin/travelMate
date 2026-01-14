@@ -49,10 +49,16 @@
   ```
   生產環境：https://your-domain.vercel.app
   開發環境：http://localhost:5173
+  
+  ⚠️ 重要：部署到 Vercel 後，必須將 Site URL 改為 Vercel 網址
+  ❌ 錯誤：http://localhost:3000
+  ✅ 正確：https://your-app-name.vercel.app
   ```
 - [ ] **Redirect URLs** 包含：
   ```
+  https://your-domain.vercel.app/**
   https://your-domain.vercel.app/auth/callback
+  http://localhost:5173/**
   http://localhost:5173/auth/callback
   ```
 
@@ -94,11 +100,32 @@
 **可能原因**：
 - 生產環境的 URL 未加入 Redirect URLs
 - Google Cloud Console 未加入生產環境網址
+- **Supabase Site URL 仍設定為 localhost**（最常見）
 
 **解決方案**：
 1. 在 Supabase Redirect URLs 加入生產環境網址
 2. 在 Google Cloud Console 加入生產環境網址
-3. 確認 Vercel 環境變數正確設定
+3. **將 Supabase Site URL 改為 Vercel 網址**
+   ```
+   ❌ 錯誤：http://localhost:3000
+   ✅ 正確：https://your-app-name.vercel.app
+   ```
+4. 確認 Vercel 環境變數正確設定
+5. 清除瀏覽器快取並重新測試
+
+#### 問題 5：跳轉到錯誤的 localhost port
+**症狀**：OAuth 完成後跳轉到 `http://localhost:3000` 而不是 Vercel 網址
+
+**原因**：Supabase Site URL 設定為 localhost
+
+**解決方案**：
+1. 前往 Supabase Dashboard
+2. Authentication > URL Configuration
+3. 將 Site URL 改為：`https://your-app-name.vercel.app`
+4. 儲存設定
+5. 等待 1-2 分鐘讓設定生效
+6. 清除瀏覽器快取
+7. 重新測試 Google 登入
 
 ### 測試步驟
 
