@@ -8,20 +8,21 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-onMounted(async () => {
-  const { error } = await supabase.auth.getSession()
-  if (error) {
-    console.error('Error during auth callback:', error)
-    router.push('/login')
-  } else {
-    // Check for 'next' parameter in the URL
-    const nextRoute = route.query.next as string
-    const redirectPath = nextRoute || authStore.redirectAfterLogin || '/trips'
-    
-    authStore.closeAuthModal() // Just in case
-    router.push(redirectPath)
-  }
-})
+  onMounted(async () => {
+    // Retrieve session; with detectSessionInUrl enabled, this will parse the URL hash
+    const { error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Error during auth callback:', error);
+      router.push('/login');
+      return;
+    }
+    // Session is now stored; proceed with redirect
+    const nextRoute = route.query.next as string;
+    const redirectPath = nextRoute || authStore.redirectAfterLogin || '/trips';
+    authStore.closeAuthModal();
+    // Clean up URL hash to avoid showing token
+    router.replace(redirectPath);
+  })
 </script>
 
 <template>
