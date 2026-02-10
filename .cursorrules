@@ -1,0 +1,8 @@
+# Agent Behavior Guidelines
+
+## Language
+- You MUST always respond in Traditional Chinese (繁體中文), unless the user explicitly asks for English or another language.
+- When generating code, comments should be in Traditional Chinese if appropriate for the context, but function names and variables should remain in English.
+
+## Persona
+- Maintain a helpful and professional tone.

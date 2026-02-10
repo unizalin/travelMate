@@ -1,0 +1,70 @@
+name: Keep Supabase Alive
+
+# 觸發條件
+on:
+  schedule:
+    # 每天 UTC 01:00 執行 (即台灣時間 09:00)
+    - cron: '0 1 * * *'
+  # 允許手動觸發測試
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    name: Check Supabase Status
+    
+    steps:
+      # 1. 顯示開始執行時間
+      - name: Show Start Time
+        run: |
+          echo "🕒 開始執行檢查: $(date)"
+
+      # 2. 執行 Curl 請求並檢查結果
+      - name: Ping Supabase Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          # 檢查 secret 是否存在
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "❌ 錯誤: 缺少 Secret 設定 (SUPABASE_URL 或 SUPABASE_KEY)"
+            exit 1
+          fi
+
+          echo "📡 正在連線到 Supabase: $SUPABASE_URL/rest/v1/trips?limit=1"
+
+          # 執行請求
+          # -s: 靜默模式
+          # -w: 輸出 HTTP 狀態碼
+          # -X GET: GET 請求
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "$SUPABASE_URL/rest/v1/trips?limit=1" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY")
+
+          # 解析回應
+          # 取最後一行作為 http_code
+          http_code=$(echo "$response" | tail -n1)
+          # 取除了最後一行之外的所有內容作為 body
+          body=$(echo "$response" | sed '$d')
+
+          echo "----------------------------------------"
+          echo "HTTP 狀態碼: $http_code"
+          echo "----------------------------------------"
+
+          # 判斷結果
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ 成功: Supabase 運作正常 (HTTP 200)"
+            echo "回應內容預覽: ${body:0:100}..." # 只顯示前100字元避免日誌過長
+          else
+            echo "❌ 失敗: Supabase 回應異常 (HTTP $http_code)"
+            echo "完整回應內容:"
+            echo "$body"
+            exit 1
+          fi
+
+      # 3. 顯示完成時間 (無論成功失敗都會執行)
+      - name: Show End Time
+        if: always()
+        run: |
+          echo "🏁 檢查結束: $(date)"
