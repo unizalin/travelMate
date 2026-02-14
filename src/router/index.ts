@@ -1,14 +1,22 @@
 import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 
+const TARGET_TRIP_ID = '2b6a733a-249f-4d77-8be1-a3e9742ae69d'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: () => import('../views/HomeView.vue'),
-      meta: { title: '首頁' }
+      redirect: `/trips/${TARGET_TRIP_ID}`
+    },
+    {
+      path: '/explore',
+      redirect: `/trips/${TARGET_TRIP_ID}`
+    },
+    {
+      path: '/trips',
+      redirect: `/trips/${TARGET_TRIP_ID}`
     },
     {
       path: '/login',
@@ -27,18 +35,6 @@ const router = createRouter({
       name: 'auth-callback',
       component: () => import('../views/AuthCallback.vue'),
       meta: { title: '驗證中' }
-    },
-    {
-      path: '/shared-trip/:tripId',
-      name: 'shared-trip',
-      component: () => import('../views/SharedTripView.vue'),
-      meta: { title: '共享旅程' }
-    },
-    {
-      path: '/trips',
-      name: 'trips',
-      component: () => import('../views/Trips.vue'),
-      meta: { requiresAuth: true, title: '我的旅程' }
     },
     {
       path: '/trips/:tripId/map',

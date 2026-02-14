@@ -1,267 +1,172 @@
-<script setup lang="ts">
-import InviteModal from '@/components/modals/InviteModal.vue'
-import ShareDialog from '@/components/modals/ShareDialog.vue'
-import UserMenu from '@/components/common/UserMenu.vue'
-import CountdownTimer from '@/components/trip/CountdownTimer.vue'
-import ItineraryView from '@/views/Itinerary.vue'
-import ExpenseView from '@/components/trip/ExpenseView.vue'
-import CandidateActivitiesView from '@/views/CandidateActivitiesView.vue'
-import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useItineraryStore } from '@/stores/itinerary'
-import { useTripStore } from '@/stores/trip'
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
-import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-
-const route = useRoute()
-const router = useRouter()
-const tripStore = useTripStore()
-const itineraryStore = useItineraryStore()
-const { currentTrip, loading, error } = storeToRefs(tripStore)
-const { itineraries } = storeToRefs(itineraryStore)
-const authStore = useAuthStore()
-const tripId = route.params.id as string
-const isInviteModalOpen = ref(false)
-const isShareModalOpen = ref(false)
-
-const isOrganizer = computed(() => {
-  if (!currentTrip.value || !authStore.user) return false
-  return currentTrip.value.trip_members?.some(
-    (m: any) => m.user_id === authStore.user!.id && m.role === 'organizer'
-  )
-})
-
-import { useDialog } from '@/composables/useDialog';
-import { useToast } from '@/composables/useToast';
-
-const { openDeleteDialog } = useDialog()
-const { showToast } = useToast()
-
-async function handleDelete() {
-  const confirmed = await openDeleteDialog('刪除行程', '確定要刪除此行程嗎？此動作無法復原。')
-  if (confirmed) {
-    tripStore.deleteTrip(tripId)
-      .then(() => router.push('/trips'))
-  }
-}
-
-onMounted(async () => {
-  await tripStore.fetchTripById(tripId)
-
-  // Auto-join if user has no access but has an invite code
-  const inviteCode = route.query.invite as string
-  if (!currentTrip.value && inviteCode && authStore.user) {
-    try {
-      await tripStore.joinTrip(inviteCode, authStore.user.id)
-      showToast('已成功加入行程！', 'success')
-      // Retry fetching after joining
-      await tripStore.fetchTripById(tripId)
-    } catch (e: any) {
-      // If error is "already member", we can ignore it and try fetching again
-      if (e.message?.includes('already a member')) {
-        await tripStore.fetchTripById(tripId)
-      } else {
-        showToast('無法加入行程：' + (e.message || '邀請碼無效'), 'error')
-      }
-    }
-  }
-
-  if (currentTrip.value) {
-    await itineraryStore.fetchItineraries(tripId, currentTrip.value.start_date, currentTrip.value.end_date)
-  }
-})
-</script>
-
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <div v-if="loading" class="flex justify-center py-20">
-      <p class="text-gray-500">Loading trip details...</p>
+  <div 
+    class="min-h-screen transition-colors duration-500 selection:bg-primary-500/30 font-sans bg-slate-50 dark:bg-[#050b18] text-slate-900 dark:text-white"
+  >
+    <!-- Background Decoration -->
+    <div class="fixed inset-0 pointer-events-none opacity-20 z-0">
+        <div :class="[
+          'absolute inset-0',
+          theme === 'dark' ? 'bg-[radial-gradient(circle_at_50%_0%,#3b82f622_0%,transparent_50%)]' : 'bg-[radial-gradient(circle_at_50%_0%,#3b82f611_0%,transparent_50%)]'
+        ]"></div>
+        <div :class="[
+          'absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]',
+          theme === 'dark' ? 'opacity-100' : 'opacity-40'
+        ]"></div>
     </div>
 
-    <div v-else-if="error" class="flex justify-center py-20">
-      <p class="text-red-500">{{ error }}</p>
-    </div>
-
-    <!-- Empty/Unauthorized State -->
-    <div v-else-if="!currentTrip && !loading" class="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
-      <div class="mb-6 rounded-full bg-gray-100 p-6">
-        <span class="text-4xl">🔒</span>
-      </div>
-      <h2 class="text-xl font-bold text-gray-900 mb-2">無法存取此行程</h2>
-      <p class="text-gray-500 max-w-md mb-8">
-        您可能沒有權限查看此行程，或是該行程不存在。如果您是被邀請加入此行程，請檢查您的邀請連結。
-      </p>
+    <!-- Theme Toggle Floating Button -->
+    <div class="fixed bottom-8 right-8 z-[100]">
       <button 
-        @click="router.push('/trips')"
-        class="inline-flex items-center justify-center rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-primary-700 hover:shadow-primary-100 transition-all"
+        @click="toggleTheme"
+        class="p-4 rounded-3xl bg-white/10 dark:bg-white/5 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-2xl hover:scale-110 active:scale-95 transition-all group"
+        :title="theme === 'dark' ? '切換至淺色模式' : '切換至深色模式'"
       >
-        返回我的行程
+        <span v-if="theme === 'dark'" class="text-xl">☀️</span>
+        <span v-else class="text-xl">🌙</span>
       </button>
     </div>
 
-    <div v-else-if="currentTrip">
-      <!-- Header -->
-      <div class="bg-white shadow relative">
-        <div class="mx-auto max-w-[1440px] 2xl:max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
-          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <!-- Trip Info -->
-            <div>
-              <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">{{ currentTrip.name }}</h1>
-              <div class="mt-2 flex flex-wrap items-center gap-y-2 gap-x-4 xl:gap-x-6 text-sm md:text-base text-gray-600">
-                 <span class="flex items-center gap-1">📍 {{ currentTrip.destination }}</span>
-                 <span class="flex items-center gap-1">📅 {{ currentTrip.start_date }} - {{ currentTrip.end_date }}</span>
-                 
-                 <!-- Members Inline for Desktop -->
-                 <div class="hidden md:flex items-center space-x-2 border-l pl-4 ml-2 border-gray-300">
-                    <div class="flex -space-x-2 overflow-hidden">
-                      <img v-for="member in currentTrip.trip_members" :key="member.id"
-                        class="inline-block h-6 w-6 rounded-full ring-2 ring-white"
-                        :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'"
-                        :alt="member.profiles?.display_name" :title="member.profiles?.display_name" />
-                    </div>
-                    <span class="text-xs text-gray-500">{{ currentTrip.trip_members.length }} 位成員</span>
-                 </div>
-              </div>
-               <!-- Members block for Mobile (below info) -->
-               <div class="flex md:hidden items-center space-x-2 mt-3">
-                  <div class="flex -space-x-2 overflow-hidden">
-                    <img v-for="member in currentTrip.trip_members" :key="member.id"
-                      class="inline-block h-7 w-7 rounded-full ring-2 ring-white"
-                      :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'"
-                      :alt="member.profiles?.display_name" />
+    <div v-if="loading" class="flex flex-col items-center justify-center min-h-screen relative z-10">
+        <div class="relative w-24 h-24">
+            <div class="absolute inset-0 border-4 border-primary-500/10 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p :class="['mt-8 text-xs font-black uppercase tracking-[0.3em] animate-pulse', theme === 'dark' ? 'text-white/30' : 'text-slate-400']">Initializing Trip Data...</p>
+    </div>
+
+    <div v-else-if="error" class="max-w-md mx-auto text-center py-20 relative z-10 min-h-screen flex flex-col justify-center items-center">
+        <div class="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 text-red-500">
+            <ExclamationTriangleIcon class="w-8 h-8" />
+        </div>
+        <h3 class="text-xl font-black mb-2">無法讀取資料</h3>
+        <p :class="['text-sm mb-8 leading-relaxed', theme === 'dark' ? 'text-white/40' : 'text-slate-500']">{{ error }}</p>
+        <button @click="tripStore.fetchTripById(tripId)" class="px-8 py-3 bg-red-500/10 text-red-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">重試</button>
+    </div>
+
+    <div v-else-if="!currentTrip && !loading" class="flex flex-col items-center justify-center min-h-screen px-4 text-center relative z-10">
+      <div class="mb-10 rounded-[2.5rem] bg-white dark:bg-secondary-900 border border-black/5 dark:border-white/5 p-8 shadow-2xl relative">
+        <span class="text-5xl">🔒</span>
+        <div class="absolute inset-0 bg-primary-500/10 blur-3xl rounded-full"></div>
+      </div>
+      <h2 :class="['text-2xl font-black mb-4', theme === 'dark' ? 'text-white' : 'text-slate-900']">核心存取限制</h2>
+      <p :class="['max-w-md mb-10 leading-relaxed font-medium', theme === 'dark' ? 'text-white/40' : 'text-slate-500']">
+        您可能沒有權限查看此行程，或是該行程不存在。請確保您已獲得授權或檢查邀請連結。
+      </p>
+    </div>
+
+    <div v-else-if="currentTrip" class="relative z-10 pt-12">
+      <!-- Main Content / Tabs Area -->
+      <main class="mx-auto max-w-[1600px] px-6 pb-24">
+        <TabGroup>
+          <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar Navigation -->
+            <aside class="w-full lg:w-72 shrink-0">
+                <TabList class="flex lg:flex-col items-center lg:items-stretch gap-1.5 p-1.5 bg-slate-200/50 dark:bg-white/5 backdrop-blur-3xl rounded-[1.5rem] border border-slate-200 dark:border-white/10 shadow-inner overflow-x-auto lg:overflow-x-visible no-scrollbar">
+              <Tab
+                v-for="tab in tabs"
+                :key="tab.name"
+                v-slot="{ selected }"
+                as="template"
+              >
+                <button
+                  :class="[
+                    'px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-2xl outline-none focus:ring-0 whitespace-nowrap lg:whitespace-normal',
+                    selected
+                      ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-xl transform scale-[1.02]'
+                      : 'text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 hover:bg-white/50 dark:hover:bg-white/5'
+                  ]"
+                >
+                  <div class="flex items-center lg:justify-start gap-2">
+                    <component :is="tab.icon" class="w-3.5 h-3.5" />
+                    <span>{{ tab.name }}</span>
                   </div>
-                  <span class="text-xs text-gray-500 ml-1">{{ currentTrip.trip_members.length }} 位成員</span>
-               </div>
-               
+                </button>
+              </Tab>
+            </TabList>
 
-               <!-- Countdown Integrated into Content Flow -->
-               <div class="mt-4 max-w-[400px]">
-                 <CountdownTimer 
-                   :departure-date="currentTrip.start_date" 
-                   :created-at="currentTrip.created_at"
-                 />
-               </div>
-            </div>
+                <!-- Additional Sidebar Info (Organizer perspective) -->
+                <div v-if="isOrganizer" class="mt-8 p-6 bg-white/5 border border-white/5 rounded-[2rem] backdrop-blur-2xl hidden lg:block">
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-primary-400 mb-6 flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
+                        Mission Control
+                    </h4>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-black text-white/40 uppercase tracking-widest">公開行程</span>
+                            <button 
+                                @click="tripStore.updateTrip(tripId, { is_public: !currentTrip.is_public })"
+                                class="relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                :class="currentTrip.is_public ? 'bg-primary-600' : 'bg-white/10'"
+                            >
+                                <span 
+                                    class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xl transition duration-200 ease-in-out"
+                                    :class="currentTrip.is_public ? 'translate-x-5' : 'translate-x-0'"
+                                ></span>
+                            </button>
+                        </div>
+                        
+                        <div class="p-4 bg-primary-600/10 border border-primary-500/20 rounded-2xl">
+                            <div class="text-[8px] font-black uppercase tracking-widest text-primary-400 mb-2">Invite Code</div>
+                            <div class="font-mono text-sm text-white flex items-center justify-between">
+                                <span>{{ currentTrip.invite_code }}</span>
+                                <button class="p-1 hover:text-primary-400 transition-colors">📋</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
 
-            <!-- Action Buttons Group (Right Aligned) -->
-            <div class="hidden lg:flex items-center gap-3 xl:gap-4 2xl:gap-6 ml-auto">
-              <button @click="router.push(`/trips/${tripId}/map`)"
-                class="rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-primary-100 hover:bg-primary-500 hover:shadow-primary-200 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                <span>🗺️</span> 查看地圖
-              </button>
-              <div class="flex items-center gap-2">
-                <button @click="isInviteModalOpen = true"
-                  class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-secondary-700 shadow-sm ring-1 ring-inset ring-secondary-200 hover:bg-secondary-50 hover:ring-secondary-300 transition-all">
-                  邀請
-                </button>
-                <button @click="isShareModalOpen = true"
-                  class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-secondary-700 shadow-sm ring-1 ring-inset ring-secondary-200 hover:bg-secondary-50 hover:ring-secondary-300 transition-all">
-                  分享
-                </button>
-                <button v-if="isOrganizer" @click="handleDelete"
-                  class="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm hover:bg-red-100 transition-all">
-                  刪除
-                </button>
-              </div>
-              
-              <div class="h-8 w-px bg-gray-200 mx-2"></div>
-              <UserMenu />
+            <!-- Main Content Panels -->
+            <div class="flex-1 min-w-0">
+                <TabPanels>
+                    <TabPanel v-for="tab in tabs" :key="tab.name" class="outline-none">
+                        <ItineraryView v-if="tab.name === '行程'" class="dark-view" />
+                        <div v-else-if="tab.name === '費用'" class="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8 min-h-[500px]">
+                            <ExpenseView 
+                                :trip-id="tripId" 
+                                :members="currentTrip.trip_members" 
+                            />
+                        </div>
+                        <CandidateActivitiesView 
+                            v-else-if="tab.name === '願望清單'"
+                            :trip-id="tripId"
+                            :trip-info="{
+                                destination: currentTrip.destination,
+                                startDate: currentTrip.start_date,
+                                endDate: currentTrip.end_date,
+                                totalDays: itineraries.length || 1
+                            }"
+                        />
+                        <div v-else-if="tab.name === '成員'" class="space-y-8">
+                            <div class="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8">
+                                <h3 class="text-xl font-black mb-8 flex items-center gap-3">
+                                    <span class="text-primary-500">#</span> 團隊成員
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div v-for="member in currentTrip.trip_members" :key="member.id" 
+                                        class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-white/10 transition-all group">
+                                    <img class="h-12 w-12 rounded-full border-2 border-primary-500/20 group-hover:border-primary-500 transition-colors"
+                                        :src="member.profiles?.avatar_url || 'https://via.placeholder.com/40'" />
+                                    <div>
+                                        <p class="text-sm font-black text-white">{{ member.profiles?.display_name || '未知成員' }}</p>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-white/20">{{ member.role }}</p>
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Preparation Checklist -->
+                            <div class="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-8">
+                                <PreparationChecklist :trip-id="tripId" />
+                            </div>
+                        </div>
+                    </TabPanel>
+                </TabPanels>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Mobile Floating Action Buttons (FAB) -->
-      <div class="fixed bottom-6 right-6 flex flex-col-reverse gap-3 z-40 lg:hidden">
-          <!-- Main Map Button -->
-          <button @click="router.push(`/trips/${tripId}/map`)" 
-             class="w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-blue-500 hover:scale-105 transition-all text-2xl"
-             title="查看地圖總覽">
-             🗺️
-          </button>
-          
-          <!-- Secondary Buttons (Smaller) -->
-           <button @click="isInviteModalOpen = true" 
-             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-50 ring-1 ring-gray-200 transition-all"
-             title="邀請成員">
-             <span class="text-xs font-bold">邀請</span>
-          </button>
-           <button v-if="isOrganizer" @click="handleDelete" 
-             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 ring-1 ring-gray-200 transition-all"
-             title="刪除行程">
-             <span class="text-xs font-bold">刪除</span>
-          </button>
-          <button @click="isShareModalOpen = true" 
-             class="h-10 px-4 bg-white rounded-full shadow-md flex items-center justify-center text-blue-600 hover:bg-blue-50 ring-1 ring-gray-200 transition-all"
-             title="分享行程">
-             <span class="text-xs font-bold">分享</span>
-          </button>
-      </div>
-
-
-      <!-- Tabs -->
-      <div class="mx-auto max-w-[1440px] 2xl:max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
-        <TabGroup>
-          <TabList class="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
-            <Tab v-for="category in ['行程', '費用', '願望清單', '成員']" as="template" :key="category"
-              v-slot="{ selected }">
-              <button :class="[
-                'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
-                'ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2',
-                selected
-                  ? 'bg-white text-primary-700 shadow'
-                  : 'text-blue-100 hover:bg-white/[0.12] hover:text-white',
-              ]">
-                {{ category }}
-              </button>
-            </Tab>
-          </TabList>
-
-          <TabPanels class="mt-2">
-            <TabPanel class="rounded-xl bg-gray-50 p-3 shadow-none">
-              <!-- Itinerary View (Overview) -->
-              <ItineraryView />
-            </TabPanel>
-
-            <TabPanel class="rounded-xl bg-white p-6 shadow-none">
-              <ExpenseView 
-                :trip-id="tripId" 
-                :members="currentTrip.trip_members" 
-              />
-            </TabPanel>
-
-            <TabPanel class="rounded-xl bg-white p-6 shadow-none">
-              <CandidateActivitiesView 
-                :trip-id="tripId"
-                :trip-info="{
-                  destination: currentTrip.destination,
-                  startDate: currentTrip.start_date,
-                  endDate: currentTrip.end_date,
-                  totalDays: itineraries.length || 1
-                }"
-              />
-            </TabPanel>
-
-            <TabPanel class="rounded-xl bg-white p-3 shadow">
-              <ul class="divide-y divide-gray-200">
-                <li v-for="member in currentTrip.trip_members" :key="member.id" class="py-4 flex items-start">
-                  <img class="h-10 w-10 rounded-full"
-                    :src="member.profiles?.avatar_url || 'https://via.placeholder.com/40'" alt="" />
-                  <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">{{ member.profiles?.display_name || '未知成員' }}</p>
-                    <p class="text-sm text-gray-500 capitalize">{{ member.role }}</p>
-                  </div>
-                </li>
-              </ul>
-
-              <!-- Preparation Checklist -->
-              <PreparationChecklist :trip-id="tripId" />
-            </TabPanel>
-          </TabPanels>
         </TabGroup>
-      </div>
+      </main>
 
       <InviteModal 
         :is-open="isInviteModalOpen" 
@@ -279,3 +184,90 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import InviteModal from '@/components/modals/InviteModal.vue'
+import ShareDialog from '@/components/modals/ShareDialog.vue'
+import ItineraryView from '@/views/Itinerary.vue'
+import ExpenseView from '@/components/trip/ExpenseView.vue'
+import CandidateActivitiesView from '@/views/CandidateActivitiesView.vue'
+import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useItineraryStore } from '@/stores/itinerary'
+import { useTripStore } from '@/stores/trip'
+import { useTheme } from '@/composables/useTheme'
+import { useToast } from '@/composables/useToast'
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/vue'
+import { storeToRefs } from 'pinia'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { 
+    ExclamationTriangleIcon,
+    CalendarDaysIcon,
+    CurrencyDollarIcon,
+    SparklesIcon,
+    UsersIcon
+} from '@heroicons/vue/24/outline'
+
+const { theme, toggleTheme } = useTheme()
+const route = useRoute()
+
+const tabs = [
+  { name: '行程', icon: CalendarDaysIcon },
+  { name: '費用', icon: CurrencyDollarIcon },
+  { name: '願望清單', icon: SparklesIcon },
+  { name: '成員', icon: UsersIcon }
+]
+const tripStore = useTripStore()
+const itineraryStore = useItineraryStore()
+const { currentTrip, loading, error } = storeToRefs(tripStore)
+const { itineraries } = storeToRefs(itineraryStore)
+const authStore = useAuthStore()
+const tripId = route.params.id as string
+const isInviteModalOpen = ref(false)
+const isShareModalOpen = ref(false)
+
+const { showToast } = useToast()
+
+const isOrganizer = computed(() => {
+  if (!currentTrip.value || !authStore.user) return false
+  return currentTrip.value.trip_members?.some(
+    (m: any) => m.user_id === authStore.user!.id && m.role === 'organizer'
+  )
+})
+
+onMounted(async () => {
+  await tripStore.fetchTripById(tripId)
+
+  // Auto-join if user has no access but has an invite code
+  const inviteCode = route.query.invite as string
+  if (!currentTrip.value && inviteCode && authStore.user) {
+    try {
+      await tripStore.joinTrip(inviteCode, authStore.user.id)
+      showToast('已成功加入行程！', 'success')
+      // Retry fetching after joining
+      await tripStore.fetchTripById(tripId)
+    } catch (e: any) {
+      if (e.message?.includes('already a member')) {
+        await tripStore.fetchTripById(tripId)
+      } else {
+        showToast('無法加入行程：' + (e.message || '邀請碼無效'), 'error')
+      }
+    }
+  }
+
+  if (currentTrip.value) {
+    await itineraryStore.fetchItineraries(tripId, currentTrip.value.start_date, currentTrip.value.end_date)
+  }
+})
+</script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+</style>

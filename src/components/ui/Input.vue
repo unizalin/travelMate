@@ -14,6 +14,7 @@
         :value="modelValue"
         :placeholder="placeholder"
         :disabled="disabled"
+        :required="required"
         :class="[
           'block w-full transition-all duration-200 sm:text-sm rounded-lg border focus:ring-2 focus:ring-offset-0 outline-none',
           $slots.prepend ? 'pl-10' : 'pl-4',

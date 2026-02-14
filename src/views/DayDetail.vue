@@ -24,6 +24,7 @@ import { useRoute } from 'vue-router';
 import draggable from 'vuedraggable';
 import { useToast } from '@/composables/useToast';
 import { useDialog } from '@/composables/useDialog';
+import { mapboxService } from '@/services/mapboxService';
 
 const route = useRoute();
 const tripId = route.params.tripId as string;
@@ -43,6 +44,8 @@ const activeMobileTab = ref<'itinerary' | 'ai'>('itinerary');
 const selectedActivity = ref<any>(null);
 const isEditMode = ref(false);
 const highlightedActivityId = ref<string | null>(null);
+const isOptimizing = ref(false);
+const showRoute = ref(true);
 
 // Refs
 const mapRef = ref<any>(null);
@@ -167,6 +170,42 @@ async function handleUpdate(activity: any) {
   }
 }
 
+async function handleOptimizeRoute() {
+  if (localActivities.value.length < 2) {
+    showToast('景點數量不足，無法優化', 'info');
+    return;
+  }
+
+  // Check if all activities have coordinates
+  const activitiesWithCoords = localActivities.value.filter(a => (a.latitude && a.longitude) || (a.start_location_lat && a.start_location_lng));
+  
+  if (activitiesWithCoords.length < localActivities.value.length) {
+    showToast('部分景點缺少座標，請先設定地點', 'warning');
+    // We could try to geocode here, but better to warn
+    return;
+  }
+
+  try {
+    isOptimizing.value = true;
+    const coords: [number, number][] = localActivities.value.map(a => [
+      a.longitude || a.start_location_lng,
+      a.latitude || a.start_location_lat
+    ]);
+
+    const optimizedOrder = await mapboxService.getOptimizedOrder(coords);
+    const optimizedActivities = optimizedOrder.map(index => localActivities.value[index]);
+    
+    // Update local and store
+    await itineraryStore.updateActivitiesBatch(currentItinerary.value!.id, optimizedActivities);
+    showToast('順序已優化！', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast('排程優化失敗', 'error');
+  } finally {
+    isOptimizing.value = false;
+  }
+}
+
 async function handleAddAI(suggestion: ActivitySuggestion) {
   if (!currentItinerary.value) return;
 
@@ -240,6 +279,7 @@ function setActivityRef(id: string, el: any) {
             ref="mapRef"
             :activities="localActivities" 
             :highlighted-id="highlightedActivityId"
+            :show-route="showRoute"
             @marker-click="handleMarkerClick"
           />
           
@@ -265,6 +305,16 @@ function setActivityRef(id: string, el: any) {
           >
             <MapIcon class="w-4 h-4 text-gray-500" />
             顯示全部
+          </button>
+
+          <button 
+            v-if="localActivities.length > 1"
+            @click="showRoute = !showRoute"
+            class="absolute bottom-16 right-4 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg shadow-lg text-xs font-medium transition-colors z-10 flex items-center gap-1.5 border border-gray-200"
+            :class="showRoute ? 'text-blue-600 border-blue-100' : 'text-gray-700'"
+          >
+            <MapPinIcon class="w-4 h-4" />
+            {{ showRoute ? '隱藏路線' : '顯示路線' }}
           </button>
 
           <!-- Mobile Tab Switcher (Floating) -->
@@ -329,6 +379,15 @@ function setActivityRef(id: string, el: any) {
               >
                 <PencilSquareIcon class="w-4 h-4" />
                 {{ isEditMode ? '停止編輯' : '快速編輯' }}
+              </button>
+
+              <button 
+                @click="handleOptimizeRoute"
+                :disabled="isOptimizing || localActivities.length < 2"
+                class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50"
+              >
+                <SparklesIcon class="w-4 h-4" :class="{'animate-pulse': isOptimizing}" />
+                {{ isOptimizing ? '優化中...' : '路徑優化' }}
               </button>
 
               <button 

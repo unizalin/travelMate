@@ -1,3 +1,119 @@
+<template>
+  <div class="min-h-screen bg-[#050b18] text-white selection:bg-primary-500/30">
+    <!-- Premium Grid Background -->
+    <div class="fixed inset-0 pointer-events-none opacity-20">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f633_0%,transparent_50%)]"></div>
+        <div class="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+    </div>
+
+    <!-- Glass Header -->
+    <header class="sticky top-0 z-50 p-6">
+        <div class="mx-auto max-w-7xl">
+            <div class="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2rem] px-6 py-3 flex justify-between items-center shadow-2xl ring-1 ring-white/5">
+                <div class="flex items-center gap-4">
+                    <router-link to="/" class="flex items-center gap-3 active:scale-95 transition-transform">
+                        <div class="p-2 bg-primary-600 rounded-xl shadow-lg shadow-primary-600/20">
+                            <img src="@/assets/img/TravelMate.png" alt="TravelMate" class="h-6 w-auto brightness-0 invert" />
+                        </div>
+                        <span class="text-xl font-black tracking-tighter hidden sm:block">TRAVELMATE</span>
+                    </router-link>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button @click="isJoinModalOpen = true"
+                        class="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-black uppercase tracking-widest transition-all">
+                        <UserGroupIcon class="w-4 h-4" />
+                        加入
+                    </button>
+                    
+                    <button @click="isCreateModalOpen = true"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-secondary-900 shadow-xl shadow-white/10 hover:scale-105 active:scale-95 text-xs font-black uppercase tracking-widest transition-all">
+                        <PlusIcon class="w-4 h-4" />
+                        <span>建立旅程</span>
+                    </button>
+                    
+                    <div class="h-6 w-px bg-white/10 hidden sm:block"></div>
+                    
+                    <UserMenu class="text-white" />
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 py-12">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        
+        <!-- Welcome Section -->
+        <div class="mb-16">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="h-px w-12 bg-primary-500/50"></div>
+                <span class="text-[10px] font-black uppercase tracking-[0.3em] text-primary-400">Mission Hub</span>
+            </div>
+            <h1 class="text-5xl font-black tracking-tighter mb-4">
+                我的<span class="text-primary-500">旅程</span>
+            </h1>
+            <p class="text-white/40 font-medium max-w-lg">
+                管理您的全球足跡。從這裡開始規劃您的下一段冒險，或是查看即將到來的精彩行程。
+            </p>
+        </div>
+
+        <div v-if="loading" class="flex flex-col items-center justify-center py-32">
+            <div class="relative w-20 h-20">
+                <div class="absolute inset-0 border-4 border-primary-500/10 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p class="mt-8 text-xs font-black uppercase tracking-[0.2em] text-white/30 animate-pulse">Synchronizing Data...</p>
+        </div>
+
+        <div v-else-if="error" class="max-w-md mx-auto text-center py-20 rounded-[3rem] bg-white/5 border border-white/10 p-12 backdrop-blur-3xl shadow-2xl">
+           <div class="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 text-red-500">
+              <ExclamationTriangleIcon class="w-8 h-8" />
+           </div>
+           <h3 class="text-xl font-black mb-2">連結中斷</h3>
+           <p class="text-white/40 text-sm mb-8 leading-relaxed">{{ error }}</p>
+           <button @click="tripStore.fetchTrips()" class="px-8 py-3 bg-red-500/10 text-red-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">重新讀取</button>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="trips.length === 0" class="flex flex-col items-center justify-center py-32 bg-white/5 rounded-[3rem] border border-dashed border-white/10 text-center backdrop-blur-xl">
+            <div class="w-32 h-32 bg-secondary-900 rounded-[2.5rem] flex items-center justify-center mb-10 shadow-2xl border border-white/5 relative group">
+               <span class="text-6xl group-hover:scale-125 transition-transform">✈️</span>
+               <div class="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+            <h3 class="text-2xl font-black mb-4">尚無航點紀錄</h3>
+            <p class="text-white/40 max-w-xs mx-auto mb-10 text-sm leading-relaxed font-medium">
+               目前還沒有任何計畫。準備好迎接下一場未知的探索了嗎？
+            </p>
+            <button @click="isCreateModalOpen = true"
+                class="px-10 py-4 bg-primary-600 rounded-[2rem] text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary-600/20">
+                立即部署計畫
+            </button>
+        </div>
+
+        <!-- Trip Grid -->
+        <div v-else class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <TripCard v-for="trip in trips" :key="trip.id" :trip="trip" />
+          
+          <!-- Create New Card -->
+          <button @click="isCreateModalOpen = true" 
+            class="group relative flex flex-col items-center justify-center min-h-[350px] rounded-[2.5rem] border-2 border-dashed border-white/10 hover:border-primary-500/50 hover:bg-white/5 transition-all duration-500">
+             <div class="w-16 h-16 rounded-[1.5rem] bg-white/5 group-hover:bg-primary-600 flex items-center justify-center mb-4 transition-all duration-500 shadow-xl">
+                <PlusIcon class="w-8 h-8 text-white/20 group-hover:text-white group-hover:scale-110 transition-all duration-500" />
+             </div>
+             <span class="text-xs font-black text-white/20 group-hover:text-white uppercase tracking-[0.2em] transition-colors">建立新旅程</span>
+             
+             <!-- Corner Decoration -->
+             <div class="absolute top-6 right-6 w-2 h-2 rounded-full bg-white/5 group-hover:bg-primary-500 transition-colors"></div>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <CreateTripModal :is-open="isCreateModalOpen" @close="isCreateModalOpen = false" @success="handleTripCreated" />
+    <JoinTripModal :is-open="isJoinModalOpen" @close="isJoinModalOpen = false" @success="handleTripCreated" />
+  </div>
+</template>
+
 <script setup lang="ts">
 import CreateTripModal from '@/components/modals/CreateTripModal.vue'
 import JoinTripModal from '@/components/modals/JoinTripModal.vue'
@@ -6,7 +122,7 @@ import UserMenu from '@/components/common/UserMenu.vue'
 import { useTripStore } from '@/stores/trip'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
-import { PlusIcon, UserGroupIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, UserGroupIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
 const tripStore = useTripStore()
 const { trips, loading, error } = storeToRefs(tripStore)
@@ -22,105 +138,3 @@ function handleTripCreated(_id: string) {
 }
 
 </script>
-
-<template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <!-- Header -->
-    <header class="bg-white sticky top-0 z-30 shadow-sm/50 border-b border-gray-100 backdrop-blur-xl bg-white/80">
-      <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-14">
-           <!-- Logo & Title -->
-           <div class="flex items-center gap-3">
-              <router-link to="/" class="flex items-center gap-2 group">
-                 <img src="@/assets/img/TravelMate.png" alt="TravelMate" class="h-8 w-auto group-hover:scale-105 transition-transform" />
-                 <span class="text-xl font-black text-gray-900 tracking-tight hidden sm:block">TravelMate</span>
-              </router-link>
-           </div>
-
-           <!-- Actions -->
-           <div class="flex items-center gap-3 sm:gap-4">
-              <button @click="isJoinModalOpen = true"
-                class="hidden sm:flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all border border-gray-100">
-                <UserGroupIcon class="w-4 h-4" />
-                加入旅程
-              </button>
-              
-              <button @click="isCreateModalOpen = true"
-                class="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-100 hover:bg-primary-500 hover:shadow-primary-200 hover:-translate-y-0.5 transition-all">
-                <PlusIcon class="w-4 h-4" />
-                <span class="hidden sm:inline">建立旅程</span>
-                <span class="sm:hidden">建立</span>
-              </button>
-              
-              <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
-              
-              <!-- Profile Dropdown -->
-              <UserMenu />
-           </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="py-8 sm:py-10">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        <!-- Page Title -->
-        <div class="mb-8 flex items-end justify-between">
-           <div>
-              <h1 class="text-3xl font-black text-gray-900 tracking-tight">我的旅程</h1>
-              <p class="mt-2 text-sm font-medium text-gray-500">管理您的所有精彩冒險</p>
-           </div>
-        </div>
-
-        <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-           <div class="w-10 h-10 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin mb-4"></div>
-           <p class="text-gray-400 font-medium">正在載入精彩旅程...</p>
-        </div>
-
-        <div v-else-if="error" class="text-center py-20 rounded-3xl bg-white border border-red-100 p-8 shadow-sm">
-           <div class="mx-auto w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-500">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-           </div>
-           <h3 class="text-lg font-bold text-gray-900 mb-2">載入失敗</h3>
-           <p class="text-red-500 mb-6">{{ error }}</p>
-           <button @click="tripStore.fetchTrips()" class="text-primary-600 font-bold hover:underline">重試</button>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="trips.length === 0" class="flex flex-col items-center justify-center py-20 sm:py-32 bg-white rounded-3xl border border-dashed border-gray-200 text-center">
-            <div class="w-24 h-24 bg-primary-50 rounded-full flex items-center justify-center mb-6 shadow-inner text-4xl">
-               ✈️
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">還沒有任何旅程</h3>
-            <p class="text-gray-500 max-w-sm mx-auto mb-8 font-medium">
-               準備好開始下一段冒險了嗎？<br>建立一個新旅程，或是加入朋友的計畫！
-            </p>
-            <div class="flex gap-4">
-              <button @click="isCreateModalOpen = true"
-                class="rounded-xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-100 hover:bg-primary-500 hover:shadow-primary-200 hover:-translate-y-0.5 transition-all">
-                開始建立旅程
-              </button>
-            </div>
-        </div>
-
-        <!-- Trip Grid -->
-        <div v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <TripCard v-for="trip in trips" :key="trip.id" :trip="trip" />
-          
-          <!-- Create New Card (Design choice: add card at the end) -->
-          <button @click="isCreateModalOpen = true" class="group flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-gray-200 hover:border-primary-300 hover:bg-primary-50/30 transition-all cursor-pointer">
-             <div class="w-12 h-12 rounded-full bg-gray-50 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
-                <PlusIcon class="w-6 h-6 text-gray-400 group-hover:text-primary-500" />
-             </div>
-             <span class="text-sm font-bold text-gray-400 group-hover:text-primary-600">建立新旅程</span>
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <CreateTripModal :is-open="isCreateModalOpen" @close="isCreateModalOpen = false" @success="handleTripCreated" />
-    <JoinTripModal :is-open="isJoinModalOpen" @close="isJoinModalOpen = false" @success="handleTripCreated" />
-  </div>
-</template>

@@ -117,40 +117,40 @@ function handleClose() {
       <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
           <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200" leave-from="opacity-100 translate-y-0 sm:scale-100" leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
-            <DialogPanel class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <DialogPanel class="relative transform overflow-hidden rounded-[2.5rem] bg-white dark:bg-secondary-900 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-slate-200 dark:border-white/5">
               <!-- Header -->
-              <div class="px-8 pt-8 pb-4 flex justify-between items-center">
+              <div class="px-6 sm:px-8 pt-8 pb-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600">
+                  <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center text-primary-600 dark:text-primary-400">
                     <SparklesIcon class="w-7 h-7" />
                   </div>
                   <div>
-                    <DialogTitle as="h3" class="text-2xl font-black text-secondary-900 tracking-tight">新增候選景點</DialogTitle>
-                    <p class="text-xs font-bold text-secondary-400 uppercase tracking-widest mt-0.5">Add to Wishlist</p>
+                    <DialogTitle as="h3" class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">新增候選景點</DialogTitle>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest mt-0.5">Add to Wishlist</p>
                   </div>
                 </div>
-                <button @click="handleClose" class="w-10 h-10 rounded-full hover:bg-secondary-50 flex items-center justify-center transition-colors">
-                  <XMarkIcon class="w-6 h-6 text-secondary-400" />
+                <button @click="handleClose" class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <XMarkIcon class="w-6 h-6 text-slate-400" />
                 </button>
               </div>
 
-              <form @submit.prevent="handleSubmit" class="p-8 pt-2 space-y-6">
+              <form @submit.prevent="handleSubmit" class="p-6 sm:p-8 pt-2 space-y-6">
                 <!-- Google Maps URL -->
                 <div class="space-y-2">
-                  <label class="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-400 px-1">Google 地圖連結</label>
+                  <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 px-1">Google 地圖連結</label>
                   <div class="relative">
-                    <LinkIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-300" />
+                    <LinkIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-white/20" />
                     <input 
                       v-model="form.google_maps_url"
-                      placeholder="貼上地圖連結可自動解析名稱與座標"
-                      class="w-full bg-secondary-50 border-none rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-secondary-900 placeholder:text-secondary-300 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                      placeholder="貼上地圖連結可自動解析"
+                      class="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                     />
                   </div>
                 </div>
 
                 <!-- Name (Autocomplete) -->
                 <div class="space-y-2">
-                  <label class="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-400 px-1">景點名稱</label>
+                  <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 px-1">景點名稱</label>
                   <AddressAutocomplete 
                     v-model="form.name"
                     placeholder="輸入景點名稱或地址"
@@ -161,28 +161,28 @@ function handleClose() {
 
                 <!-- Location -->
                 <div class="space-y-2">
-                  <label class="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-400 px-1">完整地址</label>
+                  <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 px-1">完整地址</label>
                   <div class="relative">
-                    <MapPinIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-300" />
+                    <MapPinIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-white/20" />
                     <input 
                       v-model="form.location"
                       required
                       placeholder="選擇名稱後自動填入"
-                      class="w-full bg-secondary-50 border-none rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-secondary-900 placeholder:text-secondary-300 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                      class="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                     />
                   </div>
                 </div>
 
                 <!-- Description -->
                 <div class="space-y-2">
-                  <label class="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-400 px-1">推薦備註 (選填)</label>
+                  <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 px-1">推薦備註 (選填)</label>
                   <div class="relative">
-                    <ChatBubbleBottomCenterTextIcon class="absolute left-6 top-6 w-5 h-5 text-secondary-300" />
+                    <ChatBubbleBottomCenterTextIcon class="absolute left-6 top-6 w-5 h-5 text-slate-300 dark:text-white/20" />
                     <textarea 
                       v-model="form.description"
                       rows="2"
                       placeholder="食物，景點..."
-                      class="w-full bg-secondary-50 border-none rounded-2xl pl-14 pr-6 py-6 text-sm font-bold text-secondary-900 placeholder:text-secondary-300 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none resize-none"
+                      class="w-full bg-slate-50 dark:bg-white/5 border-none rounded-2xl pl-14 pr-6 py-6 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none resize-none"
                     ></textarea>
                   </div>
                 </div>
@@ -192,7 +192,7 @@ function handleClose() {
                   <button 
                     type="submit"
                     :disabled="loading || !form.name || !form.location"
-                    class="w-full bg-primary-600 hover:bg-primary-500 text-white py-5 rounded-2xl text-base font-black uppercase tracking-[0.2em] shadow-xl shadow-primary-200 transition-all active:scale-95 disabled:opacity-50"
+                    class="w-full bg-primary-600 hover:bg-primary-500 text-white py-5 rounded-2xl text-base font-black uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 transition-all active:scale-95 disabled:opacity-50"
                   >
                     <span v-if="loading">處理中...</span>
                     <span v-else>加入願望清單</span>
@@ -210,9 +210,9 @@ function handleClose() {
 <style>
 /* Override AddressAutocomplete basic styles to match our Pro Max design */
 .address-autocomplete-custom input {
-  @apply bg-secondary-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-secondary-900 placeholder:text-secondary-300 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none shadow-none !important;
+  @apply bg-slate-50 dark:bg-white/5 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none shadow-none !important;
 }
 .address-autocomplete-custom .absolute.z-50 {
-  @apply rounded-2xl border-none shadow-2xl ring-0 mt-2 overflow-hidden !important;
+  @apply rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl ring-0 mt-2 overflow-hidden bg-white dark:bg-secondary-900 !important;
 }
 </style>

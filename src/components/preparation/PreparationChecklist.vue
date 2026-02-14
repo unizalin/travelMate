@@ -10,7 +10,6 @@ import {
   TrashIcon, 
   UserIcon, 
   UsersIcon,
-  DocumentTextIcon,
   PaperAirplaneIcon,
   CheckIcon
 } from '@heroicons/vue/24/outline'
@@ -170,17 +169,17 @@ const vFocus = {
     <!-- Premium Header Area -->
     <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between mb-12 gap-8">
       <div class="space-y-4">
-        <h3 class="text-4xl font-black text-secondary-900 tracking-tighter leading-none">
+        <h3 class="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
           出發記事本
         </h3>
       </div>
 
       <div class="flex flex-wrap items-center gap-6">
         <!-- Progress Circular Widget -->
-        <div class="flex items-center gap-4 bg-white p-4 rounded-[2rem] border border-secondary-100 shadow-sm hover:shadow-md transition-all">
+        <div class="flex items-center gap-4 bg-white dark:bg-white/5 p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
           <div class="relative w-14 h-14">
             <svg class="w-full h-full -rotate-90">
-              <circle cx="28" cy="28" r="24" fill="none" stroke="#f1f5f9" stroke-width="5" />
+              <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" stroke-width="5" class="text-slate-100 dark:text-white/5" />
               <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" stroke-width="5" 
                 class="text-primary-500 transition-all duration-1000"
                 stroke-linecap="round"
@@ -189,31 +188,31 @@ const vFocus = {
               />
             </svg>
             <div class="absolute inset-0 flex items-center justify-center">
-              <span class="text-xs font-black text-secondary-900">{{ modeProgress }}%</span>
+              <span class="text-xs font-black text-slate-900 dark:text-white">{{ modeProgress }}%</span>
             </div>
           </div>
           <div class="pr-2">
-            <p class="text-xs font-black text-secondary-900">完成進度</p>
+            <p class="text-xs font-black text-slate-900 dark:text-white">完成進度</p>
           </div>
         </div>
 
         <!-- Mode Toggle Switch (iOS Style) -->
         <div class="flex flex-col gap-4">
-          <div class="flex bg-secondary-50 p-1.5 rounded-[1.5rem] border border-secondary-100 shadow-inner">
+          <div class="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner">
             <button 
               @click="activeMode = 'personal'"
-              class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
-              :class="activeMode === 'personal' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
+              :class="activeMode === 'personal' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-xl' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'"
+              class="flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
-              <UserIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+              <UserIcon class="w-4 h-4" />
               個人私有
             </button>
             <button 
               @click="activeMode = 'shared'"
-              class="flex items-center gap-2 px-6 py-3 text-xs font-black rounded-2xl transition-all uppercase tracking-widest group"
-              :class="activeMode === 'shared' ? 'bg-white text-primary-600 shadow-xl ring-1 ring-secondary-100' : 'text-secondary-400 hover:text-secondary-600'"
+              :class="activeMode === 'shared' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-xl' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'"
+              class="flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
-              <UsersIcon class="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+              <UsersIcon class="w-4 h-4" />
               團體共用
             </button>
           </div>
@@ -223,7 +222,7 @@ const vFocus = {
             <button 
               @click="filterStatus = 'pending'"
               class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
-              :class="filterStatus === 'pending' ? 'text-primary-600' : 'text-secondary-300 hover:text-secondary-500'"
+              :class="filterStatus === 'pending' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-300 dark:text-white/20 hover:text-slate-500'"
             >
               未完成
               <div v-if="filterStatus === 'pending'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
@@ -231,7 +230,7 @@ const vFocus = {
             <button 
               @click="filterStatus = 'completed'"
               class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
-              :class="filterStatus === 'completed' ? 'text-primary-600' : 'text-secondary-300 hover:text-secondary-500'"
+              :class="filterStatus === 'completed' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-300 dark:text-white/20 hover:text-slate-500'"
             >
               已完成
               <div v-if="filterStatus === 'completed'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
@@ -241,65 +240,62 @@ const vFocus = {
       </div>
     </div>
 
-    <!-- Minimal Input Area (Float Design) -->
+    <!-- Minimal Input Area -->
     <div class="max-w-3xl mx-auto mb-16 relative">
-      <div class="group bg-white rounded-[2.5rem] shadow-2xl shadow-secondary-100/50 border border-secondary-50 overflow-hidden focus-within:ring-4 focus-within:ring-primary-500/10 transition-all">
-        <div class="flex items-center px-6 py-1">
-          <div class="w-10 h-10 flex items-center justify-center text-primary-400">
-             <PlusIcon class="w-6 h-6" />
-          </div>
-          <input 
-            v-model="newItemTitle"
-            type="text" 
-            :placeholder="activeMode === 'shared' ? '建立一項團隊共用記事...' : '紀錄個人的準備事項...'"
-            class="flex-1 py-6 px-2 bg-transparent border-none text-base font-bold text-secondary-900 placeholder:text-secondary-200 outline-none"
-            @keyup.enter="handleAddItem"
-          />
-          <button 
-            @click="handleAddItem"
-            :disabled="!newItemTitle.trim()"
-            class="flex items-center gap-2 px-6 py-3 bg-secondary-900 hover:bg-black text-white text-[10px] font-black rounded-2xl transition-all disabled:opacity-20 uppercase tracking-widest active:scale-95 shadow-xl shadow-secondary-200"
-          >
-            <PaperAirplaneIcon class="w-4 h-4" />
-            新增
-          </button>
+      <div class="relative bg-white dark:bg-white/5 p-2 rounded-2.5xl border-2 border-slate-100 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-3xl flex items-center group focus-within:border-primary-500/50 transition-all">
+        <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-secondary-900 flex items-center justify-center text-slate-400 dark:text-white/20 group-focus-within:text-primary-500 transition-colors">
+          <PlusIcon class="w-6 h-6" />
         </div>
+        <input 
+          v-model="newItemTitle"
+          type="text" 
+          :placeholder="activeMode === 'shared' ? '建立一項團隊共用記事...' : '紀錄個人的準備事項...'"
+          class="flex-1 py-6 px-2 bg-transparent border-none text-base font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 outline-none"
+          @keyup.enter="handleAddItem"
+        />
+        <button 
+          @click="handleAddItem"
+          :disabled="!newItemTitle.trim()"
+          class="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-secondary-900 text-[10px] font-black rounded-2xl transition-all disabled:opacity-20 uppercase tracking-widest active:scale-95 shadow-xl"
+        >
+          <PaperAirplaneIcon class="w-4 h-4" />
+          新增
+        </button>
       </div>
     </div>
 
-    <!-- List Layout (Note-Item Design) -->
+    <!-- List Layout -->
     <div class="max-w-3xl mx-auto space-y-3">
       <div v-if="loading" class="space-y-4">
-        <div v-for="i in 5" :key="i" class="h-24 bg-secondary-50 animate-pulse rounded-[2rem]"></div>
+        <div v-for="i in 5" :key="i" class="h-24 bg-slate-100 dark:bg-white/5 animate-pulse rounded-[2rem]"></div>
       </div>
 
-      <div v-else-if="filteredItems.length === 0" class="py-32 flex flex-col items-center justify-center text-center opacity-40">
-         <div class="w-24 h-24 bg-secondary-50 rounded-[3rem] flex items-center justify-center mb-8 border-2 border-dashed border-secondary-200">
-           <DocumentTextIcon class="w-10 h-10 text-secondary-300" />
+      <div v-else-if="filteredItems.length === 0" class="py-20 text-center bg-slate-50 dark:bg-white/5 rounded-[3rem] border-4 border-dashed border-slate-100 dark:border-white/5 shadow-inner">
+         <div class="w-20 h-20 bg-slate-100 dark:bg-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-slate-300 dark:text-white/10">
+           <PaperAirplaneIcon class="w-10 h-10 -rotate-45" />
          </div>
-         <h4 class="text-xl font-black text-secondary-900 tracking-tight">記事本目前空空如也</h4>
+         <h5 class="text-xl font-black text-slate-900 dark:text-white mb-2">清單目前部署完成</h5>
+         <p class="text-sm font-medium text-slate-400 dark:text-white/20">輸入指令來新增新的準備項目</p>
       </div>
 
       <div v-else class="grid gap-3 animate-fade-in">
         <div 
           v-for="item in filteredItems" 
           :key="item.id"
-          class="group/item relative bg-white p-6 rounded-[2.2rem] border border-secondary-100 hover:border-primary-200 transition-all duration-500 overflow-hidden flex items-center justify-between gap-6 hover:shadow-2xl hover:shadow-primary-100/30"
-          :class="item.is_completed ? 'bg-secondary-50/30' : ''"
+          class="group/item relative bg-white dark:bg-white/5 p-6 rounded-[2.2rem] border border-slate-100 dark:border-white/5 hover:border-primary-200 dark:hover:border-primary-500/50 transition-all duration-500 overflow-hidden flex items-center justify-between gap-6 hover:shadow-2xl hover:shadow-primary-100/30 dark:shadow-none"
+          :class="isUserCompleted(item) ? 'bg-slate-50/50 dark:bg-white/2' : ''"
         >
-          <!-- Left side: Check and Content -->
+          <!-- Left side -->
           <div class="flex items-center gap-6 flex-1 min-w-0">
-            <!-- Checkbox with dynamic animation -->
             <button 
               @click="toggleItem(item)"
-              class="w-8 h-8 flex-shrink-0 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center relative"
-              :class="isUserCompleted(item) ? 'bg-emerald-500 border-emerald-500 scale-100 shadow-lg shadow-emerald-100' : 'bg-white border-secondary-100 group-hover/item:border-primary-400 scale-95 hover:scale-105'"
+              class="w-8 h-8 flex-shrink-0 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center relative shadow-sm"
+              :class="isUserCompleted(item) ? 'bg-emerald-500 border-emerald-500 scale-100 shadow-emerald-500/20' : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 group-hover/item:border-primary-400 scale-95 hover:scale-105'"
             >
               <CheckCircleSolid v-if="isUserCompleted(item)" class="w-5 h-5 text-white animate-pop-in" />
-              <div v-else class="w-1.5 h-1.5 rounded-full bg-secondary-100 group-hover/item:bg-primary-300 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
+              <div v-else class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/10 group-hover/item:bg-primary-300 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
             </button>
 
-            <!-- Text Content -->
             <div class="flex-1 min-w-0">
               <div v-if="editingItemId === item.id" class="flex items-center pr-4">
                 <input 
@@ -307,27 +303,26 @@ const vFocus = {
                   @keyup.enter="saveEdit(item)"
                   @blur="saveEdit(item)"
                   v-focus
-                  class="w-full bg-secondary-50/50 border-none rounded-2xl px-5 py-2.5 text-base font-bold text-secondary-900 focus:ring-2 focus:ring-primary-500 transition-all outline-none"
+                  class="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 font-black tracking-tight py-4"
                 />
               </div>
               <div v-else class="flex flex-col group/text" @click="toggleItem(item)">
                 <span 
                   class="text-base font-black transition-all cursor-pointer truncate tracking-tight pr-4"
-                  :class="isUserCompleted(item) ? 'text-secondary-300 line-through decoration-secondary-200/50 decoration-[2px]' : 'text-secondary-800'"
+                  :class="isUserCompleted(item) ? 'text-slate-300 dark:text-white/20 line-through decoration-slate-200/50 dark:decoration-white/10 decoration-[2px]' : 'text-slate-800 dark:text-white/80 group-hover:text-slate-900 dark:group-hover:text-white'"
                 >
                   {{ item.title }}
                 </span>
 
-                <!-- Member Completion Avatars (Shared Only) -->
                 <div v-if="activeMode === 'shared' && tripMembers.length > 0" class="flex items-center gap-1.5 mt-2.5">
                    <div v-for="member in tripMembers" :key="member.user_id" class="relative">
                       <img 
                         :src="member.profiles.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.profiles.display_name)}&background=random`"
                         class="w-6 h-6 rounded-full border-2 transition-all duration-500"
-                        :class="isMemberCompleted(item, member.user_id) ? 'border-primary-400 scale-110 shadow-sm' : 'border-secondary-50 grayscale opacity-30 scale-90'"
+                        :class="isMemberCompleted(item, member.user_id) ? 'border-primary-400 scale-110 shadow-sm' : 'border-slate-100 dark:border-white/5 grayscale opacity-30 scale-90'"
                         :title="member.profiles.display_name"
                       />
-                      <div v-if="isMemberCompleted(item, member.user_id)" class="absolute -top-1 -right-1 bg-primary-500 rounded-full p-0.5 shadow-sm border border-white">
+                      <div v-if="isMemberCompleted(item, member.user_id)" class="absolute -top-1 -right-1 bg-primary-500 rounded-full p-0.5 shadow-sm border border-white dark:border-secondary-900">
                         <CheckIcon class="w-1.5 h-1.5 text-white" />
                       </div>
                    </div>
@@ -336,29 +331,24 @@ const vFocus = {
             </div>
           </div>
 
-          <!-- Right side: Actions -->
-          <div class="flex items-center gap-4 relative z-10 flex-shrink-0">
-            <!-- User Status (Shared) - Removed old logic as we now show all members -->
-
-            <!-- Action Menu -->
-            <div class="flex items-center gap-2 transition-all translate-x-4 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100">
-              <button 
-                @click.stop="startEditing(item)"
-                class="w-10 h-10 flex items-center justify-center bg-secondary-50 hover:bg-white text-secondary-400 hover:text-primary-600 rounded-2xl transition-all border border-transparent hover:border-secondary-100 shadow-sm hover:shadow-md"
-              >
-                <PencilSquareIcon class="w-4 h-4" />
-              </button>
-              <button 
-                @click.stop="deleteItem(item.id)"
-                class="w-10 h-10 flex items-center justify-center bg-secondary-50 hover:bg-white text-secondary-400 hover:text-red-600 rounded-2xl transition-all border border-transparent hover:border-secondary-100 shadow-sm hover:shadow-md"
-              >
-                <TrashIcon class="w-4 h-4" />
-              </button>
-            </div>
+          <!-- Actions -->
+          <div class="flex items-center gap-2 transition-all translate-x-4 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100">
+            <button 
+              @click.stop="startEditing(item)"
+              class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-slate-400 dark:text-white/40 hover:text-primary-600 dark:hover:text-primary-400 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/10 shadow-sm hover:shadow-md"
+            >
+              <PencilSquareIcon class="w-4 h-4" />
+            </button>
+            <button 
+              @click.stop="deleteItem(item.id)"
+              class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-slate-400 dark:text-white/40 hover:text-red-600 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/10 shadow-sm hover:shadow-md"
+            >
+              <TrashIcon class="w-4 h-4" />
+            </button>
           </div>
 
-          <!-- Highlight Bar -->
-          <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary-50 group-hover/item:bg-primary-500 transition-all duration-500"></div>
+          <!-- Highlight Decoration -->
+          <div class="absolute left-0 top-0 bottom-0 w-1 bg-transparent group-hover/item:bg-primary-500 transition-all duration-500"></div>
         </div>
       </div>
     </div>

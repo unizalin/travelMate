@@ -45,6 +45,8 @@ CREATE TABLE trips (
   end_date DATE NOT NULL,
   created_by UUID REFERENCES profiles(id) ON DELETE CASCADE,
   invite_code TEXT UNIQUE NOT NULL DEFAULT substr(md5(random()::text), 0, 7),
+  is_public BOOLEAN DEFAULT FALSE,
+  trip_stats JSONB DEFAULT '{"distance": 0, "attractions": 0, "days": 0}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

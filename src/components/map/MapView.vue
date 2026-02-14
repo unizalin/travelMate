@@ -24,6 +24,7 @@ const props = defineProps<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   activities: any[]
   highlightedId?: string | null
+  showRoute?: boolean
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ const mapContainer = ref<HTMLElement | null>(null);
 let map: L.Map | null = null;
 const markers: Record<string, L.Marker> = {};
 const coordsCache = ref<Record<string, [number, number]>>({});
+let polyline: L.Polyline | null = null;
 
 // Create custom numbered icon
 const createNumberedIcon = (number: number, isActive: boolean) => {
@@ -87,11 +89,16 @@ const updateMarkers = async () => {
   // Clear old markers
   Object.values(markers).forEach(marker => marker.remove());
   for (const key in markers) delete markers[key];
+  if (polyline) {
+    polyline.remove();
+    polyline = null;
+  }
 
   if (props.activities.length === 0) return;
 
   const bounds = L.latLngBounds([]);
   let hasValidCoords = false;
+  const routePoints: [number, number][] = [];
 
   for (let index = 0; index < props.activities.length; index++) {
     const activity = props.activities[index];
@@ -135,7 +142,18 @@ const updateMarkers = async () => {
 
     markers[activity.id] = marker;
     bounds.extend([lat, lng]);
+    routePoints.push([lat, lng]);
     hasValidCoords = true;
+  }
+
+  // Draw Route
+  if (props.showRoute && routePoints.length > 1) {
+    polyline = L.polyline(routePoints, {
+      color: '#3B82F6',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: '10, 10', // Dashed line for route
+    }).addTo(map);
   }
 
   // Only fit bounds on initial load or major updates if we have coords

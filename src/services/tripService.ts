@@ -96,5 +96,16 @@ export const tripService = {
       .eq('id', id)
 
     if (error) throw error
+  },
+
+  async updateTrip(id: string, updates: Partial<Database['public']['Tables']['trips']['Update']>) {
+    const { data, error } = await (supabase.from('trips') as any)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 }

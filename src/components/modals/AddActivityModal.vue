@@ -121,6 +121,11 @@ const handleAddressSelect = (result: AddressSearchResult) => {
 };
 
 async function handleSubmit() {
+  if (!name.value.trim()) {
+    error.value = '請輸入景點名稱'
+    return
+  }
+
   try {
     loading.value = true
     error.value = ''
@@ -141,15 +146,13 @@ async function handleSubmit() {
       itinerary_id: props.itineraryId,
       name: name.value,
       location: location.value,
-      duration: duration.value || null,
+      duration: duration.value ? Number(duration.value) : null,
       start_time: startTime.value || null,
       end_time: endTime.value || null,
       notes: notes.value,
       order_index: props.currentOrder + 1,
-      // @ts-ignore
-      latitude: lat,
-      // @ts-ignore
-      longitude: lng
+      latitude: lat ? Number(lat) : null,
+      longitude: lng ? Number(lng) : null
     })
 
     // Reset form

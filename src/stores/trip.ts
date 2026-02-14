@@ -74,6 +74,26 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
+  async function updateTrip(id: string, updates: any) {
+    try {
+      loading.value = true
+      const updated = await tripService.updateTrip(id, updates)
+      if (currentTrip.value && currentTrip.value.id === id) {
+        currentTrip.value = { ...currentTrip.value, ...(updated as any) }
+      }
+      const index = trips.value.findIndex(t => t.id === id)
+      if (index !== -1) {
+        trips.value[index] = { ...(trips.value[index] as any), ...(updated as any) }
+      }
+      return updated
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     trips,
     currentTrip,
@@ -83,6 +103,7 @@ export const useTripStore = defineStore('trip', () => {
     fetchTripById,
     createTrip,
     joinTrip,
-    deleteTrip
+    deleteTrip,
+    updateTrip
   }
 })

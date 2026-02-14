@@ -6,11 +6,13 @@ import CandidateCard from '@/components/candidate/CandidateCard.vue'
 import AddCandidateModal from '@/components/candidate/AddCandidateModal.vue'
 import AIScheduleModal from '@/components/candidate/AIScheduleModal.vue'
 import DayPickerModal from '@/components/candidate/DayPickerModal.vue'
+import NearbySearchModal from '@/components/candidate/NearbySearchModal.vue'
 import { 
   PlusIcon, 
   SparklesIcon, 
   ArrowsUpDownIcon,
-  ArchiveBoxIcon
+  ArchiveBoxIcon,
+  MapPinIcon
 } from '@heroicons/vue/24/outline'
 import { useToast } from '@/composables/useToast'
 import { useDialog } from '@/composables/useDialog'
@@ -31,6 +33,7 @@ const loading = ref(true)
 const isAddModalOpen = ref(false)
 const isAIModalOpen = ref(false)
 const isDayPickerOpen = ref(false)
+const isNearbyModalOpen = ref(false)
 const selectedCandidate = ref<CandidateActivity | null>(null)
 const aiSuggestions = ref<SchedulingSuggestion[]>([])
 const isScheduling = ref(false)
@@ -176,81 +179,107 @@ onMounted(fetchCandidates)
 </script>
 
 <template>
-  <div class="space-y-10 py-6">
+  <div class="space-y-12 py-8 min-h-screen">
     <!-- View Header (Filter & Sort) -->
-    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-      <div class="flex items-center gap-3">
-        <button 
-          @click="filterStatus = 'all'"
-          :class="filterStatus === 'all' ? 'bg-secondary-900 text-white shadow-xl shadow-secondary-100' : 'bg-white text-secondary-500 hover:bg-secondary-50'"
-          class="px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-        >
-          全部
-        </button>
-        <button 
-          @click="filterStatus = 'pending'"
-          :class="filterStatus === 'pending' ? 'bg-primary-600 text-white shadow-xl shadow-primary-100' : 'bg-white text-secondary-500 hover:bg-secondary-50'"
-          class="px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-        >
-          未加入
-        </button>
-        <button 
-          @click="filterStatus = 'added'"
-          :class="filterStatus === 'added' ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-100' : 'bg-white text-secondary-500 hover:bg-secondary-50'"
-          class="px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-        >
-          已加入
-        </button>
+    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+      <!-- Filter Segmented Control -->
+      <div class="w-full xl:w-auto overflow-x-auto no-scrollbar pb-2 xl:pb-0">
+        <div class="inline-flex items-center gap-2 p-1.5 bg-white/50 dark:bg-white/5 backdrop-blur-3xl rounded-[1.5rem] border border-slate-200 dark:border-white/10 shadow-xl min-w-max">
+          <button 
+            @click="filterStatus = 'all'"
+            :class="filterStatus === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+          >
+            全部地標
+          </button>
+          <button 
+            @click="filterStatus = 'pending'"
+            :class="filterStatus === 'pending' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+          >
+            待部署
+          </button>
+          <button 
+            @click="filterStatus = 'added'"
+            :class="filterStatus === 'added' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+          >
+            已部署
+          </button>
+        </div>
       </div>
 
-      <div class="flex items-center gap-4">
+      <!-- Actions Bar -->
+      <div class="w-full xl:w-auto flex flex-wrap items-center gap-3">
         <!-- Sort Dropdown -->
-        <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-secondary-50">
-          <ArrowsUpDownIcon class="w-4 h-4 text-secondary-300" />
-          <select v-model="sortBy" class="bg-transparent border-none text-xs font-black text-secondary-600 outline-none uppercase tracking-widest cursor-pointer">
-            <option value="newest">最新添加</option>
-            <option value="likes">最多點讚</option>
-            <option value="name">按名稱</option>
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-white/5 backdrop-blur-3xl rounded-xl border border-slate-200 dark:border-white/10 shadow-lg group">
+          <ArrowsUpDownIcon class="w-3.5 h-3.5 text-slate-300 dark:text-white/20 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
+          <select v-model="sortBy" class="bg-transparent border-none text-[9px] font-black text-slate-600 dark:text-white/60 outline-none uppercase tracking-widest cursor-pointer appearance-none">
+            <option value="newest" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">最新收錄</option>
+            <option value="likes" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">最高評價</option>
+            <option value="name" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">名稱排序</option>
           </select>
         </div>
 
-        <!-- AI Button -->
-        <button 
-          @click="handleAISchedule"
-          :disabled="isScheduling || filteredItems.length === 0"
-          class="group relative overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 px-6 py-3 rounded-2xl shadow-xl shadow-indigo-100 hover:shadow-indigo-200 transition-all active:scale-95 disabled:grayscale disabled:opacity-50"
-        >
-          <div class="flex items-center gap-2 relative z-10">
-            <SparklesIcon class="w-4 h-4 text-white animate-pulse" />
-            <span class="text-xs font-black text-white uppercase tracking-widest">
-              {{ isScheduling ? 'AI 分析中...' : 'AI 智能排程' }}
+        <div class="flex items-center gap-2 flex-1 sm:flex-none">
+          <button 
+            @click="isNearbyModalOpen = true"
+            class="flex-1 sm:flex-none group flex items-center justify-center gap-2 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 py-2.5 rounded-xl shadow-lg hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-95"
+          >
+            <MapPinIcon class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span class="text-[9px] font-black text-slate-500 dark:text-white/60 uppercase tracking-widest">
+              偵測周邊
             </span>
-          </div>
-          <!-- Shimmer effect -->
-          <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-        </button>
+          </button>
 
-        <!-- Add Button -->
-        <button 
-          @click="isAddModalOpen = true"
-          class="bg-secondary-900 hover:bg-black text-white p-3 rounded-2xl shadow-xl shadow-secondary-100 transition-all active:scale-95"
-        >
-          <PlusIcon class="w-6 h-6 stroke-[3]" />
-        </button>
+          <button 
+            @click="handleAISchedule"
+            :disabled="isScheduling || filteredItems.length === 0"
+            class="flex-1 sm:flex-none group relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-5 py-2.5 rounded-xl shadow-xl shadow-indigo-600/20 hover:scale-105 transition-all active:scale-95 disabled:grayscale disabled:opacity-30"
+          >
+            <div class="flex items-center justify-center gap-2 relative z-10 text-white">
+              <SparklesIcon class="w-3.5 h-3.5 animate-pulse" />
+              <span class="text-[9px] font-black uppercase tracking-widest">
+                {{ isScheduling ? 'Analyzing...' : 'AI 排程' }}
+              </span>
+            </div>
+          </button>
+
+          <button 
+            @click="isAddModalOpen = true"
+            class="bg-slate-900 dark:bg-white text-white dark:text-secondary-900 p-2.5 rounded-xl shadow-xl hover:scale-110 active:scale-95 transition-all"
+          >
+            <PlusIcon class="w-5 h-5 stroke-[3]" />
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- Stats Panel (Optional Decoration) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+        <div 
+            v-for="(stat, label) in { 'Total Hubs': items.length, 'Pending': items.filter(i => i.status === 'pending').length, 'Deployed': items.filter(i => i.status === 'added').length, 'AI Ready': 1 }"
+            :key="label"
+            class="bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center backdrop-blur-xl"
+        >
+            <span class="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/20 mb-1">{{ label }}</span>
+            <span class="text-xl font-mono font-black text-primary-600 dark:text-primary-500">{{ stat }}</span>
+        </div>
     </div>
 
     <!-- Empty State -->
-    <div v-if="!loading && filteredItems.length === 0" class="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <div class="w-24 h-24 rounded-[2rem] bg-secondary-50 flex items-center justify-center text-secondary-200 mb-6">
-        <ArchiveBoxIcon class="w-12 h-12" />
+    <div v-if="!loading && filteredItems.length === 0" class="flex flex-col items-center justify-center py-24 px-6 text-center bg-white/50 dark:bg-white/5 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl">
+      <div class="w-24 h-24 rounded-[2.5rem] bg-slate-100 dark:bg-secondary-900 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-300 dark:text-white/10 mb-8 relative group">
+        <ArchiveBoxIcon class="w-12 h-12 group-hover:scale-110 transition-transform" />
+        <div class="absolute inset-0 bg-primary-500/10 dark:bg-primary-500/10 blur-3xl rounded-full"></div>
       </div>
-      <h4 class="text-xl font-black text-secondary-900 mb-2">願望清單目前空空如也</h4>
-      <p class="text-sm font-medium text-secondary-400 max-w-xs mx-auto">點擊加號按鈕，收集想去的地方，讓旅程更豐富！</p>
+      <h4 class="text-2xl font-black text-slate-900 dark:text-white mb-4">資料庫目前為空</h4>
+      <p class="text-sm font-medium text-slate-400 dark:text-white/30 max-w-xs mx-auto mb-10 leading-relaxed">啟動地標收藏模組，將您感興趣的目的地加入願望清單，讓 AI 為您打造完美旅程。</p>
+      <button @click="isAddModalOpen = true" class="px-8 py-3.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all">手動新增地標</button>
     </div>
 
     <!-- Grid -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
       <CandidateCard 
         v-for="item in filteredItems" 
         :key="item.id" 
@@ -283,6 +312,13 @@ onMounted(fetchCandidates)
       :candidate-name="selectedCandidate?.name || ''"
       @close="isDayPickerOpen = false"
       @select="onDaySelected"
+    />
+
+    <NearbySearchModal 
+      :is-open="isNearbyModalOpen"
+      :trip-id="tripId"
+      @close="isNearbyModalOpen = false"
+      @added="fetchCandidates"
     />
   </div>
 </template>

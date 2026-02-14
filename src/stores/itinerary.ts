@@ -72,10 +72,15 @@ export const useItineraryStore = defineStore('itinerary', () => {
   async function createActivity(activity: any) {
     try {
       loading.value = true
+
+      // Auto-calculate order_index if missing
+      if (activity.order_index === undefined) {
+        const itinerary = itineraries.value.find((i: any) => i.id === activity.itinerary_id)
+        activity.order_index = (itinerary?.activities?.length || 0) + 1
+      }
+
       const newActivity = await activityService.createActivity(activity)
       // Refresh or push to local state
-      // Simplest is to find the itinerary and push
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const itinerary = itineraries.value.find((i: any) => i.id === activity.itinerary_id)
       if (itinerary) {
         if (!itinerary.activities) itinerary.activities = []

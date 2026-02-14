@@ -1,57 +1,84 @@
 <template>
-  <UICard
-    shadow="sm"
-    hoverable
-    body-class="p-0"
+  <div 
     @click="goToDetail"
-    class="overflow-hidden group animate-fade-in"
+    class="group relative overflow-hidden rounded-[2.5rem] bg-secondary-900/40 backdrop-blur-3xl border border-white/5 hover:border-primary-500/50 transition-all duration-500 cursor-pointer shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-1 animate-fade-in"
   >
-    <div class="h-32 bg-primary-50 sm:h-40 relative overflow-hidden">
-      <!-- Placeholder image decoration -->
-      <div class="absolute inset-0 bg-gradient-to-br from-primary-100 to-primary-200"></div>
-      <div class="absolute inset-0 flex items-center justify-center text-primary-300 transform group-hover:scale-110 transition-transform duration-500">
-        <svg class="w-16 h-16 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a3 3 0 013 3v.354m.437-12.827A9.761 9.761 0 0012 2C6.477 2 2 6.477 2 12c0 2.391.838 4.588 2.238 6.287l1.396-1.397a5.552 5.552 0 01-.253-2.616 5.56 5.56 0 011.603-4.14 5.561 5.561 0 014.14-1.603 5.552 5.552 0 012.616.253l1.397-1.396A9.76 9.76 0 0012 2.065c-.021 0-.042.001-.063.001z" />
-        </svg>
+    <!-- Card Header / Image Area -->
+    <div class="h-44 relative overflow-hidden bg-[#0a1224]">
+      <!-- Background Patterns -->
+      <div class="absolute inset-0 opacity-20">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#3b82f644_0%,transparent_70%)]"></div>
+        <div class="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
       </div>
-      <!-- Destination Badge -->
-      <div class="absolute top-3 right-3">
-        <UIBadge variant="primary" size="sm" class="bg-white/90 backdrop-blur-sm border-transparent shadow-sm">
-          {{ trip.destination }}
-        </UIBadge>
+
+      <!-- Icon Decoration -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div class="relative">
+          <GlobeAltIcon class="w-16 h-16 text-primary-500/20 group-hover:scale-110 group-hover:text-primary-500/40 transition-all duration-700" />
+          <div class="absolute inset-0 bg-primary-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </div>
+      </div>
+
+      <!-- Top Badges -->
+      <div class="absolute top-4 left-4 right-4 flex justify-between items-start">
+        <div class="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black text-primary-400 uppercase tracking-widest">
+            {{ trip.start_date }}
+        </div>
+        <div class="px-3 py-1 rounded-full bg-primary-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary-500/20">
+            {{ trip.destination }}
+        </div>
       </div>
     </div>
-    
-    <div class="p-5">
-      <h3 class="text-lg font-heading font-bold text-secondary-900 group-hover:text-primary-600 transition-colors">
-        {{ trip.name }}
-      </h3>
-      
-      <div class="mt-4 flex items-center justify-between">
-        <div class="flex items-center text-sm text-secondary-500">
-          <svg class="w-4 h-4 mr-1.5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {{ trip.start_date }}
+
+    <!-- Card Content -->
+    <div class="p-6">
+      <div class="mb-4">
+        <h3 class="text-xl font-black text-white group-hover:text-primary-400 transition-colors line-clamp-1 mb-1">
+          {{ trip.name }}
+        </h3>
+        <p class="text-xs font-medium text-white/40 uppercase tracking-widest">
+            Next Adventure
+        </p>
+      </div>
+
+      <!-- Bottom Info -->
+      <div class="flex items-center justify-between">
+        <div class="flex -space-x-2">
+            <div 
+                v-for="i in 3" 
+                :key="i"
+                class="w-6 h-6 rounded-full border-2 border-[#050b18] bg-secondary-800 flex items-center justify-center text-[8px] font-black text-white/40"
+            >
+                U{{ i }}
+            </div>
         </div>
         
-        <UIBadge v-if="daysUntilStart > 0" variant="info" size="xs">
-          In {{ daysUntilStart }} days
-        </UIBadge>
-        <UIBadge v-else variant="success" size="xs">
-          Ongoing
-        </UIBadge>
+        <div 
+            v-if="daysUntilStart > 0"
+            class="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]"
+        >
+            In {{ daysUntilStart }} Days
+        </div>
+        <div 
+            v-else
+            class="flex items-center gap-1.5"
+        >
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Ongoing</span>
+        </div>
       </div>
     </div>
-  </UICard>
+
+    <!-- Interactive Border Layer -->
+    <div class="absolute inset-0 border border-white/5 rounded-[2.5rem] pointer-events-none group-hover:border-primary-500/30 transition-colors"></div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import type { Database } from '@/types/database';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import UICard from '@/components/ui/Card.vue'
-import UIBadge from '@/components/ui/Badge.vue'
+import { GlobeAltIcon } from '@heroicons/vue/24/outline';
 
 type Trip = Database['public']['Tables']['trips']['Row']
 

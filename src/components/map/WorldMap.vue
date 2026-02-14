@@ -30,9 +30,7 @@ const updateIcon = () => {
 }
 updateIcon()
 
-const props = defineProps<{
-    // Optional events or props
-}>()
+// No props needed
 
 const store = useExploreStore()
 const { dartResult, publicTrips } = storeToRefs(store)

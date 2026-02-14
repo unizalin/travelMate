@@ -6,3 +6,7 @@
 
 ## Persona
 - Maintain a helpful and professional tone.
+
+## Skill Triggers
+- **Deep Reasoning**: When the user says "深度思考", "仔細想想", or asks for a "complex analysis", you MUST use the `deep-reasoning` skill to analyze pros and cons before answering.
+- **Roundtable Council**: When the user says "召開圓桌會議", "開會討論", "多方評估", or asks for a "major architecture decision", you MUST use the `roundtable-council` skill to simulate a debate between Alice (UX), Bob (Tech), and Charlie (PM).

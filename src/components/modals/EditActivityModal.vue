@@ -145,6 +145,11 @@ const handleAddressSelect = (result: AddressSearchResult) => {
 async function handleSubmit() {
   if (!props.activity) return
 
+  if (!name.value.trim()) {
+    error.value = '請輸入景點名稱'
+    return
+  }
+
   try {
     loading.value = true
     error.value = ''
@@ -178,12 +183,12 @@ async function handleSubmit() {
     await itineraryStore.updateActivity(props.activity.id, {
       name: name.value,
       location: location.value,
-      duration: duration.value || null,
+      duration: duration.value ? Number(duration.value) : null,
       start_time: startTime.value || null,
       end_time: endTime.value || null,
       notes: notes.value,
-      latitude: lat,
-      longitude: lng
+      latitude: lat ? Number(lat) : null,
+      longitude: lng ? Number(lng) : null
     })
 
     showToast('更新成功', 'success')
