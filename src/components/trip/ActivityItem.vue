@@ -16,10 +16,10 @@ const emit = defineEmits<{
     <!-- Time/Order -->
     <div class="flex-shrink-0 w-16 text-center">
       <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        Order {{ activity.order_index }}
+        序號 {{ activity.order_index }}
       </div>
       <div v-if="activity.duration" class="mt-1 text-xs text-gray-500">
-        {{ activity.duration }}m
+        {{ activity.duration }} 分鐘
       </div>
     </div>
 
@@ -31,9 +31,9 @@ const emit = defineEmits<{
     </div>
 
     <!-- Actions -->
-    <div>
-      <button @click="emit('delete', activity.id)" class="text-gray-400 hover:text-red-500">
-        <span class="sr-only">Delete</span>
+    <div class="flex-shrink-0">
+      <button @click="emit('delete', activity.id)" class="text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+        <span class="sr-only">刪除</span>
         🗑️
       </button>
     </div>

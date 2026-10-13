@@ -14,6 +14,7 @@ export interface ActivitySuggestion {
   duration: number; // minutes
   description: string;
   recommendedTime: string; // HH:MM
+  category?: 'food' | 'sightseeing' | 'shopping' | 'transport' | 'other';
 }
 
 export interface DayPlanResponse {
@@ -26,25 +27,34 @@ export const geminiService = {
     destination: string,
     dayNumber: number
   ): Promise<ActivitySuggestion[]> {
-    const prompt = `我正在規劃${destination}旅遊的第 ${dayNumber} 天行程。
-使用者需求：${userMessage}
+    const prompt = `您是一位領先全球的 TravelMate 旅遊規劃專家，正在協助使用者規劃 ${destination} 旅程。
+今天是旅程的第 ${dayNumber} 天。
 
-請以繁體中文回覆，並用 JSON 格式列出建議的景點：
+使用者請求：${userMessage}
+
+請展現熱情、細心且極致專業的態度。回覆內容必須使用「繁體中文」。
+您的目標是提供具體、可執行且具有「Pro Max」質感的高品質建議。
+
+請嚴格遵守以下 JSON 格式回覆，不要包含任何解釋文字：
 {
   "suggestions": [
     {
       "name": "景點名稱",
-      "location": "完整地址",
+      "location": "地標名稱或地址",
       "duration": 120,
-      "description": "簡短描述",
-      "recommendedTime": "09:00"
+      "description": "簡短精煉的景點介紹，語氣高級且專業 (約 50 字)",
+      "recommendedTime": "09:00",
+      "category": "sightseeing" 
     }
   ]
-}`;
+}
+
+category 僅限：'food', 'sightseeing', 'shopping', 'transport', 'other'。`;
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+      // For @google/genai version 1.34+, let's use the known working pattern
+      const response = await (ai as any).models.generateContent({
+        model: "gemini-1.5-flash",
         contents: prompt,
       });
 

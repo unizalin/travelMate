@@ -1,7 +1,7 @@
 <template>
   <span
     :class="[
-      'inline-flex items-center rounded-full font-medium',
+      'inline-flex items-center rounded-lg font-black uppercase tracking-widest transition-colors',
       variantClasses[variant],
       sizeClasses[size]
     ]"
@@ -37,13 +37,13 @@ withDefaults(defineProps<Props>(), {
 defineEmits(['remove'])
 
 const variantClasses = {
-  primary: 'bg-primary-50 text-primary-700 border border-primary-100',
-  secondary: 'bg-secondary-50 text-secondary-700 border border-secondary-100',
-  success: 'bg-green-50 text-green-700 border border-green-100',
-  danger: 'bg-red-50 text-red-700 border border-red-100',
-  warning: 'bg-amber-50 text-amber-700 border border-amber-100',
-  info: 'bg-sky-50 text-sky-700 border border-sky-100',
-  ghost: 'bg-transparent text-secondary-500 border border-secondary-200'
+  primary: 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border border-primary-100 dark:border-primary-500/20',
+  secondary: 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-white/60 border border-gray-200 dark:border-white/5',
+  success: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20',
+  danger: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20',
+  warning: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20',
+  info: 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border border-primary-100 dark:border-primary-500/20',
+  ghost: 'bg-transparent text-gray-500 dark:text-white/40 border border-gray-200 dark:border-white/10'
 }
 
 const sizeClasses = {

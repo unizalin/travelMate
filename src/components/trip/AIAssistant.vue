@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { geminiService, type ActivitySuggestion } from '@/services/geminiService';
+import { aiSuggestionService } from '@/services/aiSuggestionService';
+import { useAuthStore } from '@/stores/auth';
 import { PaperAirplaneIcon, PlusIcon, SparklesIcon, XMarkIcon } from '@heroicons/vue/24/solid';
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 import DOMPurify from 'dompurify';
 
 const props = defineProps<{
+  tripId: string
   destination: string
   dayNumber: number
   isOpen: boolean
@@ -22,16 +25,33 @@ interface Message {
   suggestions?: ActivitySuggestion[];
 }
 
+const authStore = useAuthStore()
+
 const messages = ref<Message[]>([
   {
     role: 'assistant',
-    content: `你好！我是你的 AI 行程助手。我已知您這天預計在 <strong>${props.destination}</strong>。請問有什麼我可以幫您的？例如：「推薦附近的早午餐」或「安排下午的文藝行程」。`
+    content: `你好！我是您的行程助手。我已知您這天預計在 <strong>${props.destination}</strong>。請問有什麼我可以幫您的？例如：「推薦附近的早午餐」或「安排下午的文藝行程」。`
   }
 ])
 
 const inputMessage = ref('')
 const isLoading = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// Load history on mount
+onMounted(async () => {
+  try {
+    const history = await aiSuggestionService.getSuggestionsByDay(props.tripId, props.dayNumber)
+    if (history && history.length > 0) {
+      messages.value = history.flatMap(h => [
+        { role: 'user', content: h.user_message },
+        { role: 'assistant', content: h.ai_response, suggestions: h.suggested_activities }
+      ])
+    }
+  } catch (error) {
+    console.error('Failed to load AI history:', error)
+  }
+})
 
 // Scroll to bottom when opening
 watch(() => props.isOpen, (newVal) => {
@@ -72,17 +92,30 @@ async function sendMessage() {
       aiContent = '抱歉，我暫時找不到符合您需求的特定景點建議，能否請您提供更多細節？'
     }
 
-    messages.value.push({
-      role: 'assistant',
+    const assistantMsg = {
+      role: 'assistant' as const,
       content: aiContent,
       suggestions: suggestions
-    })
+    }
+    messages.value.push(assistantMsg)
+
+    // Save to DB (Fire & Forget, or background)
+    if (authStore.user) {
+      aiSuggestionService.saveSuggestion({
+        trip_id: props.tripId,
+        user_id: authStore.user.id,
+        day_number: props.dayNumber,
+        user_message: userText,
+        ai_response: aiContent,
+        suggested_activities: suggestions
+      }).catch(err => console.error('Failed to save AI suggestion:', err))
+    }
 
   } catch (error: any) {
     console.error(error)
     messages.value.push({
       role: 'assistant',
-      content: `抱歉，發生了一些錯誤：${error.message || '無法連線到 AI 服務'}。請稍後再試。`
+      content: `抱歉，目前連線稍有延遲：${error.message || '無法取得建議'}。請稍後再試。`
     })
   } finally {
     isLoading.value = false
@@ -124,7 +157,7 @@ function sanitizeHTML(html: string): string {
       <!-- Backdrop -->
       <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100"
         leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-        <div class="fixed inset-0 bg-black/30 bg-opacity-75 transition-opacity" />
+        <div class="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md transition-opacity" />
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-hidden">
@@ -134,52 +167,59 @@ function sanitizeHTML(html: string): string {
               enter-from="translate-x-full" enter-to="translate-x-0"
               leave="transform transition ease-in-out duration-300 sm:duration-500" leave-from="translate-x-0"
               leave-to="translate-x-full">
-              <DialogPanel class="pointer-events-auto w-screen max-w-md">
-                <div class="flex h-full flex-col bg-white shadow-xl">
+              <DialogPanel class="pointer-events-auto w-screen max-w-md transition-all">
+                <div class="flex h-full flex-col bg-white dark:bg-secondary-950 shadow-2xl transition-colors border-l border-gray-100 dark:border-white/5">
                   
                   <!-- Header -->
-                  <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                    <div class="flex items-center">
-                      <SparklesIcon class="w-5 h-5 text-primary-600 mr-2" />
-                      <DialogTitle class="font-bold text-gray-800">AI 行程助手</DialogTitle>
+                  <div class="px-6 py-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white dark:bg-secondary-900 transition-colors">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-xl flex items-center justify-center transition-colors">
+                        <SparklesIcon class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                      </div>
+                      <div>
+                        <DialogTitle class="text-[11px] font-black uppercase tracking-[0.2em] text-primary-600/40 dark:text-primary-400/20 transition-colors">智慧行程靈感</DialogTitle>
+                        <p class="text-sm font-black text-secondary-900 dark:text-white transition-colors">智慧助手</p>
+                      </div>
                     </div>
-                    <button @click="emit('close')" class="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <button @click="emit('close')" class="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex items-center justify-center text-gray-400 dark:text-white/20 transition-all">
                       <XMarkIcon class="h-6 w-6" aria-hidden="true" />
                     </button>
                   </div>
 
                   <!-- Messages Area -->
-                  <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-                    <div v-for="(msg, index) in messages" :key="index" class="flex flex-col"
+                  <div ref="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50 dark:bg-secondary-950 transition-colors bg-[radial-gradient(circle_at_50%_0%,#3b82f60a_0%,transparent_50%)]">
+                    <div v-for="(msg, index) in messages" :key="index" class="flex flex-col animate-fade-in-up"
                       :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                       <!-- Chat Bubble -->
-                      <div class="max-w-[85%] rounded-2xl px-4 py-3 shadow-sm text-sm leading-relaxed" :class="msg.role === 'user'
-                        ? 'bg-primary-600 text-white rounded-br-none'
-                        : 'bg-white text-gray-700 border border-gray-200 rounded-bl-none'">
+                      <div class="max-w-[85%] rounded-3xl px-5 py-4 shadow-sm text-sm leading-relaxed transition-all" :class="msg.role === 'user'
+                        ? 'bg-primary-600 text-white rounded-br-none shadow-xl shadow-primary-500/20 font-bold'
+                        : 'bg-white dark:bg-secondary-900 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-white/5 rounded-bl-none font-medium backdrop-blur-3xl shadow-lg shadow-black/5'">
                         <div v-if="msg.role === 'assistant'" v-html="sanitizeHTML(msg.content)"></div>
                         <div v-else>{{ msg.content }}</div>
                       </div>
 
                       <!-- Suggestions Cards (Only for assistant) -->
                       <div v-if="msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0"
-                        class="mt-3 w-full max-w-[90%] space-y-2">
+                        class="mt-4 w-full max-w-[95%] space-y-3">
                         <div v-for="(suggestion, idx) in msg.suggestions" :key="idx"
-                          class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-2">
-                          <div class="flex justify-between items-start">
-                            <div>
-                              <h4 class="font-bold text-gray-800">{{ suggestion.name }}</h4>
-                              <p class="text-xs text-gray-500 mt-0.5"><span class="mr-1">📍</span>{{ suggestion.location }}</p>
+                          class="bg-white dark:bg-secondary-900 p-5 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-xl hover:shadow-2xl transition-all flex flex-col gap-3 group/card overflow-hidden relative">
+                          <div class="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 rounded-full blur-2xl -mr-12 -mt-12 group-hover/card:bg-primary-500/10 transition-colors"></div>
+                          
+                          <div class="flex justify-between items-start relative z-10">
+                            <div class="min-w-0 flex-1 pr-2">
+                              <h4 class="font-black text-gray-900 dark:text-white truncate transition-colors">{{ suggestion.name }}</h4>
+                              <p class="text-[9px] text-gray-400 dark:text-white/20 mt-1 truncate uppercase tracking-[0.2em] font-black"><span class="mr-1">📍</span>{{ suggestion.location }}</p>
                             </div>
-                            <span class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full whitespace-nowrap">
+                            <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl whitespace-nowrap transition-all group-hover/card:scale-105">
                               {{ suggestion.recommendedTime }}
                             </span>
                           </div>
-
-                          <p class="text-xs text-gray-600 line-clamp-2">{{ suggestion.description }}</p>
-
+ 
+                          <p class="text-xs text-gray-500 dark:text-white/40 line-clamp-2 font-medium relative z-10 leading-relaxed">{{ suggestion.description }}</p>
+ 
                           <button @click="handleAdd(suggestion)"
-                            class="mt-1 w-full flex items-center justify-center py-1.5 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded text-xs font-bold transition-colors">
-                            <PlusIcon class="w-3 h-3 mr-1" />
+                            class="relative z-10 mt-2 w-full flex items-center justify-center py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-gray-900/10 dark:shadow-white/5">
+                            <PlusIcon class="w-3 h-3 mr-2" />
                             加入行程
                           </button>
                         </div>
@@ -188,26 +228,30 @@ function sanitizeHTML(html: string): string {
 
                     <!-- Loading Indicator -->
                     <div v-if="isLoading" class="flex items-start">
-                      <div class="bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
+                      <div class="bg-white dark:bg-secondary-900 border border-gray-100 dark:border-white/5 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm transition-colors">
                         <div class="flex space-x-1">
-                          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                          <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                          <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                          <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <!-- Input Area -->
-                  <div class="p-4 bg-white border-t border-gray-200">
-                    <div class="relative">
-                      <textarea v-model="inputMessage" @keydown="handleKeydown" placeholder="輸入需求... (Shift + Enter 換行)" rows="1"
-                        class="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none max-h-32 text-sm shadow-sm"
-                        style="min-height: 48px;"></textarea>
-                      <button @click="sendMessage" :disabled="!inputMessage.trim() || isLoading"
-                        class="absolute right-2 bottom-2 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:bg-gray-400 transition-colors">
-                        <PaperAirplaneIcon class="w-4 h-4" />
-                      </button>
+                  <div class="p-6 bg-white dark:bg-secondary-900 border-t border-gray-100 dark:border-white/5 transition-colors">
+                    <div class="relative group">
+                      <div class="absolute -inset-0.5 bg-primary-500/20 rounded-[1.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                      <div class="relative flex items-end gap-2 bg-gray-50 dark:bg-secondary-950 rounded-[1.5rem] border border-gray-200 dark:border-white/10 p-2 focus-within:border-primary-500/50 transition-all">
+                        <textarea v-model="inputMessage" @keydown="handleKeydown" placeholder="輸入需求... (Shift + Enter 換行)" rows="1"
+                          class="flex-1 pl-4 pr-2 py-3 bg-transparent border-none focus:ring-0 resize-none max-h-40 text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 outline-none"
+                          style="min-height: 48px;"></textarea>
+                        <button @click="sendMessage" :disabled="!inputMessage.trim() || isLoading"
+                          class="p-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-500 disabled:opacity-30 disabled:grayscale transition-all active:scale-95 shadow-xl shadow-primary-500/20 aspect-square">
+                          <PaperAirplaneIcon v-if="!isLoading" class="w-5 h-5 -rotate-45 -translate-y-0.5 translate-x-0.5" />
+                          <div v-else class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </button>
+                      </div>
                     </div>
                   </div>
 

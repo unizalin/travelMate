@@ -43,8 +43,8 @@ const sizeClasses = {
 }
 
 const colorClasses = {
-  primary: 'text-primary-600',
-  secondary: 'text-secondary-400',
+  primary: 'text-primary-600 dark:text-primary-400',
+  secondary: 'text-gray-400 dark:text-white/20',
   white: 'text-white'
 }
 </script>

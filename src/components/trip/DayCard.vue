@@ -1,40 +1,36 @@
 <template>
   <div 
     @click="handleClick"
-    class="group relative overflow-hidden rounded-[2.5rem] bg-white dark:bg-secondary-900/40 backdrop-blur-3xl border border-slate-200 dark:border-white/5 hover:border-primary-500/50 transition-all duration-500 cursor-pointer flex flex-col h-full shadow-lg shadow-slate-200/50 dark:shadow-none"
+    class="group relative overflow-hidden rounded-[3rem] bg-secondary-900/40 backdrop-blur-3xl border border-white/5 hover:border-primary-500/50 transition-all duration-700 cursor-pointer flex flex-col h-full shadow-[0_30px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
   >
-    <!-- Header: Full Plate Banner -->
-    <div class="relative h-32 flex-shrink-0 overflow-hidden bg-slate-900 dark:bg-[#0a1224]">
-      <!-- Background Image -->
-      <img 
-        :src="dayImage" 
-        class="absolute inset-0 w-full h-full object-cover opacity-60 dark:opacity-40 group-hover:scale-110 transition-transform duration-1000" 
-        alt="Day background"
-      />
-      <!-- Gradient Overlay -->
-      <div class="absolute inset-0 bg-gradient-to-t from-slate-900 dark:from-[#0a1224] via-transparent to-transparent"></div>
+    <!-- Header: Glossy Banner -->
+    <div class="relative h-32 flex-shrink-0 overflow-hidden bg-[#050b18]">
+      <!-- Sophisticated Mesh Gradient Background -->
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3b82f644_0%,transparent_70%)] opacity-80 animate-pulse-slow"></div>
+      <div class="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(2,6,23,0.9))]"></div>
+      <div class="absolute inset-0 bg-[size:20px_20px] bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)]"></div>
       
       <!-- Content -->
-      <div class="absolute inset-0 p-6 flex flex-col justify-between z-10">
+      <div class="absolute inset-0 p-8 flex flex-col justify-between z-10">
         <div class="flex justify-between w-full items-start">
-          <div class="bg-black/20 dark:bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 dark:border-white/10 shadow-xl">
-            <span class="text-white text-[10px] font-black uppercase tracking-[0.2em]">Day {{ itinerary.day_number }}</span>
+          <div class="bg-black/40 backdrop-blur-2xl px-4 py-1.5 rounded-2xl border border-white/10 shadow-2xl">
+            <span class="text-white text-[9px] font-black uppercase tracking-[0.3em] text-primary-400">Day {{ itinerary.day_number }}</span>
           </div>
-          <WeatherTooltip :weather="weather" class="text-white drop-shadow-2xl" />
+          <WeatherTooltip :weather="weather" class="text-white drop-shadow-2xl scale-110" />
         </div>
 
         <div class="w-full flex justify-between items-end">
           <div>
-            <h3 class="text-xl font-black text-white tracking-tight leading-none mb-1 shadow-black/50 drop-shadow-lg">
-              {{ itinerary.title || '探索數據點' }}
+            <h3 class="text-2xl font-black text-white tracking-tighter leading-none mb-2 drop-shadow-2xl uppercase">
+              {{ itinerary.title || '開啟精彩旅程' }}
             </h3>
-            <p class="text-[8px] font-black text-white/60 dark:text-white/40 tracking-[0.2em] uppercase">
+            <p class="text-[9px] font-black text-white/30 tracking-[0.3em] uppercase">
               {{ formattedDate }}
             </p>
           </div>
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-primary-500/10 backdrop-blur-xl rounded-xl border border-primary-500/20 shadow-lg shadow-primary-500/5">
-            <div class="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></div>
-            <span class="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">{{ activityCount }} NODES</span>
+          <div class="flex items-center gap-3 px-4 py-2 bg-primary-500/10 backdrop-blur-3xl rounded-2xl border border-primary-500/20 shadow-2xl transition-all group-hover:bg-primary-500 group-hover:border-primary-400">
+            <div class="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse group-hover:bg-white"></div>
+            <span class="text-[9px] font-black text-primary-400 uppercase tracking-widest group-hover:text-white">{{ activityCount }} 個行程</span>
           </div>
         </div>
       </div>
@@ -42,7 +38,7 @@
 
     <!-- Body: Activity List -->
     <div 
-      class="flex-1 p-6 flex flex-col relative z-10 bg-white/50 dark:bg-transparent"
+      class="flex-1 p-8 flex flex-col relative z-10 bg-transparent"
       :class="{ 'bg-primary-500/5': isDragOver }"
       @dragover.prevent="isDragOver = true"
       @dragleave="isDragOver = false"
@@ -54,48 +50,48 @@
         item-key="id"
         ghost-class="ghost-activity"
         drag-class="drag-activity"
-        class="flex-1 space-y-5 overflow-y-auto no-scrollbar pr-1 min-h-[120px]"
+        class="flex-1 space-y-6 overflow-y-auto no-scrollbar pr-1 min-h-[140px]"
         @change="onActivitiesChange"
         @start="isDragging = true"
         @end="onDragEnd"
       >
         <template #item="{ element: activity, index: idx }">
           <div 
-            class="relative flex items-start gap-4 group/item cursor-move active:cursor-grabbing"
+            class="relative flex items-start gap-5 group/item cursor-move active:cursor-grabbing scale-100 hover:scale-[1.02] transition-transform"
           >
             <!-- Connection Line -->
             <div 
               v-if="(idx as number) < localActivities.length - 1"
-              class="absolute left-[11px] top-6 bottom-[-20px] w-px bg-slate-200 dark:bg-white/10"
+              class="absolute left-3 top-8 bottom-[-24px] w-0.5 bg-white/5 group-hover/item:bg-primary-500/30 transition-colors"
             ></div>
 
             <!-- Connector Dot -->
-            <div class="flex flex-col items-center flex-shrink-0 pt-1.5">
+            <div class="flex flex-col items-center flex-shrink-0 pt-2">
               <div 
-                class="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[9px] font-black z-10 transition-all duration-300"
-                :class="(idx as number) === 0 ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 group-hover/item:border-primary-500/50 group-hover/item:text-primary-600 dark:group-hover/item:text-primary-400'"
+                class="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black z-10 transition-all duration-500"
+                :class="(idx as number) === 0 ? 'bg-primary-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-white/5 border border-white/10 text-white/30 group-hover/item:border-primary-500/50 group-hover/item:text-white'"
               >
                 {{ (idx as number) + 1 }}
               </div>
             </div>
             
             <!-- Content -->
-            <div class="flex-1 min-w-0 pb-1">
-              <div class="flex justify-between items-start mb-0.5">
-                <span class="text-[8px] font-black text-slate-300 dark:text-white/20 uppercase tracking-[0.2em]">Node {{ (idx as number) + 1 }}</span>
+            <div class="flex-1 min-w-0 pb-2">
+              <div class="flex justify-between items-start mb-1">
+                <span class="text-[8px] font-black text-white/10 uppercase tracking-[0.4em] group-hover/item:text-primary-400/50">Itinerary {{ (idx as number) + 1 }}</span>
                 <button 
                   @click.stop="handleEdit(activity)"
-                  class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-all text-slate-300 dark:text-white/20 hover:text-primary-600 dark:hover:text-primary-400 opacity-0 group-hover/item:opacity-100"
+                  class="p-1.5 rounded-xl hover:bg-white/10 transition-all text-white/10 hover:text-white opacity-0 group-hover/item:opacity-100"
                 >
-                  <PencilIcon class="w-3 h-3" />
+                  <PencilIcon class="w-3.5 h-3.5" />
                 </button>
               </div>
-              <h4 class="text-sm font-black text-slate-700 dark:text-white/80 group-hover/item:text-slate-900 dark:group-hover/item:text-white transition-colors truncate">
+              <h4 class="text-sm font-black text-white/70 group-hover/item:text-white transition-colors truncate uppercase tracking-tight">
                 {{ activity.name }}
               </h4>
-              <div v-if="activity.start_time" class="flex items-center gap-1.5 mt-1">
-                <div class="w-1 h-1 rounded-full bg-primary-500/40"></div>
-                <p class="text-[10px] text-slate-400 dark:text-white/40 font-black tracking-widest uppercase">
+              <div v-if="activity.start_time" class="flex items-center gap-2 mt-2">
+                <div class="w-1 h-1 rounded-full bg-primary-500/40 animate-pulse"></div>
+                <p class="text-[10px] text-white/30 font-black tracking-[0.2em] uppercase">
                   {{ formatTime(activity.start_time) }}
                 </p>
               </div>
@@ -105,11 +101,11 @@
 
         <template #footer>
           <!-- Empty State -->
-          <div v-if="localActivities.length === 0" class="py-12 flex flex-col items-center text-center">
-            <div class="w-12 h-12 bg-slate-50 dark:bg-white/5 text-slate-200 dark:text-white/10 rounded-2xl flex items-center justify-center mb-4 border border-slate-200 dark:border-white/5">
-              <MapPinIcon class="w-6 h-6" />
+          <div v-if="localActivities.length === 0" class="py-16 flex flex-col items-center text-center animate-fade-in">
+            <div class="w-16 h-16 bg-white/5 text-white/5 rounded-[1.5rem] flex items-center justify-center mb-6 border border-white/5 shadow-inner">
+              <MapPinIcon class="w-8 h-8 opacity-20" />
             </div>
-            <p class="text-[10px] text-slate-400 dark:text-white/20 font-black uppercase tracking-widest">部署數據點於此</p>
+            <p class="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">尚未規劃今日行程</p>
           </div>
         </template>
       </draggable>
@@ -117,15 +113,15 @@
       <!-- Add Button -->
       <button 
         @click.stop="handleAddActivity"
-        class="mt-6 w-full py-3.5 border border-dashed border-slate-300 dark:border-white/10 rounded-2xl text-slate-400 dark:text-white/20 hover:border-primary-500/50 hover:text-primary-600 dark:hover:text-white/60 hover:bg-primary-500/5 transition-all flex items-center justify-center gap-3 group/add"
+        class="mt-8 w-full py-5 bg-white/5 border border-white/10 rounded-[2rem] text-white/20 hover:border-primary-500/50 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-4 group/add shadow-2xl ring-1 ring-white/5 active:scale-95"
       >
-        <PlusIcon class="w-4 h-4 transition-transform group-hover/add:scale-125" />
-        <span class="text-[10px] font-black uppercase tracking-widest">新增節點</span>
+        <PlusIcon class="w-5 h-5 transition-transform group-hover/add:rotate-180" />
+        <span class="text-[10px] font-black uppercase tracking-[0.4em]">新增行程景點</span>
       </button>
     </div>
 
-    <!-- Interactive Layer -->
-    <div class="absolute inset-0 border border-slate-200 dark:border-white/5 rounded-[2.5rem] pointer-events-none group-hover:border-primary-500/30 transition-colors"></div>
+    <!-- Active Interface Layer -->
+    <div class="absolute inset-0 border border-white/5 rounded-[3rem] pointer-events-none group-hover:border-primary-500/30 transition-all z-30 ring-1 ring-inset ring-white/5"></div>
   </div>
 </template>
 
@@ -137,18 +133,6 @@ import WeatherTooltip from '@/components/common/WeatherTooltip.vue';
 import { useItineraryStore } from '@/stores/itinerary';
 import { candidateService } from '@/services/candidateService';
 import { useToast } from '@/composables/useToast';
-
-const dayImages = [
-  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1493246507139-91e8bef99c02?q=80&w=2070&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1530789253388-582c481c54b0?q=80&w=2070&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1472396961699-1bd220ef738c?q=80&w=2070&auto=format&fit=crop'
-]
-
-const dayImage = computed(() => dayImages[(props.itinerary.day_number - 1) % dayImages.length])
 
 const props = defineProps<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

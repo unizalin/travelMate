@@ -124,7 +124,7 @@ function handleClose() {
                       <CheckCircleIcon class="w-6 h-6" />
                     </div>
                     <div class="flex-1">
-                      <p class="text-xs font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Check Your Email</p>
+                      <p class="text-xs font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">請檢查郵件</p>
                       <p class="text-[10px] font-bold text-emerald-500/80">{{ email }}</p>
                     </div>
                   </div>
@@ -141,7 +141,7 @@ function handleClose() {
                   <div class="space-y-6">
                     <!-- Email Input -->
                     <div class="space-y-2">
-                      <label class="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em] ml-1">Email Address</label>
+                      <label class="text-[10px] font-black text-secondary-400 uppercase tracking-[0.3em] ml-1">電子郵件地址</label>
                       <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                           <EnvelopeIcon class="w-5 h-5 text-secondary-300 group-focus-within:text-primary-500 transition-colors" />

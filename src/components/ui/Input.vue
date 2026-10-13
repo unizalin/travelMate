@@ -1,11 +1,11 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="block text-sm font-medium text-secondary-700 mb-1.5">
+    <label v-if="label" :for="id" class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">
       {{ label }}
-      <span v-if="required" class="text-danger">*</span>
+      <span v-if="required" class="text-rose-500">*</span>
     </label>
     <div class="relative">
-      <div v-if="$slots.prepend" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
+      <div v-if="$slots.prepend" class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-gray-300 dark:text-white/20 transition-colors">
         <slot name="prepend"></slot>
       </div>
       <input
@@ -16,26 +16,26 @@
         :disabled="disabled"
         :required="required"
         :class="[
-          'block w-full transition-all duration-200 sm:text-sm rounded-lg border focus:ring-2 focus:ring-offset-0 outline-none',
-          $slots.prepend ? 'pl-10' : 'pl-4',
-          $slots.append ? 'pr-10' : 'pr-4',
+          'block w-full transition-all duration-300 rounded-2xl border-none shadow-none focus:ring-4 outline-none py-4',
+          $slots.prepend ? 'pl-14' : 'px-6',
+          $slots.append ? 'pr-14' : 'px-6',
           error 
-            ? 'border-danger text-danger placeholder-red-300 focus:ring-red-500 focus:border-danger' 
-            : 'border-secondary-200 text-secondary-900 placeholder-secondary-400 focus:ring-primary-500 focus:border-primary-500 hover:border-secondary-300',
-          disabled ? 'bg-secondary-50 cursor-not-allowed' : 'bg-white'
+            ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 placeholder:text-rose-300 dark:placeholder:text-rose-900 focus:ring-rose-500/10' 
+            : 'bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900',
+          disabled ? 'bg-gray-100 dark:bg-white/5 cursor-not-allowed text-gray-300 dark:text-white/20' : ''
         ]"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
       />
-      <div v-if="$slots.append" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-secondary-400">
+      <div v-if="$slots.append" class="absolute inset-y-0 right-0 pr-6 flex items-center pointer-events-none text-gray-300 dark:text-white/20 transition-colors">
         <slot name="append"></slot>
       </div>
     </div>
-    <p v-if="error && typeof error === 'string'" class="mt-1.5 text-xs text-danger" role="alert">
+    <p v-if="error && typeof error === 'string'" class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest px-1 transition-colors" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" class="mt-1.5 text-xs text-secondary-500">
+    <p v-else-if="hint" class="mt-2 text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">
       {{ hint }}
     </p>
   </div>

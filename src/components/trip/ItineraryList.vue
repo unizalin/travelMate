@@ -43,36 +43,60 @@ async function handleDeleteActivity(id: string, itineraryId: string) {
 
     <Disclosure v-for="(itinerary, index) in itineraries" :key="itinerary.id" v-slot="{ open }"
       :default-open="index === 0">
-      <div class="rounded-lg bg-white shadow">
+      <div class="glass-card rounded-[2rem] overflow-hidden transition-all duration-500 hover:shadow-2xl">
         <DisclosureButton
-          class="flex w-full justify-between rounded-t-lg bg-blue-50 px-4 py-3 text-left text-sm font-medium text-blue-900 hover:bg-blue-100 focus:outline-none focus-visible:ring focus-visible:ring-blue-500 focus-visible:ring-opacity-75">
-          <div class="flex items-center space-x-2">
-            <span>Day {{ itinerary.day_number }}</span>
-            <span class="text-gray-500 font-normal">({{ itinerary.date }})</span>
+          class="flex w-full justify-between items-center px-6 py-5 text-left transition-all duration-300 hover:bg-white/40 dark:hover:bg-white/5 focus:outline-none">
+          <div class="flex items-center space-x-4">
+            <div class="p-2.5 rounded-2xl bg-primary-100/50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+               <span class="text-xs font-black uppercase tracking-widest">Day</span>
+               <span class="ml-1 text-lg font-black leading-none">{{ itinerary.day_number }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-sm font-black text-secondary-900 dark:text-white uppercase tracking-tight">行程細節</span>
+              <span class="text-xs font-bold text-secondary-500 dark:text-secondary-400">{{ itinerary.date }}</span>
+            </div>
           </div>
-          <ChevronUpIcon :class="open ? 'rotate-180 transform' : ''" class="h-5 w-5 text-blue-500" />
+          <div class="p-2 rounded-xl bg-secondary-100/50 dark:bg-white/5 transition-transform duration-500" :class="open ? 'rotate-180' : ''">
+            <ChevronUpIcon class="h-5 w-5 text-primary-500" />
+          </div>
         </DisclosureButton>
-        <DisclosurePanel class="px-4 pb-4 pt-4 text-sm text-gray-500 space-y-3">
-          <!-- Activities List -->
-          <div v-if="!itinerary.activities || itinerary.activities.length === 0"
-            class="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-200">
-            <p>No activities yet.</p>
-            <button @click="openAddModal(itinerary.id, itinerary.activities)"
-              class="mt-2 text-primary-600 hover:text-primary-700 font-medium">
-              + Add first activity
-            </button>
-          </div>
+        
+        <transition
+          enter-active-class="transition duration-500 ease-out"
+          enter-from-class="transform scale-95 opacity-0"
+          enter-to-class="transform scale-100 opacity-100"
+          leave-active-class="transition duration-300 ease-in"
+          leave-from-class="transform scale-100 opacity-100"
+          leave-to-class="transform scale-95 opacity-0"
+        >
+          <DisclosurePanel class="px-5 pb-6 pt-2 space-y-4">
+            <!-- Activities List -->
+            <div v-if="!itinerary.activities || itinerary.activities.length === 0"
+              class="flex flex-col items-center justify-center py-8 px-4 bg-white/30 dark:bg-secondary-900/40 rounded-[1.5rem] border-2 border-dashed border-secondary-200/50 dark:border-white/10">
+              <div class="w-12 h-12 mb-3 rounded-full bg-secondary-100/50 dark:bg-white/5 flex items-center justify-center text-secondary-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p class="text-sm font-bold text-secondary-500 dark:text-secondary-400">目前尚無排定的活動</p>
+              <button @click="openAddModal(itinerary.id, itinerary.activities)"
+                class="mt-4 px-6 py-2 bg-primary-600 hover:bg-primary-500 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-primary-500/20 active:scale-95">
+                開始安排
+              </button>
+            </div>
 
-          <div v-else class="space-y-3">
-            <ActivityItem v-for="activity in itinerary.activities" :key="activity.id" :activity="activity"
-              @delete="(id) => handleDeleteActivity(id, itinerary.id)" />
+            <div v-else class="space-y-4">
+              <ActivityItem v-for="activity in itinerary.activities" :key="activity.id" :activity="activity"
+                @delete="(id) => handleDeleteActivity(id, itinerary.id)" />
 
-            <button @click="openAddModal(itinerary.id, itinerary.activities)"
-              class="w-full py-2 flex items-center justify-center space-x-1 text-primary-600 hover:bg-primary-50 rounded border border-dashed border-primary-200">
-              <span>+ Add Activity</span>
-            </button>
-          </div>
-        </DisclosurePanel>
+              <button @click="openAddModal(itinerary.id, itinerary.activities)"
+                class="w-full py-4 flex items-center justify-center space-x-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 rounded-[1.5rem] border-2 border-dashed border-primary-200/50 dark:border-primary-800/30 transition-all font-black text-sm active:scale-[0.98]">
+                <plus-icon class="w-4 h-4" />
+                <span>新增活動中心</span>
+              </button>
+            </div>
+          </DisclosurePanel>
+        </transition>
       </div>
     </Disclosure>
 

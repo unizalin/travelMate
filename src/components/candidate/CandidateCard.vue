@@ -55,7 +55,7 @@ const handleDragStart = (e: DragEvent) => {
   <div 
     draggable="true"
     @dragstart="handleDragStart"
-    class="group relative bg-white dark:bg-white/5 backdrop-blur-3xl rounded-[2rem] p-6 border border-slate-200 dark:border-white/5 hover:border-primary-500/50 transition-all duration-500 cursor-grab active:cursor-grabbing shadow-lg dark:shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-1 overflow-hidden"
+    class="group relative bg-white dark:bg-secondary-900/40 backdrop-blur-3xl rounded-[2rem] p-6 border border-gray-100 dark:border-white/5 hover:border-primary-500/50 transition-all duration-500 cursor-grab active:cursor-grabbing shadow-lg dark:shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-1 overflow-hidden"
   >
     <!-- Status Badge -->
     <div 
@@ -71,11 +71,11 @@ const handleDragStart = (e: DragEvent) => {
     <div class="flex flex-col h-full gap-5 relative z-10">
       <!-- Content -->
       <div class="space-y-3">
-        <h4 class="text-xl font-black text-slate-900 dark:text-white leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+        <h4 class="text-xl font-black text-gray-900 dark:text-white leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
           {{ candidate.name }}
         </h4>
-        <div class="flex items-center gap-2 text-slate-400 dark:text-white/40 text-[10px] font-black uppercase tracking-widest">
-            <div class="p-1 bg-slate-100 dark:bg-white/5 rounded-lg">
+        <div class="flex items-center gap-2 text-gray-400 dark:text-white/40 text-[10px] font-black uppercase tracking-widest transition-colors">
+            <div class="p-1 bg-gray-50 dark:bg-white/5 rounded-lg transition-colors">
                 <MapPinIcon class="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
             </div>
             <span class="truncate">{{ candidate.location }}</span>
@@ -84,27 +84,27 @@ const handleDragStart = (e: DragEvent) => {
 
       <!-- Description -->
       <div class="relative">
-          <p class="text-xs text-slate-500 dark:text-white/60 font-medium leading-relaxed line-clamp-2 italic pl-4 border-l border-slate-200 dark:border-white/10">
+          <p class="text-xs text-gray-500 dark:text-white/60 font-medium leading-relaxed line-clamp-2 italic pl-4 border-l border-gray-100 dark:border-white/10 transition-colors">
             {{ candidate.description || '目的地描述載入中...' }}
           </p>
       </div>
 
       <!-- Meta Info -->
-      <div class="flex items-center justify-between mt-auto pt-5 border-t border-slate-100 dark:border-white/5">
+      <div class="flex items-center justify-between mt-auto pt-5 border-t border-gray-50 dark:border-white/5 transition-colors">
         <div class="flex items-center gap-3">
           <!-- Creator -->
           <div class="flex items-center gap-2" :title="candidate.creator?.display_name">
-            <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm">
+            <div class="w-6 h-6 rounded-full overflow-hidden border border-gray-100 dark:border-white/10 shadow-sm transition-colors">
                 <img 
                   v-if="candidate.creator?.avatar_url"
                   :src="candidate.creator?.avatar_url"
                   class="w-full h-full object-cover"
                 />
-                <div v-else class="w-full h-full bg-slate-100 dark:bg-secondary-800 flex items-center justify-center">
-                    <UserIcon class="w-3 h-3 text-slate-400 dark:text-white/40" />
+                <div v-else class="w-full h-full bg-gray-50 dark:bg-secondary-800 flex items-center justify-center transition-colors">
+                    <UserIcon class="w-3 h-3 text-gray-400 dark:text-white/40" />
                 </div>
             </div>
-            <span class="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest truncate max-w-[80px]">
+            <span class="text-[10px] font-black text-gray-400 dark:text-white/30 uppercase tracking-widest truncate max-w-[80px] transition-colors">
                 {{ candidate.creator?.display_name || 'Anonymous' }}
             </span>
           </div>
@@ -113,8 +113,8 @@ const handleDragStart = (e: DragEvent) => {
         <!-- Like Button -->
         <button 
           @click.stop="handleLike"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border border-slate-100 dark:border-white/5 hover:border-primary-200 dark:hover:border-white/10"
-          :class="isLikedByMe ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 shadow-sm' : 'bg-slate-50 dark:bg-transparent text-slate-400 dark:text-white/20 hover:text-slate-600 dark:hover:text-white/60'"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border border-gray-100 dark:border-white/5 hover:border-rose-200 dark:hover:border-rose-500/30"
+          :class="isLikedByMe ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 shadow-sm shadow-rose-500/10' : 'bg-gray-50 dark:bg-transparent text-gray-400 dark:text-white/20 hover:text-gray-600 dark:hover:text-white/60'"
         >
           <HeartSolid v-if="isLikedByMe" class="w-4 h-4 animate-pop-in" />
           <HeartOutline v-else class="w-4 h-4" />
@@ -123,17 +123,17 @@ const handleDragStart = (e: DragEvent) => {
       </div>
 
       <!-- Action Overlay (Hover Only) -->
-      <div class="absolute inset-0 bg-white/95 dark:bg-[#050b18]/90 backdrop-blur-md flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 pointer-events-none group-hover:pointer-events-auto rounded-[2rem]">
+      <div class="absolute inset-0 bg-white/95 dark:bg-secondary-950/90 backdrop-blur-md flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 pointer-events-none group-hover:pointer-events-auto rounded-[2rem]">
         <button 
           @click="emit('add-to-itinerary', candidate)"
-          class="bg-slate-900 dark:bg-white text-white dark:text-secondary-900 w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:scale-110 transition-transform active:scale-95"
+          class="bg-gray-900 dark:bg-white text-white dark:text-secondary-900 w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:scale-110 transition-transform active:scale-95 shadow-gray-500/20"
           title="加入日程"
         >
           <PlusIcon class="w-7 h-7 stroke-[3]" />
         </button>
         <button 
           @click="emit('delete', candidate.id)"
-          class="bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/40 w-12 h-12 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-white/10 hover:bg-red-500/10 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-500 hover:border-red-500/50 transition-all active:scale-95"
+          class="bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-white/40 w-12 h-12 rounded-2xl flex items-center justify-center border border-gray-100 dark:border-white/10 hover:bg-red-500/10 dark:hover:bg-red-500/20 hover:text-red-500 rounded-2xl shadow-sm transition-all active:scale-95"
           title="刪除"
         >
           <TrashIcon class="w-6 h-6" />
@@ -142,17 +142,6 @@ const handleDragStart = (e: DragEvent) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes pop-in {
-  0% { transform: scale(0.8); opacity: 0; }
-  70% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.animate-pop-in {
-  animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-</style>
 
 <style scoped>
 @keyframes pop-in {

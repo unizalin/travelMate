@@ -5,7 +5,7 @@
     @close="emit('close')"
   >
     <form @submit.prevent="handleSubmit" class="space-y-5">
-      <div v-if="error" class="p-3 rounded-lg bg-red-50 border border-red-100 text-danger text-xs font-medium">
+      <div v-if="error" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest transition-colors">
         {{ error }}
       </div>
 
@@ -17,7 +17,7 @@
       />
 
       <div>
-        <label class="block text-sm font-medium text-secondary-700 mb-1.5">地點 (選填)</label>
+        <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">地點 (選填)</label>
         <AddressAutocomplete
           v-model="location"
           placeholder="搜尋地點或輸入地址..."
@@ -52,11 +52,11 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-secondary-700 mb-1.5">備註 (選填)</label>
+        <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">備註 (選填)</label>
         <textarea 
           v-model="notes" 
           rows="3"
-          class="block w-full transition-all duration-200 sm:text-sm rounded-lg border border-secondary-200 text-secondary-900 placeholder-secondary-400 focus:ring-primary-500 focus:border-primary-500 hover:border-secondary-300 p-3 outline-none"
+          class="block w-full bg-gray-50 dark:bg-white/5 transition-all duration-300 rounded-2xl border-none text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 p-6 outline-none resize-none shadow-none"
           placeholder="補充說明..."
         ></textarea>
       </div>

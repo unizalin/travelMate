@@ -59,12 +59,10 @@ ${JSON.stringify(candidateData, null, 2)}
 4. 每天的行程不要過度擁擠。`;
 
         try {
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: prompt,
-            });
-
-            const text = response.text;
+            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const result = await model.generateContent(prompt);
+            const response = result.response;
+            const text = response.text();
             if (!text) throw new Error('Empty response from Gemini');
 
             const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -79,6 +77,48 @@ ${JSON.stringify(candidateData, null, 2)}
         } catch (error: any) {
             console.error('AI Scheduling Error:', error);
             throw error;
+        }
+    },
+
+    async getSmartBlocks(activities: any[], tripInfo: { destination: string }): Promise<{ insertAfterId: string; suggestion: string; type: 'meal' | 'rest' }[]> {
+        const prompt = `你是一個專業的行程助手。分析以下行程節點，在適合的地方（例如：活動之間、中午或傍晚）插入「用餐」或「休息」的建議。
+        
+        目的地：${tripInfo.destination}
+        當前行程節點：
+        ${JSON.stringify(activities.map(a => ({ id: a.id, name: a.name, time: a.start_time })), null, 2)}
+        
+        請以繁體中文思考，並嚴格遵守以下 JSON 格式回覆：
+        {
+          "blocks": [
+            {
+              "insertAfterId": "在哪個節點 ID 之後插入",
+              "suggestion": "建議的活動內容 (例如：在當地餐廳享用午餐)",
+              "type": "meal" 
+            }
+          ]
+        }
+        
+        注意：
+        1. 只有在真正需要的地方才建議。
+        2. 確保 insertAfterId 存在於提供的節點中。`;
+
+        try {
+            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const result = await model.generateContent(prompt);
+            const response = result.response;
+            const text = response.text();
+
+            const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                return parsed.blocks || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('AI Smart Blocks Error:', error);
+            return [];
         }
     }
 };

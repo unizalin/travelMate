@@ -42,27 +42,37 @@ const createNumberedIcon = (number: number, isActive: boolean) => {
   return L.divIcon({
     className: 'custom-marker',
     html: `
-      <div style="
-        background-color: ${isActive ? '#2563EB' : '#3B82F6'};
-        color: white;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
+      <div class="marker-wrapper" style="
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 14px;
-        border: 2px solid white;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: all 0.2s ease;
-        transform: ${isActive ? 'scale(1.15)' : 'scale(1)'};
       ">
-        ${number}
+        ${isActive ? '<div class="marker-pulse" style="position: absolute; width: 44px; height: 44px; background: rgba(37, 99, 235, 0.3); border-radius: 50%; animation: pulse 2s infinite;"></div>' : ''}
+        <div style="
+          background: ${isActive ? 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)' : 'rgba(255, 255, 255, 0.9)'};
+          backdrop-filter: blur(8px);
+          color: ${isActive ? 'white' : '#1e293b'};
+          width: 36px;
+          height: 36px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          font-size: 14px;
+          border: 2px solid ${isActive ? 'rgba(255,255,255,0.8)' : 'rgba(37, 99, 235, 0.4)'};
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+          transform: ${isActive ? 'scale(1.2)' : 'scale(1)'};
+          z-index: 2;
+        ">
+          ${number}
+        </div>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16] // Center anchor
+    iconSize: [44, 44],
+    iconAnchor: [22, 22]
   });
 };
 
@@ -149,10 +159,12 @@ const updateMarkers = async () => {
   // Draw Route
   if (props.showRoute && routePoints.length > 1) {
     polyline = L.polyline(routePoints, {
-      color: '#3B82F6',
-      weight: 3,
-      opacity: 0.7,
-      dashArray: '10, 10', // Dashed line for route
+      color: '#2563eb',
+      weight: 4,
+      opacity: 0.6,
+      dashArray: '1, 10',
+      lineCap: 'round',
+      lineJoin: 'round'
     }).addTo(map);
   }
 
@@ -247,5 +259,20 @@ onMounted(() => {
 :deep(.custom-marker) {
   background: transparent;
   border: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
 }
 </style>

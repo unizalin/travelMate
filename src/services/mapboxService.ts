@@ -139,5 +139,32 @@ export const mapboxService = {
             console.error('Mapbox Optimization Error:', error);
             return coordinates.map((_, i) => i);
         }
+    },
+
+    /**
+     * Get travel time and distance between two points
+     */
+    async getTravelTime(start: [number, number], end: [number, number], profile: string = 'driving'): Promise<{ duration: number; distance: number } | null> {
+        if (!MAPBOX_TOKEN) throw new Error('Mapbox Token is missing');
+
+        const url = new URL(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${start.join(',')};${end.join(',')}`);
+        url.searchParams.append('access_token', MAPBOX_TOKEN);
+        url.searchParams.append('overview', 'simplified');
+
+        try {
+            const response = await fetch(url.toString());
+            if (!response.ok) throw new Error('Mapbox Directions Error');
+
+            const data = await response.json();
+            if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return null;
+
+            return {
+                duration: Math.round(data.routes[0].duration / 60), // in minutes
+                distance: Math.round(data.routes[0].distance / 100) / 10 // in km
+            };
+        } catch (error) {
+            console.error('Mapbox Directions Error:', error);
+            return null;
+        }
     }
 };

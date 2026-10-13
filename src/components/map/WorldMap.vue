@@ -98,15 +98,20 @@ onMounted(async () => {
 })
 
 const renderPublicTrips = () => {
+    // Note: trips table currently lacks location_lat/lng columns. 
+    // This feature is temporarily disabled until schema is updated or joined with activities.
+    /*
     if (!map.value) return
     publicTrips.value.forEach(trip => {
+        // @ts-ignore - these fields don't exist in current schema
         if (trip.location_lat && trip.location_lng) {
             const m = L.marker([trip.location_lat, trip.location_lng], { icon: tripIcon })
-                .bindPopup(`<b>${trip.name}</b><br>Likes: ${trip.likes_count}`)
+                .bindPopup(`<b>${trip.name}</b><br>${trip.start_date}`)
                 .addTo(map.value as L.Map)
             markers.value.push(m)
         }
     })
+    */
 }
 
 // Watch for Dart Result

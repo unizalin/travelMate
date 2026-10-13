@@ -1,25 +1,25 @@
 <template>
-  <div class="h-screen w-screen flex flex-col overflow-hidden relative bg-secondary-50">
+  <div class="h-screen w-screen flex flex-col overflow-hidden relative bg-[#020617] mesh-gradient-dark text-white selection:bg-primary-500/30">
       <!-- Header Area -->
-      <header class="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-secondary-100 z-30 shadow-sm">
-        <div class="px-6 h-16 flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <button @click="$router.back()" class="p-2 hover:bg-secondary-100 rounded-xl transition-colors text-secondary-600">
-              <ChevronLeftIcon class="w-5 h-5" />
+      <header class="flex-shrink-0 bg-secondary-900/40 backdrop-blur-3xl border-b border-white/10 z-30 shadow-2xl ring-1 ring-white/5">
+        <div class="px-8 h-20 flex items-center justify-between">
+          <div class="flex items-center gap-6">
+            <button @click="$router.back()" class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-95 border border-white/5 text-white/70 hover:text-white">
+              <ChevronLeftIcon class="w-6 h-6" />
             </button>
-            <div>
-              <h1 class="text-xl font-heading font-bold text-secondary-900 leading-none">{{ trip?.destination }}</h1>
-              <p class="text-xs text-secondary-500 font-body mt-1">共 {{ totalDays }} 天行程</p>
+            <div class="group">
+              <h1 class="text-2xl font-black tracking-tight text-white leading-none group-hover:text-primary-400 transition-colors">{{ trip?.destination }}</h1>
+              <p class="text-[10px] text-white/40 font-black uppercase tracking-[0.3em] mt-2 group-hover:text-white/60 transition-colors">Mission Horizon · {{ totalDays }} Days</p>
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-4">
              <button 
                @click="isSidebarOpen = !isSidebarOpen"
-               class="p-2 hover:bg-secondary-100 rounded-xl transition-colors"
-               :class="isSidebarOpen ? 'text-primary-600' : 'text-secondary-600'"
+               class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-95 border border-white/5"
+               :class="isSidebarOpen ? 'text-primary-400 border-primary-500/30 shadow-[0_0_20px_rgba(var(--color-primary-500),0.2)]' : 'text-white/70'"
              >
-               <Bars3Icon class="w-6 h-6" />
+               <Bars3Icon class="w-7 h-7" />
              </button>
           </div>
         </div>
@@ -28,12 +28,12 @@
       <div class="flex-1 flex overflow-hidden relative">
         <!-- Sidebar -->
         <Transition
-          enter-active-class="transform transition ease-in-out duration-300"
-          enter-from-class="-translate-x-full"
-          enter-to-class="translate-x-0"
-          leave-active-class="transform transition ease-in-out duration-300"
-          leave-from-class="translate-x-0"
-          leave-to-class="-translate-x-full"
+          enter-active-class="transform transition ease-in-out duration-500"
+          enter-from-class="-translate-x-full opacity-0 scale-95"
+          enter-to-class="translate-x-0 opacity-100 scale-100"
+          leave-active-class="transform transition ease-in-out duration-500"
+          leave-from-class="translate-x-0 opacity-100 scale-100"
+          leave-to-class="-translate-x-full opacity-0 scale-95"
         >
           <DaySidebar 
               v-if="isSidebarOpen"
@@ -42,7 +42,7 @@
               @select-day="handleSelectDay"
               @reorder="handleReorder"
               @close="isSidebarOpen = false"
-              class="absolute top-0 left-0 h-full z-20 border-r"
+              class="absolute top-4 left-4 h-[calc(100%-2rem)] z-20 border-white/10 bg-secondary-900/40 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
           />
         </Transition>
 
@@ -57,21 +57,22 @@
           />
 
           <!-- Float Controls -->
-          <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+          <div class="absolute top-8 right-8 z-10 flex flex-col gap-4">
              <button 
                @click="showRoute = !showRoute"
-               :class="showRoute ? 'bg-primary-600 text-white shadow-primary-200' : 'bg-white text-secondary-700'"
-               class="p-2.5 rounded-xl shadow-lg transition-all"
+               :class="showRoute ? 'bg-primary-500 text-white shadow-xl border-primary-400' : 'bg-secondary-900/40 text-white/70 border-white/10'"
+               class="p-4 rounded-3xl backdrop-blur-3xl shadow-2xl transition-all active:scale-90 border ring-1 ring-white/5"
                title="Toggle Route"
              >
-               <MapIcon class="w-5 h-5" />
+               <MapIcon class="w-6 h-6" />
              </button>
           </div>
           
           <!-- Bottom Info / Selection Hint -->
-           <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-2.5 rounded-2xl shadow-xl z-20 text-sm font-bold text-secondary-900 flex items-center gap-3 border border-secondary-100 animate-slide-up">
-             <span class="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-[10px]">D{{ selectedDayNumber }}</span>
-             <span>第 {{ selectedDayNumber }} 天 · {{ currentDayActivities.length }} 個景點</span>
+           <div class="absolute bottom-10 left-1/2 -translate-x-1/2 bg-secondary-900/40 backdrop-blur-3xl px-10 py-5 rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.4)] z-20 text-[10px] font-black tracking-[0.3em] uppercase text-white/80 flex items-center gap-5 border border-white/10 ring-1 ring-white/5 animate-slide-up group">
+             <span class="w-8 h-8 rounded-2xl bg-primary-500 text-white flex items-center justify-center text-[10px] shadow-lg shadow-primary-500/20 group-hover:scale-110 transition-transform">D{{ selectedDayNumber }}</span>
+             <span class="opacity-60">Status: Active</span>
+             <span class="text-primary-400/80">{{ currentDayActivities.length }} Waypoints</span>
            </div>
         </div>
       </div>
