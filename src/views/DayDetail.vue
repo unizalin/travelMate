@@ -17,7 +17,8 @@ import {
   PencilSquareIcon, 
   PlusIcon, 
   SparklesIcon, 
-  TrashIcon 
+  TrashIcon,
+  XMarkIcon
 } from '@heroicons/vue/24/outline';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -561,7 +562,6 @@ function hasCoordinates(activity: any) {
                             
                             <div class="w-1 h-1 rounded-full bg-primary-500/30"></div>
                             <span class="text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em]">預計停留 {{ activity.duration }} 分鐘</span>
-                          </div>
                           </div>
    
                           <div v-if="activity.location" class="flex items-start gap-2 text-xs text-gray-500 dark:text-white/40 mb-3 group-hover:text-gray-900 dark:group-hover:text-white transition-colors font-bold">

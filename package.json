@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "build:share": "vue-tsc && vite build --config vite.share.config.ts",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db-contract": "node --test tests/journey-service/migration-contract.test.mjs",
+    "test:all": "npm run test && npm run test:db-contract"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -37,13 +42,16 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.23.0",
+    "jsdom": "^25.0.1",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.5.0",
     "vite": "^5.4.11",
+    "vitest": "^2.1.8",
     "vue-tsc": "^2.0.0"
   }
 }

@@ -33,11 +33,10 @@ updateIcon()
 // No props needed
 
 const store = useExploreStore()
-const { dartResult, publicTrips } = storeToRefs(store)
+const { dartResult } = storeToRefs(store)
 
 // Use shallowRef for Leaflet instances to avoid Deep Proxy performance/type issues
 const map = shallowRef<L.Map | null>(null)
-const markers = shallowRef<L.Marker[]>([])
 const loading = ref(false)
 
 // Custom Icons
@@ -46,13 +45,6 @@ const dartIcon = L.divIcon({
   html: `<div style="background-color: #ef4444; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px #ef4444; border: 2px solid white;"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6]
-})
-
-const tripIcon = L.divIcon({
-  className: 'custom-div-icon',
-  html: `<div style="background-color: #3b82f6; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px #3b82f6;"></div>`,
-  iconSize: [8, 8],
-  iconAnchor: [4, 4]
 })
 
 onMounted(async () => {

@@ -59,10 +59,11 @@ ${JSON.stringify(candidateData, null, 2)}
 4. 每天的行程不要過度擁擠。`;
 
         try {
-            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const response = await ai.models.generateContent({
+                model: "gemini-2.0-flash",
+                contents: prompt,
+            });
+            const text = response.text;
             if (!text) throw new Error('Empty response from Gemini');
 
             const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -103,10 +104,11 @@ ${JSON.stringify(candidateData, null, 2)}
         2. 確保 insertAfterId 存在於提供的節點中。`;
 
         try {
-            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const response = await ai.models.generateContent({
+                model: "gemini-2.0-flash",
+                contents: prompt,
+            });
+            const text = response.text ?? '';
 
             const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
