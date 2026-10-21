@@ -98,6 +98,16 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
+  it('shows the selected night accommodation only in the private planner', async () => {
+    const router = makeRouter()
+    await router.push('/trips/tripbook-iceland-2026/journey')
+    const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
+    await wrapper.get('#day-tab-2026-11-02').trigger('click')
+    expect(wrapper.get('.compact-stay').text()).toContain('The Barn')
+    expect(wrapper.get('.compact-stay').text()).not.toContain('U16 by Stay in Iceland')
+    wrapper.unmount()
+  })
+
   it('shows the active Iceland aurora card in the global area before the tabs and keeps the daily summary compact', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-11-01T12:00:00Z'))

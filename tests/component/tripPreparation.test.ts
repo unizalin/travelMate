@@ -37,11 +37,11 @@ describe('preparation checklist presentation', () => {
   it('renders a single standalone packing section before the other checklists', () => {
     const wrapper = mount(TripPreparation, {
       props: { accountId: 'account-a', tripId: 'fixture', journey: icelandJourney },
-      slots: { 'packing-list': '<div data-testid="packing-list"><h2>行前清單 <small>0/45</small></h2></div>' },
+      slots: { 'packing-list': '<div data-testid="packing-list"><h2>行前清單 <small>0/49</small></h2></div>' },
     })
     const sections = wrapper.findAll('section')
     expect(sections[2].classes()).toContain('packing-section')
-    expect(sections[2].text()).toContain('行前清單 0/45')
+    expect(sections[2].text()).toContain('行前清單 0/49')
     expect(wrapper.findAll('h2').filter(heading => heading.text().includes('行前清單'))).toHaveLength(1)
     expect(sections[3].text()).toContain('冬季攝影裝備清單')
     wrapper.unmount()

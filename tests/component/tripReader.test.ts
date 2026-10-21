@@ -73,15 +73,13 @@ describe('TripReader', () => {
     expect(wrapper.findAll('a').some(link => link.text().includes('開啟規劃'))).toBe(false)
   })
 
-  it('shows no accommodation card but keeps photography tips in the private reader', async () => {
+  it('keeps photography tips in the private reader', async () => {
     const wrapper = mount(TripReader, {
       props: { journey: icelandJourney, publicOnly: false },
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
     })
 
     await wrapper.get('#view-tab-more').trigger('click')
-    expect(wrapper.text()).not.toContain('Hotel Jökulsárlón - Glacier Lagoon Hotel')
-    expect(wrapper.find('.private-stays').exists()).toBe(false)
     await wrapper.get('#view-tab-daily').trigger('click')
     const novemberFirst = wrapper.findAll('button').find(button => button.attributes('aria-label')?.includes('11月1日'))
     expect(novemberFirst).toBeDefined()

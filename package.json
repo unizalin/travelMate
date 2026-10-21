@@ -9,6 +9,8 @@
     "build:share": "vue-tsc && vite build --config vite.share.config.ts",
     "check:share": "node scripts/check-public-build.mjs dist-share",
     "preview": "vite preview",
+    "preview:qa": "vite preview --host 127.0.0.1 --port 5175 --strictPort",
+    "qa:preview": "npm run test:all && npm run type-check && npm run build && npm run build:share && npm run check:share",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "test": "vitest run",

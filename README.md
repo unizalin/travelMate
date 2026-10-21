@@ -92,6 +92,10 @@ VITE_MAPBOX_TOKEN=您的_MAPBOX_TOKEN
 npm run dev
 ```
 
+### TripBook 固定預覽與驗證
+
+最新版 TripBook 請在 `codex/tripbook-continue-20261013` worktree 執行 `npm run qa:preview`，通過後執行 `npm run preview:qa`，開啟 [本機旅程預覽](http://127.0.0.1:5175/iceland?section=itinerary)。驗證範圍、登入環境與線上部署限制見 [預覽與測試流程](docs/handoffs/2026-10-21-preview-testing-workflow.md)。
+
 ---
 
 ## 📂 專案結構

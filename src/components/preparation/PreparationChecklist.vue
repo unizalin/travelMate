@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<{ tripId: string; ownerId?: string | null
 const items = ref<PackingItem[]>([])
 const loading = ref(true)
 const error = ref('')
-const activeCategory = ref<PackingCategory>('必帶')
+const activeCategory = ref<PackingCategory>('出發前')
 const newTitle = ref('')
 const addingShared = ref(false)
 const editingId = ref<string | null>(null)
@@ -91,8 +91,7 @@ async function load(): Promise<void> {
   error.value = ''
   try {
     if (!isRemote.value) {
-      items.value = loadLocal()
-      if (items.value.length === 0) items.value = buildLocalTemplate()
+      items.value = withMissingTemplateItems(loadLocal())
       saveLocal()
       return
     }
@@ -107,8 +106,7 @@ async function load(): Promise<void> {
     await flushPending(epoch)
   } catch (reason) {
     if (epoch !== loadEpoch.value) return
-    items.value = loadLocal()
-    if (items.value.length === 0) items.value = buildLocalTemplate()
+    items.value = withMissingTemplateItems(loadLocal())
     saveLocal()
     offline.value = true
     error.value = `目前離線，顯示這個帳號的本機副本；${loadPending().length} 項變更待恢復連線後同步。`
@@ -116,7 +114,12 @@ async function load(): Promise<void> {
 }
 
 function buildLocalTemplate(): PackingItem[] {
-  return PACKING_TEMPLATE.flatMap((category, categoryIndex) => category.items.map((title, itemIndex) => ({ id: `local-${categoryIndex}-${itemIndex}`, tripId: props.tripId, category: category.category, title, isShared: true, ownerId: null, orderIndex: categoryIndex * 100 + itemIndex, completed: false })))
+  return PACKING_TEMPLATE.flatMap((category, categoryIndex) => category.items.map((title, itemIndex) => ({ id: `local-template-${categoryIndex}-${itemIndex}`, tripId: props.tripId, category: category.category, title, isShared: true, ownerId: null, orderIndex: categoryIndex * 100 + itemIndex, completed: false })))
+}
+
+function withMissingTemplateItems(existing: PackingItem[]): PackingItem[] {
+  const existingKeys = new Set(existing.map(itemKey))
+  return [...existing, ...buildLocalTemplate().filter(item => !existingKeys.has(itemKey(item)))]
 }
 
 async function toggle(item: PackingItem): Promise<void> {
