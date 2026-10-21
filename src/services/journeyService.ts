@@ -31,6 +31,22 @@ export interface JourneyRpcClient {
     name: string,
     args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: JourneyRpcError | null }>
+  from?(table: string): {
+    select(columns: string): PromiseLike<{ data: unknown; error: JourneyRpcError | null }>
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isIcelandJourney2026(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const journey = value as Record<string, unknown>
+  return journey.timeZone === 'Atlantic/Reykjavik'
+    && Array.isArray(journey.items)
+    && journey.items.some(item => item && typeof item === 'object'
+      && typeof item.date === 'string'
+      && item.date >= '2026-10-30'
+      && item.date <= '2026-11-07')
 }
 
 export class JourneyServiceError extends Error {
@@ -143,6 +159,36 @@ function parseAccessGrant(data: unknown): JourneyAccessGrant {
 }
 
 export function createJourneyService(client: JourneyRpcClient = supabase as unknown as JourneyRpcClient) {
+  async function resolveTripId(tripId: string): Promise<string> {
+    if (UUID_PATTERN.test(tripId)) return tripId
+    if (tripId !== 'tripbook-iceland-2026') {
+      throw new JourneyServiceError('INVALID_TRIP_ID', '旅程識別碼格式錯誤。', 400)
+    }
+    if (client === (supabase as unknown as JourneyRpcClient) && !supabaseConfigured) {
+      throw new JourneyServiceError('SUPABASE_NOT_CONFIGURED', 'Supabase is not configured for cloud journey storage', 503)
+    }
+    if (!client.from) {
+      throw new JourneyServiceError('JOURNEY_LOOKUP_UNAVAILABLE', '無法查詢可存取的雲端旅程。', 503)
+    }
+
+    // RLS limits this table query to journeys the signed-in account may read.
+    const { data, error } = await client.from('tripbook_journeys').select('trip_id,journey')
+    if (error) throw rpcError(error)
+    if (!Array.isArray(data)) {
+      throw new JourneyServiceError('INVALID_RESPONSE', '雲端旅程清單格式錯誤。', 502, data)
+    }
+    const matches = data.filter(row => row && typeof row === 'object'
+      && UUID_PATTERN.test((row as Record<string, unknown>).trip_id as string)
+      && isIcelandJourney2026((row as Record<string, unknown>).journey)) as Array<{ trip_id: string }>
+    if (matches.length === 0) {
+      throw new JourneyServiceError('JOURNEY_NOT_FOUND', '此帳號尚無可存取的冰島雲端旅程；請確認受邀帳號，或在同步選項建立旅程。', 404)
+    }
+    if (matches.length > 1) {
+      throw new JourneyServiceError('AMBIGUOUS_JOURNEY', '此帳號可存取多筆冰島旅程，請設定正確的旅程 UUID。', 409)
+    }
+    return matches[0].trip_id
+  }
+
   async function invoke(
     name: string,
     args: Record<string, unknown>,
@@ -175,8 +221,9 @@ export function createJourneyService(client: JourneyRpcClient = supabase as unkn
       return invoke('tripbook_create_journey', { p_journey: journey })
     },
 
-    loadJourney(tripId: string) {
-      return invoke('tripbook_load_journey', { p_trip_id: tripId }, tripId)
+    async loadJourney(tripId: string) {
+      const resolvedTripId = await resolveTripId(tripId)
+      return invoke('tripbook_load_journey', { p_trip_id: resolvedTripId }, resolvedTripId)
     },
 
     saveJourney(tripId: string, expectedRevision: number, journey: TripJourney) {

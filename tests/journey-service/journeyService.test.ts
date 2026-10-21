@@ -47,6 +47,43 @@ describe('journeyService RPC adapter', () => {
     expect(result).toEqual(envelope)
   })
 
+  it('resolves the Iceland preview alias to one accessible cloud UUID before loading', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: envelope, error: null })
+    const select = vi.fn().mockResolvedValue({ data: [
+      { trip_id: 'b7b0f3a7-68a9-4d44-a7f1-1e53e70c0a99', journey: { timeZone: 'Europe/London', items: [{ date: '2026-10-28' }] } },
+      { trip_id: envelope.tripId, journey: { timeZone: 'Atlantic/Reykjavik', items: [{ date: '2026-11-02' }] } },
+    ], error: null })
+    const from = vi.fn().mockReturnValue({ select })
+    const service = createJourneyService({ rpc, from })
+
+    await expect(service.loadJourney('tripbook-iceland-2026')).resolves.toEqual(envelope)
+    expect(from).toHaveBeenCalledWith('tripbook_journeys')
+    expect(select).toHaveBeenCalledWith('trip_id,journey')
+    expect(rpc).toHaveBeenCalledWith('tripbook_load_journey', { p_trip_id: envelope.tripId })
+  })
+
+  it('does not send a non-UUID trip ID to the database when no matching journey exists', async () => {
+    const rpc = vi.fn()
+    const from = vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [], error: null }) })
+    const service = createJourneyService({ rpc, from })
+
+    await expect(service.loadJourney('tripbook-iceland-2026')).rejects.toMatchObject({ code: 'JOURNEY_NOT_FOUND', status: 404 })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not guess which of multiple accessible Iceland journeys to open', async () => {
+    const rpc = vi.fn()
+    const otherId = 'b7b0f3a7-68a9-4d44-a7f1-1e53e70c0a99'
+    const journey = { timeZone: 'Atlantic/Reykjavik', items: [{ date: '2026-11-02' }] }
+    const from = vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [
+      { trip_id: envelope.tripId, journey }, { trip_id: otherId, journey },
+    ], error: null }) })
+    const service = createJourneyService({ rpc, from })
+
+    await expect(service.loadJourney('tripbook-iceland-2026')).rejects.toMatchObject({ code: 'AMBIGUOUS_JOURNEY', status: 409 })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('rejects a coherent response for a different requested Trip ID without mutating the draft', async () => {
     const otherTripId = 'b7b0f3a7-68a9-4d44-a7f1-1e53e70c0a99'
     const otherTripEnvelope: JourneyEnvelope = {

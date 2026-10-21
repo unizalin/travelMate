@@ -429,7 +429,8 @@ onMounted(async () => {
     @select-date="selectedDate = $event">
     <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
     <template #global-information><AuroraConditions v-if="showAurora" compact><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
-    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : '正在載入旅程' }}</span></template>
+    <template #header-notice><p v-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
+    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
     <template #flights>
       <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
     </template>
