@@ -313,6 +313,20 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
+  it('shows a failed journey lookup above the tabs instead of an endless loading state', async () => {
+    loadJourney.mockRejectedValue(new Error('此帳號尚無可存取的冰島雲端旅程。'))
+    const router = makeRouter()
+    await router.push('/trips/tripbook-iceland-2026/journey')
+    const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
+
+    await wrapper.findAll('button').find(button => button.text() === '重新載入 Supabase')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.header-notice').text()).toContain('此帳號尚無可存取的冰島雲端旅程。')
+    expect(wrapper.get('.journey-status').text()).toBe('旅程載入失敗')
+    wrapper.unmount()
+  })
+
   it('locks editing while saving and sends the captured request snapshot', async () => {
     loadJourney.mockResolvedValue({
       tripId: icelandJourney.tripId,
