@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ICELAND_FLIGHTS_PATH } from '@/router/iceland'
 import { supabase } from '@/services/supabase'
 import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -50,8 +51,15 @@ onMounted(async () => {
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Session is now stored; proceed with redirect
-    const nextRoute = route.query.next as string
-    const redirectPath = nextRoute || authStore.redirectAfterLogin || '/trips'
+    const nextRoute = typeof route.query.next === 'string' ? route.query.next : authStore.redirectAfterLogin
+    const destination = nextRoute?.startsWith('/') && !nextRoute.startsWith('//') ? nextRoute : ICELAND_FLIGHTS_PATH
+    const entryPaths = ['/', '/trips', '/iceland', '/iceland/plan', '/iceland/planning']
+    const resolved = router.resolve(destination)
+    const redirectPath = entryPaths.includes(resolved.path)
+      ? ICELAND_FLIGHTS_PATH
+      : resolved.name === 'iceland-planner'
+        ? { path: resolved.path, query: { ...resolved.query, section: 'flights' } }
+        : destination
     authStore.closeAuthModal()
     
     // Clean up URL hash and redirect

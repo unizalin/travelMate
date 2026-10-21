@@ -245,6 +245,23 @@ describe('TripJourney domain', () => {
     expect(validateJourney(stagingJourney).valid).toBe(true)
   })
 
+  it('validates activity reminders and daily Plan B notes at the storage boundary', () => {
+    const valid: TripJourney = {
+      ...journey,
+      items: [{ ...journey.items[0], reminder: '出發前確認路況與票券。' }],
+      dayPlans: { '2026-10-31': { keep: '保留住宿與主要景點', skip: '風勢過強時取消海邊停留' } },
+    }
+    expect(validateJourney(valid).valid).toBe(true)
+
+    const invalid = structuredClone(valid) as unknown as Record<string, unknown>
+    invalid.dayPlans = { 'not-a-date': { keep: 'a'.repeat(2001), skip: 42 } }
+    ;(invalid.items as Array<Record<string, unknown>>)[0].reminder = 'a'.repeat(2001)
+
+    const result = validateJourney(invalid)
+    expect(result.valid).toBe(false)
+    expect(result.errors.join(' ')).toMatch(/dayPlans.*date|dayPlans.*keep|dayPlans.*skip|reminder/)
+  })
+
   it('filters a derived participant view without copying the shared journey', () => {
     const filtered = timelineForParticipant(journey, 'member-6')
     const ids = filtered.flatMap(day => day.events.map(event => event.id))

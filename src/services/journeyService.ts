@@ -87,7 +87,7 @@ function unwrapRpcData(data: unknown): unknown {
   return data
 }
 
-function parseEnvelope(data: unknown): JourneyEnvelope {
+export function parseEnvelope(data: unknown): JourneyEnvelope {
   const value = unwrapRpcData(data)
   if (!value || typeof value !== 'object') {
     throw new JourneyServiceError('INVALID_RESPONSE', 'journey RPC returned no envelope', 502, value)
@@ -191,6 +191,19 @@ export function createJourneyService(client: JourneyRpcClient = supabase as unkn
       )
     },
 
+    saveMemo(tripId: string, expectedRevision: number, activityId: string, content: string) {
+      return invoke(
+        'tripbook_save_journey_memo',
+        {
+          p_trip_id: tripId,
+          p_expected_revision: expectedRevision,
+          p_activity_id: activityId,
+          p_content: content,
+        },
+        tripId,
+      )
+    },
+
     async grantJourneyAccess(tripId: string, userId: string, role: JourneyAccessRole): Promise<JourneyAccessGrant> {
       if (client === (supabase as unknown as JourneyRpcClient) && !supabaseConfigured) {
         throw new JourneyServiceError(
@@ -217,5 +230,7 @@ export const createJourney = (journey: TripJourney) => journeyService.createJour
 export const loadJourney = (tripId: string) => journeyService.loadJourney(tripId)
 export const saveJourney = (tripId: string, expectedRevision: number, journey: TripJourney) =>
   journeyService.saveJourney(tripId, expectedRevision, journey)
+export const saveJourneyMemo = (tripId: string, expectedRevision: number, activityId: string, content: string) =>
+  journeyService.saveMemo(tripId, expectedRevision, activityId, content)
 export const grantJourneyAccess = (tripId: string, userId: string, role: JourneyAccessRole) =>
   journeyService.grantJourneyAccess(tripId, userId, role)

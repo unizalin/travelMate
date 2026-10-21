@@ -30,7 +30,7 @@ BEGIN
     (member_id, 'Journey member'),
     (outsider_id, 'Journey outsider'),
     (editor_id, 'Journey editor')
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name;
 END;
 $fixture$;
 
@@ -171,6 +171,23 @@ BEGIN
   END IF;
 END;
 $assert_member_read$;
+
+DO $assert_member_memo_read_only$
+BEGIN
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo(
+      (envelope ->> 'tripId')::uuid,
+      1,
+      'item-1',
+      'member cannot write this shared memo'
+    ) FROM tripbook_test_created AS envelope;
+    RAISE EXCEPTION 'read-only member unexpectedly saved a shared memo';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF position('journey_read_only' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+END;
+$assert_member_memo_read_only$;
 
 DO $assert_direct_write$
 BEGIN
@@ -418,6 +435,46 @@ BEGIN
 END;
 $assert_cas$;
 
+DO $assert_shared_memo_server_stamp$
+DECLARE
+  preserved jsonb;
+  created jsonb;
+  saved jsonb;
+  memo jsonb;
+BEGIN
+  SELECT envelope INTO created FROM tripbook_test_created;
+  saved := public.tripbook_save_journey_memo(
+    (created ->> 'tripId')::uuid,
+    3,
+    'item-1',
+    '集合前確認冰爪與雨衣'
+  );
+  memo := saved -> 'journey' -> 'memos' -> 'item-1';
+  IF (saved ->> 'revision')::integer <> 4 THEN RAISE EXCEPTION 'memo CAS did not increment revision'; END IF;
+  IF memo ->> 'content' <> '集合前確認冰爪與雨衣' THEN RAISE EXCEPTION 'memo content was not saved'; END IF;
+  IF memo ->> 'updatedBy' <> auth.uid()::text THEN RAISE EXCEPTION 'memo actor was not server stamped'; END IF;
+  IF memo ->> 'updatedByName' <> 'Journey owner' THEN RAISE EXCEPTION 'memo profile name was not server resolved'; END IF;
+  IF memo ->> 'updatedAt' IS NULL THEN RAISE EXCEPTION 'memo timestamp was not server stamped'; END IF;
+
+  preserved := public.tripbook_save_journey(
+    (created ->> 'tripId')::uuid,
+    4,
+    created -> 'journey'
+  );
+  IF (preserved -> 'journey' -> 'memos' -> 'item-1' ->> 'content') <> '集合前確認冰爪與雨衣' THEN
+    RAISE EXCEPTION 'legacy full journey save erased the shared memo';
+  END IF;
+
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo((created ->> 'tripId')::uuid, 3, 'item-1', 'stale memo');
+    RAISE EXCEPTION 'stale memo unexpectedly succeeded';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF position('journey_conflict' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+END;
+$assert_shared_memo_server_stamp$;
+
 RESET ROLE;
 DO $assert_owner_column_immutable$
 DECLARE
@@ -527,5 +584,196 @@ BEGIN
   END;
 END;
 $assert_anonymous$;
+
+-- Memo-specific authorization and validation cases. All writes are rolled back.
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub', '00000000-0000-0000-0000-000000000104', 'role', 'authenticated')::text, true);
+DO $memo_editor$
+DECLARE
+  current_doc jsonb;
+  saved jsonb;
+  trip uuid;
+  rev integer;
+BEGIN
+  SELECT (envelope ->> 'tripId')::uuid INTO trip FROM tripbook_test_created;
+  current_doc := public.tripbook_load_journey(trip);
+  rev := (current_doc ->> 'revision')::integer;
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo(trip, rev, 'not-an-activity', 'invalid');
+    RAISE EXCEPTION 'unknown activity memo accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF position('invalid_journey' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo(trip, rev, 'item-1', repeat('x', 2001));
+    RAISE EXCEPTION 'oversized memo accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF position('invalid_journey' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+  saved := public.tripbook_save_journey_memo(trip, rev, 'item-1', 'Editor memo');
+  IF saved #>> '{journey,memos,item-1,updatedBy}' <> auth.uid()::text
+     OR (saved ->> 'revision')::integer <> rev + 1 THEN
+    RAISE EXCEPTION 'editor memo stamp or CAS incorrect';
+  END IF;
+  BEGIN
+    PERFORM public.tripbook_save_journey(trip, rev, current_doc -> 'journey');
+    RAISE EXCEPTION 'full save ignored memo revision';
+  EXCEPTION WHEN OTHERS THEN
+    IF position('journey_conflict' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+  saved := public.tripbook_save_journey(trip, rev + 1,
+    jsonb_set(saved -> 'journey', '{memos,item-1}',
+      '{"content":"forged","updatedBy":"forged-user","updatedAt":"2000-01-01T00:00:00Z"}'::jsonb));
+  IF saved #>> '{journey,memos,item-1,content}' <> 'Editor memo'
+     OR saved #>> '{journey,memos,item-1,updatedBy}' <> auth.uid()::text THEN
+    RAISE EXCEPTION 'full save overwrote server memo';
+  END IF;
+END;
+$memo_editor$;
+
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub', '00000000-0000-0000-0000-000000000103', 'role', 'authenticated')::text, true);
+DO $memo_outsider$
+BEGIN
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo((envelope ->> 'tripId')::uuid, 1, 'item-1', 'unauthorized') FROM tripbook_test_created;
+    RAISE EXCEPTION 'outsider saved memo';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$memo_outsider$;
+
+RESET ROLE;
+SET LOCAL ROLE anon;
+SELECT set_config('request.jwt.claims', '{}', true);
+DO $memo_anon$
+BEGIN
+  BEGIN
+    PERFORM public.tripbook_save_journey_memo((envelope ->> 'tripId')::uuid, 1, 'item-1', 'unauthorized') FROM tripbook_test_created;
+    RAISE EXCEPTION 'anonymous saved memo';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$memo_anon$;
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000101','role','authenticated')::text,true);
+DO $identity_owner$
+DECLARE trip uuid; state jsonb;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  state := public.tripbook_claim_member(trip,'member-1');
+  IF NOT (state->'claims' @> '[{"memberId":"member-1","isSelf":true}]'::jsonb) THEN RAISE EXCEPTION 'self claim missing'; END IF;
+  BEGIN
+    PERFORM public.tripbook_claim_member(trip,'member-2');
+    RAISE EXCEPTION 'second identity accepted';
+  EXCEPTION WHEN unique_violation THEN NULL; END;
+  state := public.tripbook_choose_flight(trip,'ba802',true);
+  state := public.tripbook_choose_flight(trip,'fi0501',true);
+  IF jsonb_array_length(state->'choices')<>1 OR NOT (state->'choices' @> '[{"memberId":"member-1","flightId":"fi0501"}]'::jsonb) THEN RAISE EXCEPTION 'flight replacement failed'; END IF;
+  BEGIN
+    PERFORM public.tripbook_choose_flight(trip,'fake-flight',true);
+    RAISE EXCEPTION 'unknown flight accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+END;
+$identity_owner$;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000104','role','authenticated')::text,true);
+DO $identity_editor$
+DECLARE trip uuid; state jsonb;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  BEGIN
+    PERFORM public.tripbook_claim_member(trip,'member-1');
+    RAISE EXCEPTION 'claimed identity stolen';
+  EXCEPTION WHEN unique_violation THEN NULL; END;
+  BEGIN
+    PERFORM public.tripbook_choose_flight(trip,'ba801',true);
+    RAISE EXCEPTION 'unclaimed account selected flight';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  PERFORM public.tripbook_claim_member(trip,'member-2');
+  state := public.tripbook_choose_flight(trip,'ba801',true);
+  IF NOT (state->'choices' @> '[{"memberId":"member-1","flightId":"fi0501"},{"memberId":"member-2","flightId":"ba801"}]'::jsonb) THEN RAISE EXCEPTION 'editor changed someone else'; END IF;
+  state := public.tripbook_claim_member(trip,NULL);
+  IF jsonb_array_length(state->'claims')<>1 OR jsonb_array_length(state->'choices')<>1 THEN RAISE EXCEPTION 'release did not cascade only own choices'; END IF;
+END;
+$identity_editor$;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000102','role','authenticated')::text,true);
+DO $identity_readonly$
+DECLARE trip uuid;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  PERFORM public.tripbook_roster(trip);
+  BEGIN
+    PERFORM public.tripbook_claim_member(trip,'member-2');
+    RAISE EXCEPTION 'readonly claimed identity';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    INSERT INTO public.tripbook_member_claims VALUES(trip,'member-2',auth.uid());
+    RAISE EXCEPTION 'direct claim write accepted';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END;
+$identity_readonly$;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000103','role','authenticated')::text,true);
+DO $identity_outsider$
+DECLARE trip uuid;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  BEGIN
+    PERFORM public.tripbook_roster(trip);
+    RAISE EXCEPTION 'outsider read roster';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END;
+$identity_outsider$;
+RESET ROLE;
+SET LOCAL ROLE anon;
+SELECT set_config('request.jwt.claims','{}',true);
+DO $identity_anon$
+BEGIN
+  BEGIN
+    PERFORM public.tripbook_roster((envelope->>'tripId')::uuid) FROM tripbook_test_created;
+    RAISE EXCEPTION 'anonymous read roster';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END;
+$identity_anon$;
+
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000101','role','authenticated')::text,true);
+DO $photo_owner$
+DECLARE trip uuid; saved jsonb;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  saved := public.tripbook_save_photo_preferences(trip,'member-1',true,'["spot-1"]'::jsonb,'[]'::jsonb,NULL);
+  IF saved->'phoneSpotIds' <> '["spot-1"]'::jsonb THEN RAISE EXCEPTION 'photo save failed'; END IF;
+  BEGIN
+    PERFORM public.tripbook_save_photo_preferences(trip,'member-1',false,'[]'::jsonb,'[]'::jsonb,NULL);
+    RAISE EXCEPTION 'stale photo write accepted';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'stale photo write accepted' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.tripbook_load_photo_preferences(trip,'member-2');
+    RAISE EXCEPTION 'other member photo read accepted';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END;
+$photo_owner$;
+SELECT set_config('request.jwt.claims', jsonb_build_object('sub','00000000-0000-0000-0000-000000000104','role','authenticated')::text,true);
+DO $photo_editor$
+DECLARE trip uuid;
+BEGIN
+  SELECT (envelope->>'tripId')::uuid INTO trip FROM tripbook_test_created;
+  PERFORM public.tripbook_claim_member(trip,'member-2');
+  PERFORM public.tripbook_save_photo_preferences(trip,'member-2',false,'[]'::jsonb,'["spot-2"]'::jsonb,NULL);
+  BEGIN
+    PERFORM 1 FROM public.tripbook_member_photo_preferences WHERE trip_id=trip AND member_id='member-1';
+    RAISE EXCEPTION 'editor read photo table directly';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    PERFORM public.tripbook_save_photo_preferences(trip,'member-1',false,'[]'::jsonb,'[]'::jsonb,NULL);
+    RAISE EXCEPTION 'editor changed owner photo';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END;
+$photo_editor$;
 
 ROLLBACK;

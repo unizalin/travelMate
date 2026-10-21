@@ -4,20 +4,21 @@ import { useRoute } from 'vue-router'
 import { CalendarDaysIcon, UserIcon, UsersIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
-const fallbackTripId = 'tripbook-iceland-2026'
+const fallbackTripId = import.meta.env.VITE_ICELAND_TRIP_ID || 'tripbook-iceland-2026'
 const tripId = computed(() => String(route.params.tripId || fallbackTripId))
 
 const tabs = computed(() => [
-  { name: '行程', path: '/share/iceland', icon: CalendarDaysIcon },
-  { name: '規劃', path: `/trips/${tripId.value}/journey`, icon: UsersIcon },
+  { name: '行程', path: `/trips/${tripId.value}/journey`, icon: CalendarDaysIcon },
+  { name: '航班', path: `/trips/${tripId.value}/journey?section=flights`, icon: UsersIcon },
   { name: '個人', path: '/profile', icon: UserIcon },
 ])
 
 const currentPath = computed(() => route.path)
 
 function isActive(path: string): boolean {
-  if (path === '/share/iceland') return currentPath.value === '/share/iceland' || currentPath.value === '/iceland'
-  return currentPath.value === path || currentPath.value.startsWith(`${path}/`)
+  const [pathname, query] = path.split('?')
+  if (pathname.endsWith('/journey')) return currentPath.value === pathname && (query ? route.query.section === 'flights' : route.query.section !== 'flights')
+  return currentPath.value === pathname || currentPath.value.startsWith(`${pathname}/`)
 }
 </script>
 

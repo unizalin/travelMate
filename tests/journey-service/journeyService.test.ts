@@ -119,6 +119,34 @@ describe('journeyService RPC adapter', () => {
     })
   })
 
+  it('saves one shared memo through the revision guarded RPC without trusting actor metadata', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: envelope, error: null })
+    const service = createJourneyService({ rpc })
+
+    await expect(service.saveMemo(envelope.tripId, envelope.revision, 'iceland-stop-1', '抵達後確認採買清單')).resolves.toEqual(envelope)
+    expect(rpc).toHaveBeenCalledWith('tripbook_save_journey_memo', {
+      p_trip_id: envelope.tripId,
+      p_expected_revision: envelope.revision,
+      p_activity_id: 'iceland-stop-1',
+      p_content: '抵達後確認採買清單',
+    })
+    expect(JSON.stringify(rpc.mock.calls[0][1])).not.toContain('updatedBy')
+    expect(JSON.stringify(rpc.mock.calls[0][1])).not.toContain('updatedAt')
+  })
+
+  it('maps stale memo writes to the same journey conflict used by full saves', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'journey_conflict', details: 'expected revision is stale' },
+    })
+    const service = createJourneyService({ rpc })
+
+    await expect(service.saveMemo(envelope.tripId, envelope.revision, 'iceland-stop-1', 'draft')).rejects.toMatchObject({
+      code: JOURNEY_CONFLICT,
+      status: 409,
+    })
+  })
+
   it('maps an owner-only access failure without exposing the access table', async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: null,

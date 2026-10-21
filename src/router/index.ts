@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-export const ICELAND_READER_PATH = '/share/iceland'
-export const ICELAND_TRIP_ID = 'tripbook-iceland-2026'
+import { ICELAND_READER_PATH, ICELAND_TRIP_ID, ICELAND_FLIGHTS_PATH } from './iceland'
+export { ICELAND_READER_PATH, ICELAND_TRIP_ID } from './iceland'
 const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 const router = createRouter({
@@ -9,19 +9,18 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: ICELAND_READER_PATH,
+      redirect: ICELAND_FLIGHTS_PATH,
     },
     {
       path: '/iceland',
-      name: 'iceland-reader',
-      component: () => import('../views/IcelandReader.vue'),
-      meta: { publicReader: true, title: 'Iceland 旅程' },
+      name: 'iceland-planner',
+      component: () => import('../views/IcelandJourney.vue'),
+      meta: { hideMobileTab: true, title: '冰島行程' },
     },
     {
-      path: ICELAND_READER_PATH,
+      path: '/share/iceland',
       name: 'share-iceland',
-      component: () => import('../views/IcelandReader.vue'),
-      meta: { publicReader: true, title: 'Iceland 旅程' },
+      redirect: '/iceland',
     },
     {
       path: '/share/:tripId',
@@ -43,7 +42,7 @@ const router = createRouter({
     },
     {
       path: '/trips',
-      redirect: ICELAND_READER_PATH,
+      redirect: ICELAND_FLIGHTS_PATH,
     },
     {
       path: '/login',
@@ -65,9 +64,8 @@ const router = createRouter({
     },
     {
       path: '/trips/:tripId/journey',
-      name: 'iceland-planner',
-      component: () => import('../views/IcelandPlanner.vue'),
-      meta: { requiresAuth: true, title: 'Iceland 規劃' },
+      name: 'iceland-legacy-planner',
+      redirect: to => ({ path: '/iceland', query: to.query }),
     },
     {
       path: '/trips/:tripId/map',
@@ -129,9 +127,9 @@ router.beforeEach(async to => {
     authStore.openAuthModal('login', to.fullPath)
     return ICELAND_READER_PATH
   }
-  if ((to.path === '/login' || to.path === '/register') && isAuthenticated) return '/trips'
+  if ((to.path === '/login' || to.path === '/register') && isAuthenticated) return ICELAND_FLIGHTS_PATH
   if (to.path === '/login' || to.path === '/register') {
-    authStore.openAuthModal(to.path === '/login' ? 'login' : 'register')
+    authStore.openAuthModal(to.path === '/login' ? 'login' : 'register', ICELAND_FLIGHTS_PATH)
     return ICELAND_READER_PATH
   }
   return true

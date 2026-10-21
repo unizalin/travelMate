@@ -39,4 +39,16 @@ describe('local journey persistence', () => {
     storage.setItem(journeyStorageKey('account-a', 'trip-b'), JSON.stringify({ tripId: 'trip-b' }))
     expect(loadLocalJourney('account-a', 'trip-b', storage)).toBeNull()
   })
+
+  it('loads an existing saved draft unchanged after the seed itinerary changes', () => {
+    const storage = memoryStorage()
+    const draft = withTripId(icelandJourney, 'trip-saved')
+    draft.items[0] = { ...draft.items[0], name: '旅伴已保存的自訂活動' }
+
+    saveLocalJourney('account-a', draft, storage)
+
+    const loaded = loadLocalJourney('account-a', 'trip-saved', storage)
+    expect(loaded?.items[0].id).toBe(draft.items[0].id)
+    expect(loaded?.items[0].name).toBe('旅伴已保存的自訂活動')
+  })
 })

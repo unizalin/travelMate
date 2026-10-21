@@ -8,18 +8,30 @@ import {
   saveLocalJourney,
   timelineForParticipant,
   withTripId,
-  type JourneyAccommodation,
-  type JourneyGroup,
-  type JourneyMember,
-  type JourneyStatus,
-  type JourneyTransport,
+  type JourneyItem,
   type TripJourney,
 } from '@/domain/tripJourney'
+import { ICELAND_TRIP_ID } from '@/router/iceland'
+import { tripOpeningDate } from '@/domain/tripOpeningDate'
 import { icelandJourney } from '@/data/icelandJourney'
+import type { JourneyRoster as RosterState } from '@/services/journeyRosterService'
+import { isOnlyLondonAddition } from '@/domain/londonJourney'
+import ItineraryActivities from '@/components/trip/ItineraryActivities.vue'
+import AddItineraryActivity from '@/components/trip/AddItineraryActivity.vue'
+import MorningChecks from '@/components/trip/MorningChecks.vue'
+import TripPreparation from '@/components/trip/TripPreparation.vue'
+import { handbookDays } from '@/data/icelandHandbook'
+import LondonPrelude from '@/components/trip/LondonPrelude.vue'
+import TripReader from '@/components/trip/TripReader.vue'
+import ActivityComments from '@/components/trip/ActivityComments.vue'
+import AuroraReminderSettings from '@/components/trip/AuroraReminderSettings.vue'
+import AuroraConditions from '@/components/trip/AuroraConditions.vue'
+import JourneyRoster from '@/components/trip/JourneyRoster.vue'
+import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 
 const route = useRoute()
 const router = useRouter()
-const defaultTripId = icelandJourney.tripId
+const defaultTripId = ICELAND_TRIP_ID
 const routeTripId = computed(() => {
   const value = route.params.tripId
   return typeof value === 'string' && value.length > 0 ? value : defaultTripId
@@ -27,6 +39,7 @@ const routeTripId = computed(() => {
 const activeTripId = ref(routeTripId.value)
 
 const accountId = ref('local-preview')
+const packingOwnerId = computed(() => accountId.value === 'local-preview' ? null : accountId.value)
 const draft = ref<TripJourney>(withTripId(icelandJourney, routeTripId.value))
 const localSavedJson = ref(JSON.stringify(draft.value))
 const cloudBaseJson = ref<string | null>(null)
@@ -41,9 +54,47 @@ const busy = ref(false)
 const statusMessage = ref('')
 const errorMessage = ref('')
 const selectedDate = ref('')
-const previewMemberId = ref('all')
-const benefitInputs = reactive<Record<string, string>>({})
+const activeSection = ref<'itinerary' | 'flights' | 'more'>('itinerary')
+watch(() => route.query.section, section => {
+  activeSection.value = section === 'flights' || section === 'more' ? section : 'itinerary'
+}, { immediate: true })
+const editMode = ref(false)
+const tripToday = new Intl.DateTimeFormat('en-CA',{timeZone:'Atlantic/Reykjavik',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+const showAurora = computed(() => tripToday >= '2026-10-30' && tripToday <= '2026-11-07')
+const visibleItems = computed(() => draft.value.items.filter(item => item.date === selectedDate.value && !item.id.startsWith('london-') && item.status !== 'fallback').sort((a,b)=>a.order-b.order))
+const fallbackItems = computed(() => draft.value.items.filter(item => item.date === selectedDate.value && !item.id.startsWith('london-') && item.status === 'fallback'))
+const dayPlan = computed(() => draft.value.dayPlans?.[selectedDate.value] ?? handbookDays[selectedDate.value])
+function editItem(id: string, patch: Partial<JourneyItem>) {
+  if(!canEditDraft.value || !editMode.value) return
+  const item=draft.value.items.find(item=>item.id===id)
+  if(item) Object.assign(item,patch)
+}
+function reorderItems(items: JourneyItem[]) {
+  if(!canEditDraft.value || !editMode.value) return
+  items.forEach((item,index)=>editItem(item.id,{order:index+1}))
+}
+function addItem(date: string,name: string,location: string) {
+  if(!canEditDraft.value || !editMode.value) return
+  const london=date<'2026-10-30'
+  draft.value.items.push({id:`${london?'london-':'activity-'}${crypto.randomUUID()}`,tripId:activeTripId.value,date,name,location:location||name,order:Math.max(0,...draft.value.items.filter(item=>item.date===date).map(item=>item.order))+1,plannedStart:null,plannedEnd:null,actualStart:null,actualEnd:null,status:'planned',participation:london?['member-2','member-3','member-4','member-5']:undefined})
+}
+function editPlan(field: 'keep'|'skip',value: string) {
+  if(!canEditDraft.value || !editMode.value || !dayPlan.value) return
+  draft.value.dayPlans ??= {}
+  draft.value.dayPlans[selectedDate.value]={keep:dayPlan.value.keep,skip:dayPlan.value.skip,[field]:value}
+}
+function editLondonPlan(date: string, field: 'keep'|'skip', value: string) {
+  if(!canEditDraft.value || !editMode.value) return
+  const current = draft.value.dayPlans?.[date] ?? handbookDays[date]
+  if(!current) return
+  draft.value.dayPlans ??= {}
+  draft.value.dayPlans[date]={keep:current.keep,skip:current.skip,[field]:value}
+}
 
+const flightRoster = ref<RosterState>({ claims: [], choices: [] })
+const previewMemberId = ref('all')
+const memoDrafts = reactive<Record<string, string>>({})
+const serverMemoContentsJson = ref('{}')
 type CloudEnvelope = { tripId?: string; revision: number; journey: TripJourney; canEdit: boolean; updatedAt?: string }
 const pendingEnvelope = ref<CloudEnvelope | null>(null)
 
@@ -82,49 +133,36 @@ const isDirty = computed(() => currentDraftJson.value !== localSavedJson.value)
 const hasCloudChanges = computed(() => cloudBaseJson.value === null
   ? localDraftAvailable.value || isDirty.value
   : currentDraftJson.value !== cloudBaseJson.value)
-const editingLocked = computed(() => busy.value || (cloudLoaded.value && cloudCanEdit.value === false))
 const canSaveCloud = computed(() => cloudLoaded.value && cloudCanEdit.value === true && revision.value !== null && !busy.value && !pendingEnvelope.value)
-const localStatusLabel = computed(() => {
-  if (localPersistenceError.value) return '副本尚未保存'
-  if (hasCloudChanges.value) return isDirty.value ? '有未同步變更' : '本機草稿待同步'
-  if (cloudLoaded.value) return '已同步'
-  if (isDirty.value) return '有未儲存變更'
-  if (localDraftAvailable.value) return '本機草稿待載入雲端'
-  return '尚未載入雲端'
-})
-const cloudLabel = computed(() => {
-  if (localConflictKept.value) return '雲端：本機待整理'
-  if (pendingEnvelope.value) return '雲端：等待版本選擇'
-  if (cloudCanEdit.value === false) return '雲端：僅可讀'
-  if (cloudLoaded.value && cloudCanEdit.value === true) return '雲端：可編輯'
-  return '雲端：尚未連線'
-})
+const canEditDraft = computed(() => !busy.value && !pendingEnvelope.value && cloudCanEdit.value !== false)
+function serverMemoContents(): Record<string, string> {
+  try {
+    return JSON.parse(serverMemoContentsJson.value) as Record<string, string>
+  } catch {
+    return {}
+  }
+}
 
-const transportDraft = reactive<{
-  kind: JourneyTransport['kind']
-  name: string
-  departure: JourneyTransport['departure']
-  arrival: JourneyTransport['arrival']
-  participantIds: string[]
-}>({
-  kind: 'car',
-  name: '',
-  departure: { location: '', localDate: '2026-10-30', localTime: null, timeZone: icelandJourney.timeZone },
-  arrival: { location: '', localDate: '2026-10-30', localTime: null, timeZone: icelandJourney.timeZone },
-  participantIds: [],
-})
+function memoDirty(activityId: string): boolean {
+  return memoText(activityId) !== (serverMemoContents()[activityId] ?? '')
+}
+const hasUnsyncedMemo = computed(() => Object.keys(memoDrafts).some(activityId => memoDirty(activityId)))
+function memoContents(journey: TripJourney): Record<string, string> {
+  return Object.fromEntries(Object.entries(journey.memos ?? {}).map(([activityId, memo]) => [activityId, memo.content]))
+}
 
-const statusOptions: Array<{ value: JourneyStatus; label: string }> = [
-  { value: 'planned', label: '規劃中' },
-  { value: 'next', label: '下一站' },
-  { value: 'completed', label: '已完成' },
-  { value: 'fallback', label: '備案' },
-  { value: 'skipped', label: '略過' },
-  { value: 'cancelled', label: '已取消' },
-]
+function resetMemoDrafts(journey: TripJourney, syncServerContents = true): void {
+  Object.keys(memoDrafts).forEach(key => delete memoDrafts[key])
+  Object.assign(memoDrafts, memoContents(journey))
+  if (syncServerContents) serverMemoContentsJson.value = JSON.stringify(memoContents(journey))
+}
+
+function memoText(activityId: string): string {
+  return memoDrafts[activityId] ?? ''
+}
 
 watch(timeline, days => {
-  if (!days.some(day => day.date === selectedDate.value)) selectedDate.value = days[0]?.date ?? ''
+  if (!days.some(day => day.date === selectedDate.value)) selectedDate.value = tripOpeningDate(days.map(day => day.date))
 }, { immediate: true })
 
 watch(routeTripId, async nextTripId => {
@@ -133,6 +171,7 @@ watch(routeTripId, async nextTripId => {
   invalidateJourneyOperations()
   activeTripId.value = nextTripId
   draft.value = withTripId(icelandJourney, nextTripId)
+  resetMemoDrafts(draft.value)
   localSavedJson.value = JSON.stringify(draft.value)
   cloudBaseJson.value = null
   localDraftAvailable.value = false
@@ -144,28 +183,26 @@ watch(routeTripId, async nextTripId => {
   pendingEnvelope.value = null
   previewMemberId.value = 'all'
   selectedDate.value = ''
-  Object.keys(benefitInputs).forEach(key => delete benefitInputs[key])
   statusMessage.value = ''
   errorMessage.value = ''
   loadScopedLocalDraft(accountId.value, nextTripId)
 
-  if (cloudAuthReady.value) await loadCloud()
+  if (cloudAuthReady.value) {
+    await loadCloud()
+
+  }
 })
 
 watch(draft, () => {
   errorMessage.value = ''
 }, { deep: true })
 
-function createId(prefix: string): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `${prefix}-${crypto.randomUUID()}`
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
-
 function loadScopedLocalDraft(scopeAccountId: string, scopeTripId = routeTripId.value): void {
   try {
     const local = loadLocalJourney(scopeAccountId, scopeTripId)
     if (local) {
       draft.value = local
+      resetMemoDrafts(local, false)
       localSavedJson.value = JSON.stringify(local)
       localDraftAvailable.value = true
       statusMessage.value = '已載入這個帳號的本機草稿。'
@@ -179,8 +216,13 @@ function switchAccount(nextAccountId: string): void {
   if (accountId.value === nextAccountId) return
   invalidateJourneyOperations()
   accountId.value = nextAccountId
+
+
+
+
   activeTripId.value = routeTripId.value
   draft.value = withTripId(icelandJourney, routeTripId.value)
+  resetMemoDrafts(draft.value)
   localSavedJson.value = JSON.stringify(draft.value)
   cloudBaseJson.value = null
   localDraftAvailable.value = false
@@ -191,11 +233,12 @@ function switchAccount(nextAccountId: string): void {
   localConflictKept.value = false
   pendingEnvelope.value = null
   previewMemberId.value = 'all'
-  Object.keys(benefitInputs).forEach(key => delete benefitInputs[key])
   statusMessage.value = ''
   errorMessage.value = ''
   loadScopedLocalDraft(nextAccountId, routeTripId.value)
 }
+
+function updateFlightRoster(next: RosterState): void { flightRoster.value = next }
 
 function normalizeJourneyForEditor(source: TripJourney): TripJourney {
   const next = cloneJourney(source)
@@ -215,107 +258,6 @@ function normalizeJourneyForEditor(source: TripJourney): TripJourney {
   return next
 }
 
-function dayLabel(date: string): string {
-  return new Intl.DateTimeFormat('zh-TW', { month: 'short', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`))
-}
-
-function memberLabel(member: JourneyMember): string {
-  const index = draft.value.members.indexOf(member)
-  return member.displayName?.trim() || `成員 ${index + 1}`
-}
-
-function setGroupMembers(group: JourneyGroup, memberId: string, checked: boolean): void {
-  group.memberIds = checked
-    ? [...new Set([...group.memberIds, memberId])]
-    : group.memberIds.filter(id => id !== memberId)
-}
-
-function setParticipants(target: { participantIds: string[] }, memberId: string, checked: boolean): void {
-  target.participantIds = checked
-    ? [...new Set([...target.participantIds, memberId])]
-    : target.participantIds.filter(id => id !== memberId)
-}
-
-function addGroup(): void {
-  draft.value.groups.push({
-    id: createId('group'),
-    tripId: draft.value.tripId,
-    name: `群組 ${draft.value.groups.length + 1}`,
-    memberIds: [],
-    membershipConfirmed: false,
-  })
-}
-
-function removeGroup(groupId: string): void {
-  draft.value.groups = draft.value.groups.filter(group => group.id !== groupId)
-}
-
-function addTransport(): void {
-  if (!transportDraft.name.trim() || !transportDraft.departure.location.trim() || !transportDraft.arrival.location.trim()) {
-    errorMessage.value = '請先填入交通名稱、出發地與抵達地。'
-    return
-  }
-  draft.value.transports.push({
-    id: createId('transport'),
-    tripId: draft.value.tripId,
-    kind: transportDraft.kind,
-    name: transportDraft.name.trim(),
-    departure: { ...transportDraft.departure },
-    arrival: { ...transportDraft.arrival },
-    participantIds: [...transportDraft.participantIds],
-    status: 'planned',
-    actualStart: null,
-    actualEnd: null,
-  })
-  transportDraft.name = ''
-  transportDraft.departure.location = ''
-  transportDraft.arrival.location = ''
-  transportDraft.participantIds = []
-  statusMessage.value = '交通已加入本機草稿。'
-}
-
-function removeTransport(transportId: string): void {
-  draft.value.transports = draft.value.transports.filter(transport => transport.id !== transportId)
-}
-
-function addAccommodation(): void {
-  const index = draft.value.accommodations.length + 1
-  const stay: JourneyAccommodation = {
-    id: createId('stay'),
-    tripId: draft.value.tripId,
-    name: `住宿 ${index}`,
-    checkIn: '2026-11-01',
-    checkOut: '2026-11-02',
-    participantIds: [],
-    rooms: [],
-    benefits: [],
-  }
-  draft.value.accommodations.push(stay)
-}
-
-function removeAccommodation(stayId: string): void {
-  draft.value.accommodations = draft.value.accommodations.filter(stay => stay.id !== stayId)
-  delete benefitInputs[stayId]
-}
-
-function addRoom(stay: JourneyAccommodation): void {
-  stay.rooms.push({ id: createId('room'), name: `房間 ${stay.rooms.length + 1}`, participantIds: [] })
-}
-
-function removeRoom(stay: JourneyAccommodation, roomId: string): void {
-  stay.rooms = stay.rooms.filter(room => room.id !== roomId)
-}
-
-function benefitsText(stay: JourneyAccommodation): string {
-  if (benefitInputs[stay.id] === undefined) benefitInputs[stay.id] = stay.benefits.join('、')
-  return benefitInputs[stay.id]
-}
-
-function updateBenefits(stay: JourneyAccommodation, value: string): void {
-  benefitInputs[stay.id] = value
-  stay.benefits = value.split(/[、,，]/).map(item => item.trim()).filter(Boolean)
-}
-
 function localSave(): void {
   invalidateJourneyOperations()
   try {
@@ -330,15 +272,19 @@ function localSave(): void {
   }
 }
 
-function applyEnvelope(envelope: CloudEnvelope): void {
-  draft.value = normalizeJourneyForEditor(envelope.journey)
+function applyEnvelope(envelope: CloudEnvelope, preservedJourney?: TripJourney): void {
+  const serverJourney = normalizeJourneyForEditor(envelope.journey)
+  draft.value = preservedJourney ? normalizeJourneyForEditor(preservedJourney) : serverJourney
+  resetMemoDrafts(draft.value)
+  if (preservedJourney) serverMemoContentsJson.value = JSON.stringify(memoContents(serverJourney))
   activeTripId.value = envelope.tripId ?? envelope.journey.tripId
   revision.value = envelope.revision
   cloudCanEdit.value = envelope.canEdit
   cloudLoaded.value = true
   localConflictKept.value = false
   pendingEnvelope.value = null
-  cloudBaseJson.value = JSON.stringify(draft.value)
+  cloudBaseJson.value = JSON.stringify(serverJourney)
+
   try {
     saveLocalJourney(accountId.value, draft.value)
     localSavedJson.value = JSON.stringify(draft.value)
@@ -380,7 +326,7 @@ async function loadCloud(): Promise<void> {
     const envelope = await service.loadJourney(requestedTripId)
     if (!isCurrentJourneyOperation(operation)) return
     const cloudJson = JSON.stringify(normalizeJourneyForEditor(envelope.journey))
-    if (hasCloudChanges.value && currentDraftJson.value !== cloudJson) {
+    if (hasCloudChanges.value && currentDraftJson.value !== cloudJson && !isOnlyLondonAddition(draft.value, normalizeJourneyForEditor(envelope.journey))) {
       pendingEnvelope.value = envelope
       localConflictKept.value = false
       statusMessage.value = '雲端版本已取得，但本機有未儲存變更；請選擇套用雲端或保留本機。'
@@ -400,6 +346,8 @@ async function loadCloud(): Promise<void> {
 async function createCloud(): Promise<void> {
   const operation = beginJourneyOperation()
   const journeySnapshot = cloneJourney(draft.value)
+  const pendingMemos = journeySnapshot.memos
+  journeySnapshot.memos = undefined
   busy.value = true
   errorMessage.value = ''
   try {
@@ -408,7 +356,10 @@ async function createCloud(): Promise<void> {
     const envelope = await service.createJourney(journeySnapshot)
     if (!isCurrentJourneyOperation(operation)) return
     operation.tripId = envelope.tripId ?? envelope.journey.tripId
-    applyEnvelope(envelope)
+    const createdJourney = pendingMemos && Object.keys(pendingMemos).length > 0
+      ? { ...envelope.journey, memos: pendingMemos }
+      : undefined
+    applyEnvelope(envelope, createdJourney)
     if (!isCurrentJourneyOperation(operation)) return
     if (routeTripId.value !== operation.tripId) {
       await router.replace({ name: 'iceland-planner', params: { tripId: operation.tripId } })
@@ -461,7 +412,10 @@ onMounted(async () => {
       }, { immediate: true })
       if (!authStore.user) await authStore.initializeAuth()
       cloudAuthReady.value = true
-      if (authStore.user) await loadCloud()
+      if (authStore.user) {
+        await loadCloud()
+
+      }
     } catch {
       statusMessage.value = '目前以本機預覽模式開啟；雲端控制待登入後可用。'
     }
@@ -470,33 +424,45 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#f5f8f7] pb-28 text-slate-900">
-    <header class="bg-[#0d3031] text-white">
-      <div class="mx-auto max-w-6xl px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
-        <div class="flex items-center justify-between gap-3 text-xs font-semibold tracking-[.18em] text-teal-100/75">
-          <button type="button" class="rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[.16em] transition hover:bg-white/10" @click="router.push('/share/iceland')">← 閱讀行程</button>
-          <span>PRIVATE PLANNING</span>
-        </div>
-        <div class="mt-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-          <div>
-            <p class="text-sm text-amber-100/85">Iceland 2026 · {{ draft.timeZone }}</p>
-            <h1 class="mt-2 text-3xl font-black tracking-[-.04em] sm:text-5xl">一起把行程排好</h1>
-            <p class="mt-3 max-w-xl text-sm leading-6 text-teal-50/75">成員名稱、群組、乘客與房間只留在私人規劃。尚未確認的資訊會保留為空白，避免替旅伴做決定。</p>
-          </div>
-          <div class="flex flex-wrap gap-2 text-xs font-semibold">
-            <span class="rounded-full border border-white/15 bg-white/[.08] px-3 py-2">本機：{{ localStatusLabel }}</span>
-            <span class="rounded-full border border-white/15 bg-white/[.08] px-3 py-2">{{ cloudLabel }}</span>
-          </div>
-        </div>
+  <TripReader :journey="draft" :public-only="false" companion-mode :section="activeSection"
+    @select-section="router.replace({ query: { ...route.query, section: $event } })"
+    @select-date="selectedDate = $event">
+    <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
+    <template #global-information><AuroraConditions v-if="showAurora" compact><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
+    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : '正在載入旅程' }}</span></template>
+    <template #flights>
+      <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
+    </template>
+    <template #preparation>
+      <TripPreparation :account-id="accountId" :trip-id="activeTripId" :journey="draft">
+        <template #packing-list><PreparationChecklist :trip-id="activeTripId" :owner-id="packingOwnerId" :can-edit-shared="cloudCanEdit === true" embedded /></template>
+      </TripPreparation>
+    </template>
+    <template #route-summary>
+      <p v-if="selectedDay" class="route-line">{{ handbookDays[selectedDate]?.route ?? visibleItems.map(item => item.name).join(' → ') }}</p>
+    </template>
+    <template #day-practical>
+      <div v-if="selectedDay" class="practical"><b>沿途實用</b> <span>{{ handbookDays[selectedDate]?.fuel }}</span> · <span>廁所：沿途休息站／遊客中心（開放待確認）</span> · <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((selectedDate==='2026-10-31'?'Grundarfjörður':selectedDate==='2026-11-05'?'Vík':visibleItems[0]?.location||'Reykjavík')+' petrol station')}`" target="_blank" rel="noreferrer">附近加油站 ↗</a> · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">今日路況・攝影機 ↗</a> · <a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is ↗</a></div>
+    </template>
+    <template #daily-start><MorningChecks :date="selectedDate" :account-id="accountId" :trip-id="activeTripId" /></template>
+    <template #day-content>
+      <div v-if="selectedDay" class="compact-day">
+        <div v-if="dayPlan" class="plan-b"><template v-if="editMode"><label>保住<input :value="dayPlan.keep" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('keep',($event.target as HTMLInputElement).value)" /></label><label>先刪<input :value="dayPlan.skip" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('skip',($event.target as HTMLInputElement).value)" /></label></template><template v-else><b>應變</b>　保住：{{ dayPlan.keep }} ｜ 先刪：{{ dayPlan.skip }}</template></div>
+        <ItineraryActivities :items="visibleItems" :editing="editMode" :disabled="!canEditDraft" :today="selectedDate===tripToday" @edit="editItem" @reorder="reorderItems"><template #reminder="{ item }"><p v-if="/Ice Cave|Zodiac/.test(item.name)" class="notice-line">{{ /Zodiac/.test(item.name) ? '行程時段 11:20–13:20' : '行程時段 09:00–15:00' }}；集合／報到時間依票券核對。</p><p v-if="/Reynisfjara/.test(item.name)" class="notice-line">面向海、遵守警示燈與封閉線，保留退路。</p><p v-if="/Blue Lagoon/.test(item.name) && selectedDate==='2026-11-07'" class="notice-line">泡湯與當日航班時間衝突待確認，先保留機場緩衝。</p></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" :legacy-memo="draft.memos?.[item.id]" :legacy-pending="memoDirty(item.id)" /></template></ItineraryActivities>
+        <section v-for="stay in draft.accommodations.filter(stay => stay.checkIn <= selectedDate && selectedDate < stay.checkOut)" :key="stay.id" class="compact-stay"><h3>今晚住宿</h3><p class="stay-name">{{ stay.name }}</p><p>入住時間待確認 · {{ stay.benefits.join(' · ') || '早餐、停車依訂單確認' }}</p></section>
+        <AddItineraryActivity v-if="canEditDraft" :editing="editMode" :disabled="!canEditDraft" @start="editMode=true" @add="(name,location)=>addItem(selectedDate,name,location)" />
+        <details v-if="fallbackItems.length" class="alternatives"><summary>備選景點與餐廳 <span class="disclosure-label" aria-hidden="true" /></summary><ItineraryActivities :items="fallbackItems" :editing="editMode" :disabled="!canEditDraft" @edit="editItem" @reorder="reorderItems"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities></details>
       </div>
-    </header>
-
-    <div class="mx-auto max-w-6xl space-y-8 px-5 pt-6 sm:px-8 sm:pt-10">
+    </template>
+    <template #daily-footer><footer v-if="canEditDraft" class="edit-footer"><button type="button" :disabled="!canEditDraft" @click="editMode=!editMode">{{ editMode ? '完成編輯' : '編輯行程' }}</button></footer></template>
+    <template #sync-settings>
+      <details class="mt-6 rounded-2xl border border-stone-200 bg-stone-50" :open="hasCloudChanges || !!pendingEnvelope || !!errorMessage || !!localPersistenceError">
+        <summary class="cursor-pointer px-4 py-4 text-sm font-semibold text-stone-600">儲存與同步設定<span v-if="hasCloudChanges" class="ml-2 text-[var(--iceland-glacier)]">有變更待儲存</span></summary>
       <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
         <div>
-          <p class="text-sm font-bold text-slate-900">草稿控制</p>
-          <p class="mt-1 text-xs leading-5 text-slate-500">本機草稿按帳號與旅程分開保存；雲端儲存使用版本號保護彼此的變更。</p>
-          <p v-if="statusMessage" class="mt-3 text-xs font-semibold text-teal-700" role="status">{{ statusMessage }}</p>
+          <p class="text-sm font-bold text-slate-900">{{ cloudLoaded ? '儲存到 TravelMate Supabase' : '連接旅程中' }}</p>
+          <p class="mt-1 text-xs leading-5 text-slate-500">這是同一趟冰島旅程；儲存後，有編輯權限的人會看到更新。裝置也會保留備份。</p>
+          <p v-if="statusMessage" class="mt-3 text-xs font-semibold text-[var(--iceland-glacier)]" role="status">{{ statusMessage }}</p>
           <p v-if="errorMessage" class="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold leading-5 text-rose-800" role="alert">{{ errorMessage }}</p>
           <p v-if="localPersistenceError" class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900" role="alert">{{ localPersistenceError }}</p>
           <div v-if="pendingEnvelope" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-950" role="alert">
@@ -509,215 +475,21 @@ onMounted(async () => {
           </div>
           <p v-if="cloudLoaded && cloudCanEdit === false" class="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold leading-5 text-slate-600">雲端目前只有閱讀權限；編輯控制已停用，但仍可另存本機草稿。</p>
         </div>
-        <div class="mt-4 grid grid-cols-2 gap-2 sm:mt-0 sm:flex sm:flex-wrap sm:justify-end">
-          <button type="button" class="min-h-11 rounded-2xl bg-teal-900 px-4 text-xs font-bold text-white transition hover:bg-teal-800" @click="localSave">儲存本機</button>
-          <button type="button" class="min-h-11 rounded-2xl border border-slate-200 px-4 text-xs font-bold text-slate-700 transition hover:border-teal-300" :disabled="busy" @click="loadCloud">載入雲端</button>
-          <button type="button" class="min-h-11 rounded-2xl border border-slate-200 px-4 text-xs font-bold text-slate-700 transition hover:border-teal-300 disabled:cursor-not-allowed disabled:opacity-50" :disabled="busy || cloudLoaded || !!pendingEnvelope" @click="createCloud">建立雲端</button>
-          <button type="button" class="min-h-11 rounded-2xl bg-amber-500 px-4 text-xs font-bold text-amber-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-45" :disabled="!canSaveCloud" @click="saveCloud">更新雲端</button>
+        <div class="mt-4 flex flex-wrap gap-2 sm:mt-0 sm:justify-end">
+          <button v-if="hasCloudChanges" type="button" class="min-h-11 rounded-2xl bg-[var(--iceland-action)] px-5 text-sm font-bold text-white disabled:opacity-45" :disabled="!canSaveCloud || !hasCloudChanges || hasUnsyncedMemo" @click="saveCloud">{{ busy ? '儲存中…' : '儲存變更' }}</button>
+          <details class="relative text-xs text-slate-600">
+            <summary class="flex min-h-11 cursor-pointer items-center rounded-2xl border border-slate-200 px-4 font-bold">同步選項</summary>
+            <div class="absolute right-0 z-10 mt-2 flex min-w-40 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+              <button type="button" class="text-left" @click="localSave">儲存裝置備份</button>
+              <button type="button" class="text-left" :disabled="busy" @click="loadCloud">重新載入 Supabase</button>
+              <button v-if="!cloudLoaded" type="button" class="text-left" :disabled="busy || !!pendingEnvelope" @click="createCloud">建立新旅程</button>
+            </div>
+          </details>
         </div>
       </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" aria-labelledby="roster-heading">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[.2em] text-teal-700">Roster / six slots</p>
-            <h2 id="roster-heading" class="mt-1 text-2xl font-black tracking-tight">旅伴名單</h2>
-          </div>
-          <span class="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-500">帳號綁定待確認</span>
-        </div>
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label v-for="(member, index) in draft.members" :key="member.id" class="rounded-2xl border border-slate-200 p-4">
-            <span class="text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">Member {{ index + 1 }}</span>
-            <input v-model="member.displayName" type="text" class="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none transition focus:border-teal-500 focus:bg-white" :aria-label="`成員 ${index + 1} 名稱`" :disabled="editingLocked" />
-            <span class="mt-2 block text-[11px] text-slate-400">未綁定帳號 · 不會出現在公開閱讀</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" aria-labelledby="groups-heading">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[.2em] text-indigo-700">Groups / overlap allowed</p>
-            <h2 id="groups-heading" class="mt-1 text-2xl font-black tracking-tight">分組</h2>
-          </div>
-          <button type="button" class="min-h-10 rounded-xl border border-indigo-200 px-3 text-xs font-bold text-indigo-800 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="addGroup">＋ 新增群組</button>
-        </div>
-        <div class="mt-5 grid gap-3 lg:grid-cols-3">
-          <article v-for="group in draft.groups" :key="group.id" class="rounded-2xl border border-slate-200 p-4">
-            <div class="flex items-center gap-2">
-              <input v-model="group.name" type="text" class="min-h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-indigo-400 focus:bg-white" aria-label="群組名稱" :disabled="editingLocked" />
-              <button type="button" class="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label="刪除群組" :disabled="editingLocked" @click="removeGroup(group.id)">×</button>
-            </div>
-            <label class="mt-3 flex items-center gap-2 text-xs text-slate-500">
-              <input v-model="group.membershipConfirmed" type="checkbox" class="h-4 w-4 accent-indigo-700" :disabled="editingLocked" /> 已確認成員
-            </label>
-            <div class="mt-4 grid grid-cols-2 gap-2">
-              <label v-for="member in draft.members" :key="member.id" class="flex items-center gap-2 text-xs text-slate-600">
-                <input type="checkbox" class="h-4 w-4 accent-indigo-700" :checked="group.memberIds.includes(member.id)" :disabled="editingLocked" @change="setGroupMembers(group, member.id, ($event.target as HTMLInputElement).checked)" />
-                <span class="truncate">{{ memberLabel(member) }}</span>
-              </label>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" aria-labelledby="preview-heading">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-          <p class="text-[11px] font-bold uppercase tracking-[.2em] text-teal-700">Preview / one shared itinerary</p>
-          <h2 id="preview-heading" class="mt-1 text-2xl font-black tracking-tight">每日預覽</h2>
-          </div>
-          <label class="text-xs font-semibold text-slate-500">查看參與者
-            <select v-model="previewMemberId" class="ml-2 min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-700">
-              <option value="all">全部共享行程</option>
-              <option v-for="member in draft.members" :key="member.id" :value="member.id">{{ memberLabel(member) }}</option>
-            </select>
-          </label>
-        </div>
-        <div class="mt-5 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button v-for="day in timeline" :key="day.date" type="button" class="min-w-[110px] rounded-2xl border px-3 py-3 text-left" :class="selectedDay?.date === day.date ? 'border-teal-800 bg-teal-800 text-white' : 'border-slate-200 text-slate-600'" @click="selectedDate = day.date">
-            <span class="block text-[10px] font-bold uppercase tracking-[.16em] opacity-65">Day {{ timeline.indexOf(day) + 1 }}</span>
-            <span class="mt-1 block text-sm font-bold">{{ dayLabel(day.date) }}</span>
-          </button>
-        </div>
-        <div v-if="selectedDay" class="mt-4 space-y-2">
-          <div v-for="event in selectedDay.events" :key="event.id" class="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-            <span class="h-2 w-2 shrink-0 rounded-full" :class="event.type === 'transport' ? 'bg-amber-500' : event.type === 'accommodation' ? 'bg-indigo-500' : 'bg-teal-500'"></span>
-            <span class="min-w-0 flex-1 truncate text-sm font-semibold">{{ event.name }}</span>
-            <span class="shrink-0 text-xs text-slate-400">{{ event.pendingParticipation ? '待確認' : event.type === 'transport' ? '交通' : event.type === 'accommodation' ? '住宿' : '行程' }}</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" aria-labelledby="transport-heading">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[.2em] text-amber-700">Transport / seven kinds</p>
-            <h2 id="transport-heading" class="mt-1 text-2xl font-black tracking-tight">交通與乘客</h2>
-          </div>
-          <span class="rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-800">乘客可留空</span>
-        </div>
-        <div class="mt-5 space-y-4">
-          <article v-for="transport in draft.transports" :key="transport.id" class="rounded-2xl border border-slate-200 p-4">
-            <div class="grid gap-3 sm:grid-cols-[120px_1fr_auto] sm:items-center">
-              <select v-model="transport.kind" class="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-amber-400" :disabled="editingLocked">
-                <option v-for="kind in ['flight', 'train', 'bus', 'car', 'ferry', 'transfer', 'other']" :key="kind" :value="kind">{{ kind }}</option>
-              </select>
-              <input v-model="transport.name" type="text" class="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-amber-400" placeholder="交通名稱，例如 BA802" :disabled="editingLocked" />
-              <button type="button" class="min-h-11 rounded-xl px-3 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="removeTransport(transport.id)">刪除</button>
-            </div>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2">
-              <div class="rounded-xl bg-slate-50 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">出發</p>
-                <div class="mt-2 grid grid-cols-2 gap-2">
-                  <input v-model="transport.departure.location" type="text" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" placeholder="地點" :disabled="editingLocked" />
-                  <input v-model="transport.departure.localDate" type="date" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                  <input v-model="transport.departure.localTime" type="time" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                  <input v-model="transport.departure.timeZone" type="text" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" placeholder="IANA 時區" :disabled="editingLocked" />
-                </div>
-              </div>
-              <div class="rounded-xl bg-slate-50 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">抵達</p>
-                <div class="mt-2 grid grid-cols-2 gap-2">
-                  <input v-model="transport.arrival.location" type="text" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" placeholder="地點" :disabled="editingLocked" />
-                  <input v-model="transport.arrival.localDate" type="date" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                  <input v-model="transport.arrival.localTime" type="time" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                  <input v-model="transport.arrival.timeZone" type="text" class="min-h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs" placeholder="IANA 時區" :disabled="editingLocked" />
-                </div>
-              </div>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-              <label v-for="member in draft.members" :key="member.id" class="flex items-center gap-2 text-xs text-slate-600">
-                <input type="checkbox" class="h-4 w-4 accent-amber-600" :checked="transport.participantIds.includes(member.id)" :disabled="editingLocked" @change="setParticipants(transport, member.id, ($event.target as HTMLInputElement).checked)" />
-                {{ memberLabel(member) }}
-              </label>
-            </div>
-            <select v-model="transport.status" class="mt-3 min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600" :disabled="editingLocked">
-              <option v-for="option in statusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-          </article>
-
-          <article class="rounded-2xl border border-dashed border-amber-300 bg-amber-50/40 p-4">
-            <div class="grid gap-3 sm:grid-cols-[120px_1fr_auto]">
-              <select v-model="transportDraft.kind" class="min-h-11 rounded-xl border border-amber-200 bg-white px-3 text-sm font-semibold" :disabled="editingLocked">
-                <option v-for="kind in ['flight', 'train', 'bus', 'car', 'ferry', 'transfer', 'other']" :key="kind" :value="kind">{{ kind }}</option>
-              </select>
-              <input v-model="transportDraft.name" type="text" class="min-h-11 rounded-xl border border-amber-200 bg-white px-3 text-sm" placeholder="新增交通名稱" :disabled="editingLocked" />
-              <button type="button" class="min-h-11 rounded-xl bg-amber-500 px-4 text-xs font-bold text-amber-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="addTransport">新增交通</button>
-            </div>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2">
-              <div class="grid grid-cols-2 gap-2">
-                <input v-model="transportDraft.departure.location" type="text" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" placeholder="出發地" :disabled="editingLocked" />
-                <input v-model="transportDraft.departure.localDate" type="date" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                <input v-model="transportDraft.departure.localTime" type="time" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                <input v-model="transportDraft.departure.timeZone" type="text" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" placeholder="出發時區" :disabled="editingLocked" />
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <input v-model="transportDraft.arrival.location" type="text" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" placeholder="抵達地" :disabled="editingLocked" />
-                <input v-model="transportDraft.arrival.localDate" type="date" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                <input v-model="transportDraft.arrival.localTime" type="time" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" :disabled="editingLocked" />
-                <input v-model="transportDraft.arrival.timeZone" type="text" class="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" placeholder="抵達時區" :disabled="editingLocked" />
-              </div>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-              <label v-for="member in draft.members" :key="member.id" class="flex items-center gap-2 text-xs text-slate-600">
-                <input type="checkbox" class="h-4 w-4 accent-amber-600" :checked="transportDraft.participantIds.includes(member.id)" :disabled="editingLocked" @change="setParticipants(transportDraft, member.id, ($event.target as HTMLInputElement).checked)" />
-                {{ memberLabel(member) }}
-              </label>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" aria-labelledby="stay-heading">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[.2em] text-indigo-700">Accommodation / rooms</p>
-            <h2 id="stay-heading" class="mt-1 text-2xl font-black tracking-tight">住宿、房間與福利</h2>
-          </div>
-          <button type="button" class="min-h-10 rounded-xl border border-indigo-200 px-3 text-xs font-bold text-indigo-800 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="addAccommodation">＋ 新增住宿</button>
-        </div>
-        <div class="mt-5 grid gap-4 lg:grid-cols-2">
-          <article v-for="stay in draft.accommodations" :key="stay.id" class="rounded-2xl border border-slate-200 p-4">
-            <div class="flex gap-2">
-              <input v-model="stay.name" type="text" class="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold focus:border-indigo-400 focus:bg-white" aria-label="住宿名稱" :disabled="editingLocked" />
-              <button type="button" class="rounded-xl px-3 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="removeAccommodation(stay.id)">刪除</button>
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-              <label class="text-[11px] font-semibold text-slate-500">入住<input v-model="stay.checkIn" type="date" class="mt-1 min-h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" /></label>
-              <label class="text-[11px] font-semibold text-slate-500">退房<input v-model="stay.checkOut" type="date" class="mt-1 min-h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs" :disabled="editingLocked" /></label>
-            </div>
-            <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              <label v-for="member in draft.members" :key="member.id" class="flex items-center gap-2 text-xs text-slate-600">
-                <input type="checkbox" class="h-4 w-4 accent-indigo-700" :checked="stay.participantIds.includes(member.id)" :disabled="editingLocked" @change="setParticipants(stay, member.id, ($event.target as HTMLInputElement).checked)" />
-                {{ memberLabel(member) }}
-              </label>
-            </div>
-            <label class="mt-4 block text-[11px] font-semibold text-slate-500">包含福利
-              <input :value="benefitsText(stay)" type="text" class="mt-1 min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs" placeholder="早餐、接駁…" :disabled="editingLocked" @input="updateBenefits(stay, ($event.target as HTMLInputElement).value)" />
-            </label>
-            <div class="mt-4 rounded-xl bg-slate-50 p-3">
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-[11px] font-bold uppercase tracking-[.16em] text-slate-400">房間</p>
-                <button type="button" class="text-xs font-bold text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="addRoom(stay)">＋ 新增房間</button>
-              </div>
-              <div v-if="stay.rooms.length === 0" class="mt-2 text-xs text-slate-400">尚未分配房間，避免預設任何配對。</div>
-              <div v-for="room in stay.rooms" :key="room.id" class="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                <div class="flex gap-2">
-                  <input v-model="room.name" type="text" class="min-h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-2 text-xs font-semibold" aria-label="房間名稱" :disabled="editingLocked" />
-                  <button type="button" class="px-2 text-xs font-bold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" :disabled="editingLocked" @click="removeRoom(stay, room.id)">刪除</button>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-x-3 gap-y-2">
-                  <label v-for="member in draft.members" :key="member.id" class="flex items-center gap-1.5 text-[11px] text-slate-600">
-                    <input type="checkbox" class="h-3.5 w-3.5 accent-indigo-700" :checked="room.participantIds.includes(member.id)" :disabled="editingLocked || !stay.participantIds.includes(member.id)" @change="setParticipants(room, member.id, ($event.target as HTMLInputElement).checked)" />
-                    {{ memberLabel(member) }}
-                  </label>
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-    </div>
-  </main>
+      </details>
+    </template>
+  </TripReader>
 </template>
+
+<style scoped>.route-line,.practical{font-size:12px;line-height:1.7;color:#7a8783}.route-line{margin:0 0 4px}.practical{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:white;border:1px solid #dde3de;border-radius:9px;padding:6px 10px;margin:6px 0 0;line-height:1.55}.practical>b{color:#397d86;margin-right:4px}.practical a{color:#397d86;font-weight:600}.plan-b{font-size:12px;line-height:1.55;margin:8px 0 0;color:#7a8783}.plan-b b{color:#263331;margin-right:5px}.plan-b label{display:grid;gap:4px}.plan-b input{padding:8px;border:1px solid #ccd5cf;border-radius:8px;min-height:44px;background:white}.notice-line{font-size:12.5px;line-height:1.5;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;padding:6px 9px;border-radius:9px;margin-top:7px}.compact-stay{background:white;border:1px solid #dde3de;border-radius:14px;padding:11px 13px;margin:14px 0 0}.compact-stay h3{font-size:13px;font-weight:600}.compact-stay .stay-name{font-size:13px;color:#263331}.compact-stay p{font-size:12px;line-height:1.7;color:#64726c;margin-top:3px}.edit-footer{display:flex;justify-content:center;margin:16px 0 4px}.edit-footer button{font-size:13px;color:#7a8783;border:1px solid #dde3de;background:white;border-radius:999px;padding:8px 20px;min-height:40px}.alternatives{margin-top:14px;border-top:1px solid #dde3de}.alternatives>summary{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:12px 0 2px;cursor:pointer;list-style:none}.disclosure-label{font-size:12px;font-weight:400;color:#7a8783}.disclosure-label::after{content:"展開 ▾"}.alternatives[open] .disclosure-label::after{content:"收合 ▴"}.journey-status{padding:3px 9px;font-size:10px}</style>

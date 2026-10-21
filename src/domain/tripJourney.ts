@@ -39,6 +39,21 @@ export interface JourneyMember {
   accountId: string | null
 }
 
+export const PHOTO_SPOT_DEVICES = ['phone', 'camera', 'both'] as const
+export type PhotoSpotDevice = (typeof PHOTO_SPOT_DEVICES)[number]
+
+export interface PhotoSpot {
+  id: string
+  title: string
+  device: PhotoSpotDevice
+  composition: string
+  suggestedTime?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  safetyNote?: string | null
+  sourceLabel: string
+}
+
 export interface JourneyGroup {
   id: string
   tripId: string
@@ -61,7 +76,9 @@ export interface JourneyItem {
   /** Omitted participation means the shared default: every member. */
   participation?: JourneyParticipation
   notes?: string | null
+  reminder?: string | null
   photoTip?: string | null
+  photoSpots?: PhotoSpot[]
   /** Kept optional because items in the staging document are trip-scoped by their parent. */
   tripId?: string
 }
@@ -109,6 +126,13 @@ export interface JourneyAccommodation {
   notes?: string | null
 }
 
+export interface JourneyMemo {
+  content: string
+  updatedBy: string | null
+  updatedAt: string | null
+  updatedByName?: string | null
+}
+
 export interface TripJourney {
   tripId: string
   timeZone: string
@@ -117,6 +141,9 @@ export interface TripJourney {
   items: JourneyItem[]
   transports: JourneyTransport[]
   accommodations: JourneyAccommodation[]
+  /** Private shared memos keyed by stable activity ID; omitted from public journeys. */
+  dayPlans?: Record<string, { keep: string; skip: string }>
+  memos?: Record<string, JourneyMemo>
 }
 
 export interface JourneyValidationResult {
@@ -334,6 +361,37 @@ function validateIdList(value: unknown, path: string, memberIds: Set<string>, er
   }
 }
 
+function validatePhotoSpots(value: unknown, path: string, errors: string[]): void {
+  if (value === undefined) return
+  if (!Array.isArray(value)) {
+    errors.push(`${path} must be an array`)
+    return
+  }
+  const ids = new Set<string>()
+  value.forEach((spot, index) => {
+    const spotPath = `${path}[${index}]`
+    if (!isRecord(spot)) {
+      errors.push(`${spotPath} is required`)
+      return
+    }
+    if (typeof spot.id !== 'string' || spot.id.trim() === '') errors.push(`${spotPath}.id is required`)
+    else if (ids.has(spot.id)) errors.push(`${spotPath}.id is duplicated`)
+    else ids.add(spot.id)
+    if (typeof spot.title !== 'string' || spot.title.trim() === '') errors.push(`${spotPath}.title is required`)
+    if (!PHOTO_SPOT_DEVICES.includes(spot.device as PhotoSpotDevice)) errors.push(`${spotPath}.device is invalid`)
+    if (typeof spot.composition !== 'string' || spot.composition.trim() === '') errors.push(`${spotPath}.composition is required`)
+    if (spot.suggestedTime !== undefined && spot.suggestedTime !== null && typeof spot.suggestedTime !== 'string') errors.push(`${spotPath}.suggestedTime is invalid`)
+    for (const coordinate of ['latitude', 'longitude'] as const) {
+      const value = spot[coordinate]
+      if (value !== undefined && value !== null && (typeof value !== 'number' || !Number.isFinite(value))) errors.push(`${spotPath}.${coordinate} is invalid`)
+    }
+    if (typeof spot.latitude === 'number' && (spot.latitude < -90 || spot.latitude > 90)) errors.push(`${spotPath}.latitude is out of range`)
+    if (typeof spot.longitude === 'number' && (spot.longitude < -180 || spot.longitude > 180)) errors.push(`${spotPath}.longitude is out of range`)
+    if (spot.safetyNote !== undefined && spot.safetyNote !== null && typeof spot.safetyNote !== 'string') errors.push(`${spotPath}.safetyNote is invalid`)
+    if (typeof spot.sourceLabel !== 'string' || spot.sourceLabel.trim() === '') errors.push(`${spotPath}.sourceLabel is required`)
+  })
+}
+
 export function validateJourney(value: unknown): JourneyValidationResult {
   const errors: string[] = []
   if (!isRecord(value)) return { valid: false, errors: ['journey must be an object'] }
@@ -394,15 +452,53 @@ export function validateJourney(value: unknown): JourneyValidationResult {
     if (item.tripId !== undefined && item.tripId !== journey.tripId) errors.push(`${path}.tripId does not match journey.tripId`)
     if (!isValidDate(item.date)) errors.push(`${path}.date is invalid`)
     if (typeof item.name !== 'string' || item.name.trim() === '') errors.push(`${path}.name is required`)
+    if (item.reminder !== undefined && item.reminder !== null && (typeof item.reminder !== 'string' || item.reminder.length > 2000)) errors.push(`${path}.reminder must be text up to 2000 characters`)
     if (typeof item.order !== 'number' || !Number.isInteger(item.order) || item.order < 0) errors.push(`${path}.order is invalid`)
     validateStatus(item.status, path, errors)
     validateParticipation(item.participation, memberIds, `${path}.participation`, errors)
+    validatePhotoSpots(item.photoSpots, `${path}.photoSpots`, errors)
     for (const field of ['plannedStart', 'plannedEnd', 'actualStart', 'actualEnd'] as const) {
       const fieldValue = item[field]
       if (fieldValue !== null && fieldValue !== undefined && typeof fieldValue !== 'string') errors.push(`${path}.${field} is invalid`)
       else if (fieldValue) validateStamp(fieldValue, `${path}.${field}`, timeZone, errors)
     }
   })
+
+  if (journey.dayPlans !== undefined) {
+    if (!isRecord(journey.dayPlans)) {
+      errors.push('dayPlans must be an object')
+    } else {
+      Object.entries(journey.dayPlans).forEach(([date, plan]) => {
+        const path = `dayPlans.${date}`
+        if (!isValidDate(date)) errors.push(`${path} uses an invalid date`)
+        if (!isRecord(plan)) {
+          errors.push(`${path} must be an object`)
+          return
+        }
+        for (const field of ['keep', 'skip'] as const) {
+          if (typeof plan[field] !== 'string' || plan[field].length > 2000) errors.push(`${path}.${field} must be text up to 2000 characters`)
+        }
+      })
+    }
+  }
+
+  if (journey.memos !== undefined) {
+    if (!isRecord(journey.memos)) {
+      errors.push('memos must be an object')
+    } else {
+      Object.entries(journey.memos).forEach(([activityId, memo]) => {
+        const path = `memos.${activityId}`
+        if (!itemIds.has(activityId)) errors.push(`${path} references an unknown activity`)
+        if (!isRecord(memo)) {
+          errors.push(`${path} must be an object`)
+          return
+        }
+        if (typeof memo.content !== 'string' || memo.content.length > 2000) errors.push(`${path}.content must be text up to 2000 characters`)
+        if (memo.updatedBy !== null && (typeof memo.updatedBy !== 'string' || memo.updatedBy.trim() === '')) errors.push(`${path}.updatedBy must be text or null`)
+        if (memo.updatedAt !== null && (typeof memo.updatedAt !== 'string' || instantForDateTime(memo.updatedAt, timeZone) === null)) errors.push(`${path}.updatedAt must be a valid instant or null`)
+      })
+    }
+  }
 
   const transportIds = new Set<string>()
   const transports = Array.isArray(journey.transports) ? journey.transports : []
@@ -480,6 +576,10 @@ export function validateJourney(value: unknown): JourneyValidationResult {
   })
 
   return { valid: errors.length === 0, errors }
+}
+
+export function photoSpotsForItem(item: JourneyItem): PhotoSpot[] {
+  return (item.photoSpots ?? []).map(spot => ({ ...spot }))
 }
 
 export function assertValidJourney(journey: unknown): asserts journey is TripJourney {

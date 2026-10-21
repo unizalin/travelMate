@@ -22,7 +22,10 @@ export interface PublicIcelandDay {
 /** Public sharing intentionally carries no accommodation records. */
 export const publicIcelandStays: never[] = []
 
-export const publicIcelandDays: PublicIcelandDay[] = [...new Set(publicIcelandItems.map(item => item.date))]
+export const publicIcelandDays: PublicIcelandDay[] = [...new Set([
+  ...publicIcelandItems.map(item => item.date),
+  ...publicIcelandTransports.flatMap(transport => [transport.departure.localDate, transport.arrival.localDate]),
+])]
   .sort()
   .map(date => ({
     date,
@@ -59,17 +62,14 @@ export const icelandTrip = {
       departure: flight.departure.localTime,
       arrival: flight.arrival.localTime,
     })),
+  suppliedOpeningHours: { 'public-iceland-stop-1': '10:00–21:00' } as Record<string, string>,
+  onwardFlights: [
+    { name: 'BR068', from: 'LHR', to: 'BKK', departureDate: '2026-11-07', departure: '21:20', arrival: '16:00', dateNote: 'BKK 抵達日期待補' },
+    { name: 'BR068', from: 'BKK', to: 'TPE', departureDate: null, departure: '17:15', arrival: '21:50', dateNote: 'BKK 出發與 TPE 抵達日期待補' },
+  ],
   alerts: [
-    {
-      tone: 'warning',
-      title: 'Nov 7 行程需要確認',
-      message: 'Blue Lagoon 與 11:55 從 KEF 起飛的 BA801 之間，接駁與入場時段尚未確認。',
-    },
-    {
-      tone: 'info',
-      title: '資訊仍在規劃中',
-      message: '公開閱讀只提供共享日期、地點與交通摘要；詳細住宿與攝影提示留在私人規劃。',
-    },
+    { tone: 'info' as 'info' | 'warning', title: '行程已確認', message: '依已確認版本安排；一般景點保留寬鬆節奏，已提供的 Tour 與航班時間固定標示。' },
+    { tone: 'info' as 'info' | 'warning', title: '回程轉機日期待補', message: '11/7 保留 Blue Lagoon，離境與返台依各自選擇的航班；各航段時間為當地時間，BR068 未提供的跨日日期不自行推算。' },
   ],
 } as const
 

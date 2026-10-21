@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>本機元件版面驗證（測試資料）</title></head><body><div id="app"></div>
+<script type="module">
+// Development-only fixture: no authentication, cloud reads, or journey writes.
+import { createApp, h, ref } from 'vue'
+import '/src/assets/main.css'
+import '/src/styles/globals.css'
+import TripReader from '/src/components/trip/TripReader.vue'
+import LondonPrelude from '/src/components/trip/LondonPrelude.vue'
+import ItineraryActivities from '/src/components/trip/ItineraryActivities.vue'
+import ActivityComments from '/src/components/trip/ActivityComments.vue'
+import AuroraConditions from '/src/components/trip/AuroraConditions.vue'
+import AuroraReminderSettings from '/src/components/trip/AuroraReminderSettings.vue'
+import TripPreparation from '/src/components/trip/TripPreparation.vue'
+import JourneyFlightCard from '/src/components/trip/JourneyFlightCard.vue'
+import { icelandFlights } from '/src/data/icelandFlights.ts'
+import { icelandJourney } from '/src/data/icelandJourney.ts'
+import { londonSeedItems } from '/src/domain/londonJourney.ts'
+import { handbookDays } from '/src/data/icelandHandbook.ts'
+const journey = { ...icelandJourney, items: [...icelandJourney.items,...londonSeedItems(icelandJourney.tripId)] }
+const date = ref('2026-10-30')
+const section = ref('itinerary')
+const comment = ({item}) => h(ActivityComments, { tripId: 'layout-fixture', activityId: item.id, accountId: 'local-preview', canPost: false })
+createApp({render: () => h(TripReader, {journey, publicOnly:false, companionMode:true,section:section.value,onSelectSection:value=>section.value=value,onSelectDate:value=>date.value=value}, {
+  'header-actions':()=>h('span',{class:'journey-status rounded-full px-3 py-1 text-xs'},'測試資料'),
+  'global-information': () => h(AuroraConditions,{compact:true},{reminders:({cityId})=>h(AuroraReminderSettings,{cityId,accountId:'local-preview'})}),
+  prelude: ({date}) => h(LondonPrelude,{journey,sharedReady:true,date,embedded:true},{comments:comment}),
+  'route-summary':()=>h('p',{style:'font-size:12px;line-height:1.6;color:#7a8783;margin-bottom:4px'},handbookDays[date.value]?.route),
+  'day-practical':()=>h('p',{style:'font-size:12px;line-height:1.6;color:#7a8783;margin:4px 0'},`沿途實用 · ${handbookDays[date.value]?.fuel || '待補'}`),
+  'day-content': () => [h('p',{style:'font-size:12px;line-height:1.6;border-left:2px solid #c76b46;padding-left:10px;margin:8px 0;color:#7a8783'},`應變　保住：${handbookDays[date.value]?.keep || '待補'} ｜ 先刪：${handbookDays[date.value]?.skip || '待補'}`),h(ItineraryActivities,{items:journey.items.filter(item=>item.date===date.value && item.status!=='fallback'),editing:false},{comments:comment})],
+  flights:()=>icelandFlights.filter(flight=>flight.id==='ba802'||flight.id==='ba801').map(flight=>h(JourneyFlightCard,{flight})),
+  preparation:()=>h(TripPreparation,{accountId:'layout-verification',tripId:'layout-fixture',journey}),
+})}).mount('#app')
+</script></body></html>

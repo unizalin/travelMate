@@ -1,0 +1,23 @@
+<script setup lang="ts">
+import type { JourneyItem } from '@/domain/tripJourney'
+const props = defineProps<{ item: JourneyItem; index: number; editing?: boolean; disabled?: boolean; next?: boolean; navigationTerm?: string; facilityLabel?: string; facilityQuery?: string }>()
+const emit = defineEmits<{ edit: [id: string, patch: Partial<JourneyItem>] }>()
+const mapTerm = (item: JourneyItem) => props.navigationTerm || (item.id.startsWith('london-') && ['London','London／Cambridge'].includes(item.location || '') ? `${item.name}, ${item.date==='2026-10-26' && !/King|Pizza|Duck/.test(item.name) ? 'Cambridge' : 'London'}` : item.location || item.name)
+const maps = (item: JourneyItem) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapTerm(item))}`
+</script>
+<template>
+      <li :id="`activity-${item.id}`" class="activity" :class="{ done: item.status === 'completed' || item.status === 'skipped', upcoming: next }">
+        <div class="activity-heading"><button v-if="editing" type="button" class="drag-handle" aria-label="拖曳排序" :disabled="disabled">≡</button><span class="number">{{ String(index + 1).padStart(2,'0') }}</span><h3>{{ item.name }}</h3><time v-if="item.plannedStart">{{ item.plannedStart.slice(11,16) }}<template v-if="item.plannedEnd">–{{ item.plannedEnd.slice(11,16) }}</template></time><small v-if="next" class="next-label">下一站</small></div>
+        <div v-if="editing" class="activity-editor"><label>名稱<input :value="item.name" :disabled="disabled" maxlength="200" @input="emit('edit',item.id,{name:($event.target as HTMLInputElement).value})" /></label><label>導航搜尋詞<input :value="item.location" :disabled="disabled" @input="emit('edit',item.id,{location:($event.target as HTMLInputElement).value})" /></label><label>備註<textarea :value="item.notes" :disabled="disabled" rows="2" maxlength="2000" @input="emit('edit',item.id,{notes:($event.target as HTMLTextAreaElement).value})" /></label><label>提醒<textarea :value="item.reminder" :disabled="disabled" rows="2" maxlength="2000" @input="emit('edit',item.id,{reminder:($event.target as HTMLTextAreaElement).value})" /></label><label>狀態<select :value="item.status" :disabled="disabled" @change="emit('edit',item.id,{status:($event.target as HTMLSelectElement).value as JourneyItem['status']})"><option value="planned">照行程</option><option value="next">下一站</option><option value="completed">已完成</option><option value="skipped">略過</option><option value="fallback">備選</option><option value="cancelled">取消</option></select></label></div>
+        <p v-else-if="item.notes" class="activity-note">{{ item.notes }}</p>
+        <p v-if="item.reminder" class="activity-reminder"><b>提醒</b>　{{ item.reminder }}</p>
+        <slot name="reminder" :item="item" />
+        <slot name="photography" :item="item" />
+        <a class="activity-map" :href="maps(item)" target="_blank" rel="noreferrer">導航：{{ mapTerm(item) }} ↗</a>
+        <a v-if="facilityLabel && facilityQuery" class="activity-facility" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facilityQuery)}`" target="_blank" rel="noreferrer">廁所：{{ facilityLabel }} ↗</a>
+        <slot name="comments" :item="item" />
+      </li>
+</template>
+<style scoped>
+.activity{padding:11px 0 8px;border-top:1px solid #dde3de;scroll-margin-top:125px}.activity-heading{display:flex;align-items:baseline;gap:8px}.number{font-size:12px;color:#397d86;font-weight:700}.activity h3{font-size:15px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.5}.activity time{font-size:12px;font-weight:600;color:#397d86;white-space:nowrap}.activity-note{font-size:12.5px;color:#7a8783;line-height:1.55;margin:3px 0 0;white-space:pre-line}.activity-map{display:block;font-size:12px;font-weight:600;color:#397d86;margin:4px 0 0;overflow-wrap:anywhere}.activity-facility{display:block;font-size:12px;font-weight:500;color:#68766f;margin:2px 0 0;overflow-wrap:anywhere}.activity-reminder{background:#fdf3ec;border:1px solid #f0d9c8;color:#8a4b28;border-radius:9px;padding:6px 9px;font-size:12.5px;line-height:1.5;margin:7px 0 0}.activity-reminder b{color:#c76b46}.activity-editor{display:grid;gap:8px;font-size:12px;margin:8px 0}.activity-editor label{display:grid;gap:4px}.activity-editor :is(input,textarea,select){min-height:44px;width:100%;border:1px solid #ccd5cf;background:white;border-radius:8px;padding:9px;font:inherit}.drag-handle{touch-action:none;cursor:grab;min-width:44px;min-height:44px;font-size:23px}.done{opacity:.5}.next-label{background:#397d86;color:white;padding:2px 8px;border-radius:999px;font-size:10.5px;white-space:nowrap;font-weight:700}
+</style>

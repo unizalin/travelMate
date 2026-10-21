@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>travelMate UI 預覽 — 冰島段 11/2 南岸（實案）</title>
+<style>
+  :root{
+    --bg:#F7F8F6; --ink:#263331; --teal:#397D86; --moss:#E5EBDF; --lava:#C76B46;
+    --muted:#7a8783; --line:#dde3de; --bubble:#eef1ee; --night:#233E49;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; background:#e8ece8; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; color:var(--ink)}
+  .phone{max-width:390px; margin:0 auto; background:var(--bg); min-height:100vh; position:relative; padding-bottom:28px; box-shadow:0 0 24px rgba(38,51,49,.12)}
+  header{padding:14px 18px 8px}
+  .brandrow{display:flex; justify-content:space-between; align-items:center}
+  .brand{font-size:12px; letter-spacing:.18em; color:var(--teal); font-weight:700}
+  .sync{font-size:11px; color:var(--muted); background:var(--moss); padding:3px 9px; border-radius:999px}
+  h1{font-size:19px; margin:6px 0 2px}
+  h1 small{font-size:12.5px; color:var(--muted); font-weight:400; margin-left:6px}
+  .clocks{font-size:12px; color:var(--muted); margin:1px 0 0}
+  .clocks b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .clocks .sep{color:#c8cfcb; margin:0 5px}
+  .tabs{display:flex; gap:6px; padding:6px 18px 0}
+  .tab{flex:1; text-align:center; font-size:13.5px; padding:9px 0; border-radius:11px; color:var(--muted)}
+  .tab.on{background:var(--ink); color:#fff; font-weight:600}
+  .sticky{position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 18px 10px; border-bottom:1px solid var(--line)}
+  .legs{display:flex; background:var(--moss); border-radius:11px; padding:3px; margin-bottom:9px}
+  .leg{flex:1; text-align:center; font-size:12.5px; padding:6px 0; border-radius:8px; color:var(--muted)}
+  .leg.on{background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(38,51,49,.12)}
+  .leg span{display:block; font-size:11px; color:var(--muted); font-weight:400}
+  .days{display:flex; gap:7px; overflow-x:auto; scrollbar-width:none}
+  .days::-webkit-scrollbar{display:none}
+  .day{flex:0 0 auto; width:74px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:7px 0 8px; text-align:center}
+  .day i{display:block; font-style:normal; font-size:10px; letter-spacing:.1em; color:var(--muted)}
+  .day b{font-size:13px}
+  .day.on{background:var(--teal); border-color:var(--teal); color:#fff}
+  .day.on i{color:#cfe3e6}
+  main{padding:6px 18px 0}
+  .segmeta{font-size:12px; color:var(--teal); margin:8px 0 0}
+  .segname{font-size:21px; font-weight:700; margin:3px 0 2px}
+  .segname .tz{float:right; font-size:11.5px; color:var(--muted); font-weight:400; margin-top:8px}
+  .people{font-size:12.5px; color:var(--muted); margin:0 0 4px}
+  .daytitle{font-size:16.5px; font-weight:700; margin:14px 0 2px}
+  .route{font-size:12px; color:var(--muted); margin:0 0 4px; line-height:1.55}
+  .wx{display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px; color:#39544e; background:#eef4f1; border-radius:9px; padding:6px 10px; margin:6px 0 0}
+  .wx b{color:var(--ink)}
+  .wx .sep{color:#b9c4c0}
+  .util{display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); background:#fff; border:1px solid var(--line); border-radius:9px; padding:6px 10px; margin:6px 0 0}
+  .util b{color:var(--teal)}
+  .util .sep{color:#d5dbd7}
+  .util a{color:var(--teal); text-decoration:none; font-weight:600}
+  .planb{font-size:12px; color:var(--muted); margin:8px 0 0; line-height:1.55}
+  .planb b{color:var(--ink)}
+  .alert{display:flex; gap:8px; align-items:flex-start; background:#fbeee6; border:1px solid #efcdb4; color:#7c3f1d; border-radius:11px; padding:8px 11px; margin:8px 0 0; font-size:12.5px; line-height:1.55}
+  .alert b{color:var(--lava)}
+  .alert button{margin-left:auto; background:none; border:none; color:#b08a72; font-size:15px; cursor:pointer; padding:0 2px; line-height:1}
+  .aurora{background:var(--night); color:#dcebf0; border-radius:14px; padding:12px 14px; margin:10px 0 0}
+  .aurora .t{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:2px 8px}
+  .aurora .t b{font-size:14px; color:#fff}
+  .aurora .t span{font-size:11px; color:#9fc3cf}
+  .aurora .big{font-size:13px; margin:6px 0 2px; line-height:1.6}
+  .aurora .big b{color:#8fd8b2}
+  .aurora .sub{font-size:11.5px; color:#9fc3cf; margin:0; line-height:1.6}
+  .act{border-top:1px solid var(--line); padding:11px 0 8px}
+  .acthead{display:flex; align-items:baseline; gap:8px}
+  .num{color:var(--teal); font-size:12px; font-weight:700}
+  .actname{font-size:15px; font-weight:600; flex:1}
+  .acttime{font-size:12px; color:var(--teal); font-weight:600}
+  .note{font-size:12.5px; color:var(--muted); margin:3px 0 0; line-height:1.55}
+  .photo{font-size:12.5px; margin:5px 0 0; line-height:1.55; color:#44534f}
+  .photo b{color:var(--teal)}
+  .photobtn{display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; padding:7px 0 0; cursor:pointer; font:inherit; font-size:12.5px; color:var(--teal); font-weight:600; text-align:left}
+  .photobtn span{color:var(--muted); font-size:11px}
+  .photopanel{margin-top:5px; background:#f2f7f5; border-radius:10px; padding:8px 11px}
+  .prow{font-size:12.5px; line-height:1.6; margin:0 0 5px; color:#44534f}
+  .prow:last-child{margin-bottom:0}
+  .ptag{display:inline-block; background:var(--teal); color:#fff; font-size:10.5px; font-weight:700; border-radius:5px; padding:1px 6px; margin-right:6px; vertical-align:1px}
+  .nav{font-size:12px; margin:4px 0 0}
+  .nav a{color:var(--teal); text-decoration:none; font-weight:600}
+  .remind{margin:7px 0 0; font-size:12.5px; background:#fdf3ec; border:1px solid #f0d9c8; color:#8a4b28; border-radius:9px; padding:6px 9px; line-height:1.5}
+  .remind b{color:var(--lava)}
+  .fbbar{display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; border-top:1px solid var(--line); margin-top:9px; padding:8px 2px 2px; cursor:pointer; font:inherit}
+  .fbbar .a{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); font-weight:600}
+  .fbbar svg{width:16px; height:16px; fill:none; stroke:var(--muted); stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round}
+  .fbbar .meta{font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:5px}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--lava); display:inline-block}
+  .open{margin-top:6px}
+  .fb{display:flex; gap:8px; margin:0 0 9px}
+  .ava{flex:0 0 auto; width:32px; height:32px; border-radius:50%; color:#fff; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .bub{background:var(--bubble); border-radius:14px; padding:6px 11px 7px}
+  .bub b{font-size:12.5px; display:block}
+  .bub p{font-size:13px; margin:1px 0 0; line-height:1.5}
+  .fmeta{font-size:11px; color:var(--muted); margin:2px 0 0 43px}
+  .fmeta a{color:var(--muted); text-decoration:none; font-weight:600; cursor:pointer}
+  .fbinput{display:flex; gap:8px; align-items:center; margin-top:2px}
+  .fbinput .ava{width:30px; height:30px; font-size:11.5px; background:var(--lava)}
+  .fbinput .pill{flex:1; display:flex; background:var(--bubble); border-radius:999px; padding:4px 4px 4px 13px; align-items:center}
+  .fbinput input{flex:1; border:none; background:transparent; font-size:12.5px; font-family:inherit; outline:none; color:var(--ink)}
+  .fbinput button{background:var(--teal); color:#fff; border:none; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer}
+  .stay{background:#fff; border:1px solid var(--line); border-radius:14px; padding:11px 13px; margin:14px 0 0}
+  .stay h4{margin:0 0 3px; font-size:13px}
+  .stay h4 span{color:var(--muted); font-weight:400; font-size:11.5px; margin-left:5px}
+  .stay p{font-size:13px; margin:0; line-height:1.55}
+  .stay p small{color:var(--muted); font-size:12px}
+  .addrow{width:100%; margin-top:12px; background:none; border:1.5px dashed var(--line); border-radius:12px; padding:10px 0; font:inherit; font-size:13px; color:var(--muted); cursor:pointer}
+  .fallback{width:100%; background:none; border:none; border-top:1px solid var(--line); margin-top:14px; padding:12px 0 2px; display:flex; justify-content:space-between; font:inherit; font-size:14px; font-weight:600; cursor:pointer; color:var(--ink)}
+  .fallback span{color:var(--muted); font-size:12px}
+  .footedit{text-align:center; margin:16px 0 4px}
+  .footedit span{font-size:13px; color:var(--muted); border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 20px; display:inline-block}
+  .drive{font-size:11.5px; color:var(--muted); padding:2px 0 2px 27px}
+  .nextpill{background:var(--teal); color:#fff; font-size:10.5px; border-radius:999px; padding:2px 8px; font-weight:700}
+  .act.past{opacity:.5}
+  .handle{display:none; color:var(--muted); cursor:grab; font-size:15px}
+  body.editing .handle{display:inline}
+  body.editing .act{background:#fff; border-radius:10px}
+  body.editing .remind{outline:1.5px dashed var(--lava); outline-offset:2px; cursor:text}
+  .hint{font-size:11px; color:var(--muted); text-align:center; margin:10px 0 0}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="brandrow"><span class="brand">ICELAND · 2026</span><span class="sync">已同步</span></div>
+    <h1>一起去冰島<small>10 月 30 日 — 11 月 7 日 · 9 天 · 6 人</small></h1>
+    <p class="clocks">冰島 <b id="clkLocal">--:--</b><span class="sep">·</span>台灣 <b id="clkTw">--:--</b></p>
+  </header>
+  <div style="padding:0 18px">
+    <div class="alert" style="margin-top:2px"><span><b>通知</b>　1 號公路 Kirkjubæjarklaustur 一帶強風陣風 22 m/s，下午移動前再確認 Umferðin 路況。</span><button onclick="this.parentElement.style.display='none'" aria-label="關閉">×</button></div>
+    <div class="aurora" style="margin-top:8px">
+      <div class="t"><b>今晚極光 · 南岸</b><span>Open-Meteo / NOAA 參考值</span></div>
+      <p class="big">KP <b>4</b> · 雲量 25% · <b>有機會看到</b>，最佳時段 22:00–01:00</p>
+      <p class="sub">住宿 The Barn 在鄉間、光害低，飯店附近看即可；出發前 1 小時會再推播。</p>
+      <p class="sub" style="margin-top:4px">未來兩晚：明晚 KP 3 · 雲量 60%｜後晚 KP 5 · 雲量 20%</p>
+    </div>
+  </div>
+  <div class="tabs"><div class="tab on">每日行程</div><div class="tab">我的航班</div><div class="tab">行前準備</div></div>
+
+  <div class="sticky">
+    <div class="legs">
+      <div class="leg">倫敦前段<span>10/24–29</span></div>
+      <div class="leg on">冰島九天<span>10/30–11/7</span></div>
+    </div>
+    <div class="days">
+      <div class="day"><i>DAY 01</i><b>10/30（五）</b></div>
+      <div class="day"><i>DAY 02</i><b>10/31（六）</b></div>
+      <div class="day"><i>DAY 03</i><b>11/01（日）</b></div>
+      <div class="day on"><i>DAY 04</i><b>11/02（一）</b></div>
+      <div class="day"><i>DAY 05</i><b>11/03（二）</b></div>
+      <div class="day"><i>DAY 06</i><b>11/04（三）</b></div>
+    </div>
+  </div>
+
+  <main>
+    <p class="daytitle" style="margin-top:12px">南岸：經典瀑布、荒原殘骸與黑沙海岸</p>
+    <p class="route">Aurora Igloo → Seljalandsfoss → Skógafoss → Plane Wreck → Reynisfjara → Vík（今日車程合計約 1 小時 40 分）</p>
+    <div class="wx"><b>南岸 · Vík</b><span>−1°／4°</span><span class="sep">·</span><span>降雨 40%</span><span class="sep">·</span><span>風 9 m/s</span><span class="sep">·</span><span>日出 09:10／日落 17:00／藍調 17:02–17:42</span></div>
+    <div class="util"><b>沿途實用</b><span>加油：Vík N1 <a href="#">導航 ↗</a>，過站後往東 140 km 才有下一站</span><span class="sep">·</span><span>廁所：兩座瀑布停車場、黑沙灘</span></div>
+    <div class="util"><b>今日穿搭</b><span>防水外層＋防水褲（瀑布水霧）、冰爪放隨身、帽子選能固定的</span></div>
+
+    <p class="planb"><b>應變</b>　保住：兩座瀑布＋黑沙灘安全觀景 ｜ 先刪：Plane Wreck（接駁停駛、風雪或延誤直接取消）</p>
+
+    <div class="drive">車程約 30 分 · 35 km（07:50 出發）</div>
+
+    <div class="act past">
+      <div class="acthead"><span class="handle">≡</span><span class="num">01</span><span class="actname">Seljalandsfoss</span><span class="acttime">08:35</span></div>
+      <p class="note">07:50 離開 Aurora Igloo。瀑布後方步道僅在開放且無嚴重結冰時進入。</p>
+      <button class="photobtn" data-p="p1">拍攝建議 <span>展開 ▾</span></button>
+      <div class="photopanel" id="p1" hidden>
+        <p class="prow"><span class="ptag">iPhone</span>正面偏左站位，0.5x 廣角低角度沿河道拍，人物入鏡當比例。</p>
+        <p class="prow"><span class="ptag">相機</span>CPL 轉掉水面反光、出太陽時彩虹更明顯；快門 1/4–1 秒可拉出水流線條（需腳架）。</p>
+      </div>
+      <p class="nav"><a href="#">導航：Seljalandsfoss Parking ↗</a></p>
+      <button class="fbbar" data-t="c1"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount"></span></span></button>
+      <div class="open" id="c1" hidden>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="drive">車程約 25 分 · 25 km</div>
+
+    <div class="act">
+      <div class="acthead"><span class="handle">≡</span><span class="num">02</span><span class="actname">Skógafoss</span><span class="nextpill">下一站</span><span class="acttime">10:00</span></div>
+      <p class="note">停留約 1 小時；之後 11:05 午餐／咖啡。</p>
+      <button class="photobtn" data-p="p2">拍攝建議 <span>展開 ▾</span></button>
+      <div class="photopanel" id="p2" hidden>
+        <p class="prow"><span class="ptag">iPhone</span>用 Live Photo 拍，回看改成「長時間曝光」就是絲綢瀑布；拍之前先擦乾鏡頭。</p>
+        <p class="prow"><span class="ptag">相機</span>ND64 慢快門 1/4–2 秒＋腳架；正中央對稱或側面人物尺度，CPL 可壓水霧反光。</p>
+      </div>
+      <p class="remind"><b>提醒</b>　水霧非常大，人和相機都會濕，拍完先擦乾再收。</p>
+      <p class="nav"><a href="#">導航：Skógafoss Parking ↗</a></p>
+      <button class="fbbar" data-t="c2"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="dot"></span><span class="ncount">2 則留言</span></span></button>
+      <div class="open" id="c2" hidden>
+        <div class="fb"><div class="ava" style="background:#8a7d5c">思</div><div><div class="bub"><b>思辰</b><p>瀑布旁小店的羊肉湯很好喝，午餐可以在那解決</p></div></div></div>
+        <p class="fmeta">10/20 12:15 · <a class="rep">回覆</a></p>
+        <div class="fb"><div class="ava" style="background:#397D86">Y</div><div><div class="bub"><b>YU</b><p>那我帶防水袋，包包不要放地上</p></div></div></div>
+        <p class="fmeta">10/20 12:20 · <a class="rep">回覆</a></p>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="drive">車程約 12 分 · 11 km</div>
+
+    <div class="act">
+      <div class="acthead"><span class="handle">≡</span><span class="num">03</span><span class="actname">Sólheimasandur Plane Wreck</span><span class="acttime">12:25</span></div>
+      <p class="note">接駁＋拍攝約 1.5 小時。應變名單第一位：接駁停駛或延誤就取消。</p>
+      <button class="photobtn" data-p="p3">拍攝建議 <span>展開 ▾</span></button>
+      <div class="photopanel" id="p3" hidden>
+        <p class="prow"><span class="ptag">iPhone</span>0.5x 廣角貼近機身，留大量天空與荒原當負空間。</p>
+        <p class="prow"><span class="ptag">相機</span>長焦壓縮遠山層次；CPL 讓藍天與雲的對比更沉。</p>
+      </div>
+      <p class="nav"><a href="#">導航：Sólheimasandur Plane Wreck Parking ↗</a></p>
+      <button class="fbbar" data-t="c3"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount"></span></span></button>
+      <div class="open" id="c3" hidden>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="drive">車程約 20 分 · 20 km</div>
+
+    <div class="act">
+      <div class="acthead"><span class="handle">≡</span><span class="num">04</span><span class="actname">Reynisfjara 黑沙灘</span><span class="acttime">14:35</span></div>
+      <p class="note">指定觀景區停留；只在安全區內活動。</p>
+      <button class="photobtn" data-p="p4">拍攝建議 <span>展開 ▾</span></button>
+      <div class="photopanel" id="p4" hidden>
+        <p class="prow"><span class="ptag">iPhone</span>連拍抓浪退去的瞬間，不要為了等畫面靠近水線。</p>
+        <p class="prow"><span class="ptag">相機</span>ND 濾鏡 1/4–1 秒拖曳浪線；腳架只放安全區，同行者全程幫忙看浪。</p>
+      </div>
+      <p class="remind"><b>提醒</b>　永遠面向海、遵守警示燈與封閉線；浪退得遠不代表安全。</p>
+      <p class="nav"><a href="#">導航：Reynisfjara ↗</a></p>
+      <button class="fbbar" data-t="c4"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount">1 則留言</span></span></button>
+      <div class="open" id="c4" hidden>
+        <div class="fb"><div class="ava" style="background:#7d9b6a">j</div><div><div class="bub"><b>jinyo</b><p>玄武岩柱拍照要排隊，抓 20 分鐘</p></div></div></div>
+        <p class="fmeta">10/20 11:20 · <a class="rep">回覆</a></p>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="drive">車程約 12 分 · 11 km</div>
+
+    <div class="act">
+      <div class="acthead"><span class="handle">≡</span><span class="num">05</span><span class="actname">Víkurkirkja 藍調收尾</span><span class="acttime">16:00</span></div>
+      <button class="photobtn" data-p="p5">拍攝建議 <span>展開 ▾</span></button>
+      <div class="photopanel" id="p5" hidden>
+        <p class="prow"><span class="ptag">iPhone</span>藍調時刻開夜景模式，手靠牆面或欄杆穩住。</p>
+        <p class="prow"><span class="ptag">相機</span>白平衡約 3200K 保留藍調；由教堂向下拍小鎮、海岸與天空。之後 16:30 入住 The Barn。</p>
+      </div>
+      <p class="nav"><a href="#">導航：Víkurkirkja ↗</a></p>
+      <button class="fbbar" data-t="c5"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount"></span></span></button>
+      <div class="open" id="c5" hidden>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="stay">
+      <h4>今晚住宿<span>Vík</span></h4>
+      <p>The Barn<br><small>16:30 入住 · 鄉間低光害，極光在飯店附近看</small></p>
+    </div>
+
+    <button class="addrow">＋ 加行程</button>
+
+    <button class="fallback" id="fbBtn">備選景點與餐廳 <span id="fbArrow">展開 ▾</span></button>
+    <div id="fbBody" hidden>
+      <p class="note" style="margin-top:6px">替代方案：Kvernufoss（從 Skógar Museum 一帶步行進峽谷）——不想拍飛機殘骸時換這個，當天不要同時塞。</p>
+    </div>
+
+    <div class="footedit"><span id="editToggle" style="cursor:pointer">編輯行程</span></div>
+    <p class="hint">內容取自 2026 Iceland Winter Photo Travel Book 的 11/2 南岸日</p>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('.photobtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var el = document.getElementById(b.getAttribute('data-p'));
+      var open = el.hidden; el.hidden = !open;
+      b.querySelector('span').textContent = open ? '收合 ▴' : '展開 ▾';
+    });
+  });
+  document.querySelectorAll('.fbbar').forEach(function(b){
+    b.addEventListener('click', function(){
+      var el = document.getElementById(b.getAttribute('data-t'));
+      el.hidden = !el.hidden;
+    });
+  });
+  document.querySelectorAll('.fbinput button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pill = btn.parentElement, input = pill.querySelector('input');
+      var v = input.value.trim(); if(!v) return;
+      var box = pill.parentElement.parentElement;
+      var wrap = document.createElement('div');
+      wrap.innerHTML = '<div class="fb"><div class="ava" style="background:#C76B46">U</div><div><div class="bub"><b>U</b><p></p></div></div></div><p class="fmeta">剛剛 · <a class="rep">回覆</a></p>';
+      wrap.querySelector('.bub p').textContent = v;
+      box.insertBefore(wrap, pill.parentElement);
+      input.value = '';
+      var act = box.closest('.act'), cnt = act.querySelector('.ncount');
+      var n = (parseInt(cnt.textContent, 10) || 0) + 1;
+      cnt.textContent = n + ' 則留言';
+    });
+  });
+  document.querySelectorAll('.rep').forEach(function(a){
+    a.addEventListener('click', function(){
+      var box = a.closest('.open');
+      var input = box.querySelector('.fbinput input');
+      if(input) input.focus();
+    });
+  });
+  var fb = document.getElementById('fbBtn'), fbBody = document.getElementById('fbBody');
+  fb.addEventListener('click', function(){
+    var open = fbBody.hidden; fbBody.hidden = !open;
+    document.getElementById('fbArrow').textContent = open ? '收合 ▴' : '展開 ▾';
+  });
+  function tick(){
+    var f = function(tz){ return new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date()); };
+    document.getElementById('clkLocal').textContent = f('Atlantic/Reykjavik');
+    document.getElementById('clkTw').textContent = f('Asia/Taipei');
+  }
+  tick(); setInterval(tick, 20000);
+  var et = document.getElementById('editToggle');
+  et.addEventListener('click', function(){
+    var on = document.body.classList.toggle('editing');
+    et.textContent = on ? '完成編輯' : '編輯行程';
+    document.querySelectorAll('.act').forEach(function(a){ a.draggable = on; });
+    document.querySelectorAll('.remind').forEach(function(r){ r.contentEditable = on; });
+  });
+  var dragEl = null;
+  document.querySelectorAll('.act').forEach(function(a){
+    a.addEventListener('dragstart', function(){ dragEl = a; a.style.opacity = '.4'; });
+    a.addEventListener('dragend', function(){ a.style.opacity = ''; });
+    a.addEventListener('dragover', function(e){
+      e.preventDefault();
+      if(dragEl && dragEl !== a){
+        var r = a.getBoundingClientRect();
+        var after = (e.clientY - r.top) > r.height / 2;
+        a.parentNode.insertBefore(dragEl, after ? a.nextSibling : a);
+      }
+    });
+  });
+</script>
+</body>
+</html>

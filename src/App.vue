@@ -25,6 +25,7 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen mesh-gradient text-secondary-900 dark:mesh-gradient-dark dark:text-secondary-100 transition-colors duration-200" :class="showMobileNavigation ? 'pb-24 lg:pb-0' : ''">
+    <p v-if="!route.matched.length" class="mx-auto max-w-2xl px-5 py-16 text-center text-sm text-slate-600" role="status">正在載入旅程…</p>
     <RouterView />
     <MobileTabBar v-if="showMobileNavigation" />
     <GlobalUIContainer v-if="supabaseConfigured" />

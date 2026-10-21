@@ -1,4 +1,5 @@
 import { supabase } from '@/services/supabase'
+import { requireGoogleLogin } from '@/services/googleLoginAvailability'
 import type { Session, User } from '@supabase/supabase-js'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -15,14 +16,22 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Store the unsubscribe function to prevent memory leaks
   let authStateUnsubscribe: (() => void) | null = null
+  let initialization: Promise<void> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
 
-  async function initializeAuth() {
+  function initializeAuth(): Promise<void> {
+    if (initialization) return initialization
+    initialization = doInitializeAuth().finally(() => { initialization = null })
+    return initialization
+  }
+
+  async function doInitializeAuth() {
     loading.value = true
-    const { data } = await supabase.auth.getSession()
-    session.value = data.session
-    user.value = data.session?.user ?? null
+    try {
+      const { data } = await supabase.auth.getSession()
+      session.value = data.session
+      user.value = data.session?.user ?? null
 
     // Clean up previous subscription if exists
     if (authStateUnsubscribe) {
@@ -30,13 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, _session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
       session.value = _session
       user.value = _session?.user ?? null
 
       if (_event === 'SIGNED_IN' && _session?.user) {
-        // Sync profile from metadata if needed
-        await syncProfileFromMetadata(_session.user)
+        // Supabase calls inside the auth callback can block the auth lock.
+        setTimeout(() => { void syncProfileFromMetadata(_session.user) }, 0)
       }
 
       // Redirect to login if session expires
@@ -48,7 +57,9 @@ export const useAuthStore = defineStore('auth', () => {
     // Store unsubscribe function
     authStateUnsubscribe = () => subscription.unsubscribe()
     
-    loading.value = false
+    } finally {
+      loading.value = false
+    }
   }
 
   async function signInWithEmail(email: string) {
@@ -72,14 +83,14 @@ export const useAuthStore = defineStore('auth', () => {
       redirectTo.searchParams.set('next', redirectAfterLogin.value)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (provider !== 'google') throw new Error('目前使用 Google 登入。')
+    await requireGoogleLogin(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY)
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider as any,
+      provider: 'google',
       options: {
         redirectTo: redirectTo.toString(),
         queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+          prompt: 'select_account',
         },
       },
     })
