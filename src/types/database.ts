@@ -39,6 +39,8 @@ export interface Database {
           created_by: string
           invite_code: string | null
           created_at: string
+          is_public: boolean
+          cover_image_url: string | null
         }
         Insert: {
           id?: string
@@ -49,6 +51,8 @@ export interface Database {
           created_by: string
           invite_code?: string | null
           created_at?: string
+          is_public?: boolean
+          cover_image_url?: string | null
         }
         Update: {
           id?: string
@@ -59,6 +63,8 @@ export interface Database {
           created_by?: string
           invite_code?: string | null
           created_at?: string
+          is_public?: boolean
+          cover_image_url?: string | null
         }
       }
       trip_members: {
@@ -225,6 +231,38 @@ export interface Database {
           status?: 'unpaid' | 'pending' | 'settled'
           is_paid?: boolean | null
           paid_at?: string | null
+        }
+      }
+      ai_suggestions: {
+        Row: {
+          id: string
+          trip_id: string | null
+          user_id: string | null
+          day_number: number | null
+          user_message: string
+          ai_response: string
+          suggested_activities: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          trip_id?: string | null
+          user_id?: string | null
+          day_number?: number | null
+          user_message: string
+          ai_response: string
+          suggested_activities?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          trip_id?: string | null
+          user_id?: string | null
+          day_number?: number | null
+          user_message?: string
+          ai_response?: string
+          suggested_activities?: Json
+          created_at?: string
         }
       }
     }

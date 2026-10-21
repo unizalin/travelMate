@@ -1,5 +1,5 @@
 <template>
-  <div class="group bg-white dark:bg-secondary-800/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-primary-200 dark:hover:border-primary-500/50 hover:shadow-md transition-all duration-300 flex items-center gap-4 relative overflow-hidden">
+  <div class="group bg-white dark:bg-secondary-900/40 p-4 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-primary-500/50 hover:shadow-lg transition-all duration-300 flex items-center gap-4 relative overflow-hidden">
     <!-- Category Icon -->
     <div 
       class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm"
@@ -11,9 +11,9 @@
     <!-- Details -->
     <div class="flex-1 min-w-0">
       <div class="flex items-center justify-between mb-0.5">
-        <h4 class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ expense.name }}</h4>
+        <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate transition-colors">{{ expense.name }}</h4>
         <div class="text-right flex flex-col">
-          <span class="text-sm font-black text-slate-900 dark:text-white font-mono">
+          <span class="text-sm font-black text-gray-900 dark:text-white font-mono transition-colors">
             {{ getSymbol(expense.currency) }}{{ formatAmount(expense.amount) }}
           </span>
           <span v-if="expense.currency !== preferredCurrency" class="text-[10px] font-black text-primary-600 dark:text-primary-500">
@@ -22,11 +22,11 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-white/40">
           {{ expense.category }}
         </span>
-        <span class="w-1 h-1 rounded-full bg-slate-200 dark:bg-white/10"></span>
-        <span class="text-[10px] text-slate-400 dark:text-white/40 font-medium">
+        <span class="w-1 h-1 rounded-full bg-gray-200 dark:bg-white/10"></span>
+        <span class="text-[10px] text-gray-400 dark:text-white/40 font-medium">
           {{ formatDate(expense.created_at) }}
         </span>
       </div>
@@ -34,17 +34,17 @@
       <!-- Split Info -->
       <div class="mt-2 flex items-center gap-2">
         <div class="flex -space-x-1.5 overflow-hidden">
-           <img 
-             v-if="expense.paid_by_profile?.avatar_url"
-             :src="expense.paid_by_profile.avatar_url" 
-             class="inline-block h-4 w-4 rounded-full ring-2 ring-white dark:ring-secondary-800"
-             :title="`由 ${expense.paid_by_profile.display_name} 支付`"
-           />
-           <div v-else class="h-4 w-4 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center ring-2 ring-white dark:ring-secondary-800">
-             <UserIcon class="w-2.5 h-2.5 text-slate-400" />
-           </div>
+          <img 
+            v-if="expense.paid_by_profile?.avatar_url"
+            :src="expense.paid_by_profile.avatar_url" 
+            class="inline-block h-4 w-4 rounded-full ring-2 ring-white dark:ring-secondary-800"
+            :title="`由 ${expense.paid_by_profile.display_name} 支付`"
+          />
+          <div v-else class="h-4 w-4 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center ring-2 ring-white dark:ring-secondary-800 transition-colors">
+            <UserIcon class="w-2.5 h-2.5 text-gray-400 dark:text-gray-500" />
+          </div>
         </div>
-        <span class="text-[10px] font-bold" :class="expense.expense_type === 'shared' ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'">
+        <span class="text-[10px] font-bold transition-colors" :class="expense.expense_type === 'shared' ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'">
           {{ expense.expense_type === 'shared' ? '多人分帳' : '個人支出' }}
         </span>
       </div>
@@ -54,7 +54,7 @@
     <div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
       <button 
         @click.stop="$emit('delete', expense.id)"
-        class="p-1.5 hover:bg-red-50 text-secondary-300 hover:text-red-500 rounded-lg transition-colors"
+        class="p-1.5 hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-300 dark:text-white/20 hover:text-red-500 transition-colors uppercase rounded-lg"
       >
         <TrashIcon class="w-4 h-4" />
       </button>

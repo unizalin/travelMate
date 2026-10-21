@@ -1,181 +1,56 @@
+import { PACKING_TEMPLATE, mergePackingItems, type PackingCategory, type PackingItem } from '@/domain/packingChecklist'
 import { supabase } from '@/services/supabase'
 
-export interface PreparationItem {
-    id: string
-    trip_id: string
-    user_id: string
-    is_shared: boolean
-    category: string
-    title: string
-    description: string | null
-    is_completed: boolean
-    completed_at: string | null
-    completed_by_id: string | null
-    completed_by?: {
-        display_name: string
-        avatar_url: string
+type RemotePackingRow = Omit<PackingItem, 'completed'> & { completed: boolean }
+
+function toRows(data: unknown): PackingItem[] {
+  if (!Array.isArray(data)) return []
+  return data.map(row => {
+    const value = row as RemotePackingRow & Record<string, unknown>
+    return {
+      id: value.id as string,
+      tripId: (value.tripId ?? value.trip_id) as string,
+      category: value.category as PackingCategory,
+      title: value.title as string,
+      isShared: (value.isShared ?? value.is_shared) as boolean,
+      ownerId: (value.ownerId ?? value.owner_id ?? null) as string | null,
+      orderIndex: (value.orderIndex ?? value.order_index ?? 0) as number,
+      completed: Boolean(value.completed),
     }
-    completions?: {
-        user_id: string
-    }[]
-    order_index: number
-    created_at: string
+  })
 }
 
 export const preparationService = {
-    async getItems(tripId: string) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('User not authenticated')
+  async getItems(tripId: string, ownerId: string | null): Promise<PackingItem[]> {
+    const { data, error } = await supabase.rpc('tripbook_load_packing_items' as never, { p_trip_id: tripId } as never)
+    if (error) throw error
+    return mergePackingItems(toRows(data), ownerId)
+  },
 
-        // Fetch shared items AND personal items for this user
-        const { data, error } = await (supabase
-            .from('preparation_items' as any) as any)
-            .select(`
-                *,
-                completed_by:completed_by_id (
-                    display_name,
-                    avatar_url
-                ),
-                completions:preparation_item_completions (
-                    user_id
-                )
-            `)
-            .eq('trip_id', tripId)
-            .or(`is_shared.eq.true,user_id.eq.${user.id}`)
-            .order('order_index', { ascending: true })
+  async ensureDefaults(tripId: string): Promise<void> {
+    const items = PACKING_TEMPLATE.flatMap((category, categoryIndex) => category.items.map((title, itemIndex) => ({ category: category.category, title, orderIndex: categoryIndex * 100 + itemIndex })))
+    const { error } = await supabase.rpc('tripbook_ensure_packing_template' as never, { p_trip_id: tripId, p_items: items } as never)
+    if (error) throw error
+  },
 
-        if (error) throw error
-        return data as PreparationItem[]
-    },
+  async toggleItem(item: PackingItem, completed: boolean): Promise<void> {
+    const { error } = await supabase.rpc('tripbook_set_packing_completion' as never, { p_item_id: item.id, p_completed: completed } as never)
+    if (error) throw error
+  },
 
-    async toggleItem(item: PreparationItem, isCompleted: boolean) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('User not authenticated')
+  async addItem(tripId: string, category: PackingCategory, title: string, isShared: boolean, orderIndex = 1000): Promise<PackingItem> {
+    const { data, error } = await supabase.rpc('tripbook_add_packing_item' as never, { p_trip_id: tripId, p_category: category, p_title: title, p_is_shared: isShared, p_order_index: orderIndex } as never)
+    if (error) throw error
+    return toRows([data])[0]
+  },
 
-        if (item.is_shared) {
-            if (isCompleted) {
-                const { error } = await (supabase.from('preparation_item_completions' as any) as any)
-                    .insert({ item_id: item.id, user_id: user.id })
-                if (error && error.code !== '23505') throw error
-            } else {
-                const { error } = await (supabase.from('preparation_item_completions' as any) as any)
-                    .delete()
-                    .eq('item_id', item.id)
-                    .eq('user_id', user.id)
-                if (error) throw error
-            }
-        } else {
-            const { error } = await (supabase
-                .from('preparation_items' as any) as any)
-                .update({
-                    is_completed: isCompleted,
-                    completed_at: isCompleted ? new Date().toISOString() : null,
-                    completed_by_id: isCompleted ? user.id : null
-                })
-                .eq('id', item.id)
-            if (error) throw error
-        }
-    },
+  async updateItem(itemId: string, title: string): Promise<void> {
+    const { error } = await supabase.rpc('tripbook_update_packing_item' as never, { p_item_id: itemId, p_title: title } as never)
+    if (error) throw error
+  },
 
-    async updateItem(itemId: string, updates: Partial<PreparationItem>) {
-        const { error } = await (supabase
-            .from('preparation_items' as any) as any)
-            .update(updates)
-            .eq('id', itemId)
-
-        if (error) throw error
-    },
-
-    async addItem(item: Partial<PreparationItem>) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('User not authenticated')
-
-        const { data, error } = await (supabase
-            .from('preparation_items' as any) as any)
-            .insert({ ...item, user_id: user.id })
-            .select()
-            .single()
-
-        if (error) throw error
-        return data as PreparationItem
-    },
-
-    async deleteItem(itemId: string) {
-        const { error } = await (supabase
-            .from('preparation_items' as any) as any)
-            .delete()
-            .eq('id', itemId)
-
-        if (error) throw error
-    },
-
-    async initializeDefaults(tripId: string) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('User not authenticated')
-
-        const { count, error: countError } = await (supabase
-            .from('preparation_items' as any) as any)
-            .select('*', { count: 'exact', head: true })
-            .eq('trip_id', tripId)
-            .eq('user_id', user.id)
-            .eq('is_shared', false)
-
-        if (countError) throw countError
-
-        const itemsToInsert: any[] = []
-
-        if (!count || count === 0) {
-            const personalDefaults = [
-                { category: '證件文件', items: ['護照', '簽證', '旅遊保險'] },
-                { category: '行李打包', items: ['雪衣雪褲', '保暖內衣', '換洗衣物', '盥洗用品', '鞋子'] },
-                { category: '個人裝備', items: ['滑雪板雪靴', '安全帽', '護具', '雪鏡', '手套'] },
-                { category: '電子設備', items: ['手機充電器', '行動電源', '相機', '轉接頭'] },
-                { category: '藥品用品', items: ['常備藥', '防曬乳', '暖暖包', 'OK繃'] },
-                { category: '個人財務', items: ['換匯', '準備生活費現金'] }
-            ]
-            itemsToInsert.push(...personalDefaults.flatMap((cat, catIdx) =>
-                cat.items.map((title, itemIdx) => ({
-                    trip_id: tripId,
-                    user_id: user.id,
-                    is_shared: false,
-                    category: cat.category,
-                    title: title,
-                    order_index: (catIdx + 10) * 100 + itemIdx,
-                    is_completed: false
-                }))
-            ))
-        }
-
-        const { count: sharedCount } = await (supabase
-            .from('preparation_items' as any) as any)
-            .select('*', { count: 'exact', head: true })
-            .eq('trip_id', tripId)
-            .eq('is_shared', true)
-
-        if (!sharedCount || sharedCount === 0) {
-            const sharedDefaults = [
-                { category: '團體公務', items: ['訂房確認', '租車/交通預約', '團體保險', '集合時間確認'] },
-                { category: '行程準備', items: ['下載離線地圖', '餐廳訂位', '門票預約'] }
-            ]
-            itemsToInsert.push(...sharedDefaults.flatMap((cat, catIdx) =>
-                cat.items.map((title, itemIdx) => ({
-                    trip_id: tripId,
-                    user_id: user.id,
-                    is_shared: true,
-                    category: cat.category,
-                    title: title,
-                    order_index: catIdx * 100 + itemIdx,
-                    is_completed: false
-                }))
-            ))
-        }
-
-        if (itemsToInsert.length > 0) {
-            const { error: insertError } = await (supabase
-                .from('preparation_items' as any) as any)
-                .insert(itemsToInsert)
-
-            if (insertError) throw insertError
-        }
-    }
+  async deleteItem(itemId: string): Promise<void> {
+    const { error } = await supabase.rpc('tripbook_delete_packing_item' as never, { p_item_id: itemId } as never)
+    if (error) throw error
+  },
 }

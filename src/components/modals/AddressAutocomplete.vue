@@ -1,8 +1,8 @@
 <template>
   <div class="relative group" ref="containerRef">
     <div class="relative">
-      <div v-if="loading" class="absolute right-3 top-3">
-        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+      <div v-if="loading" class="absolute right-4 top-1/2 -translate-y-1/2">
+        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 transition-colors"></div>
       </div>
       <input
         type="text"
@@ -10,7 +10,7 @@
         @input="handleInput"
         @keydown="handleKeydown"
         @focus="showSuggestions = true"
-        class="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+        class="block w-full rounded-2xl bg-gray-50 dark:bg-white/5 border-none shadow-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 py-4 px-6 text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 transition-all outline-none"
         :placeholder="placeholder"
       />
     </div>
@@ -18,32 +18,32 @@
     <!-- Suggestions Dropdown -->
     <div
       v-if="showSuggestions && suggestions.length > 0"
-      class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+      class="absolute z-50 mt-2 max-h-80 w-full overflow-auto rounded-3xl bg-white dark:bg-secondary-900 py-3 text-sm shadow-2xl border border-gray-100 dark:border-white/5 focus:outline-none transition-all"
     >
       <div
         v-for="(suggestion, index) in suggestions"
         :key="index"
         @click="selectSuggestion(suggestion)"
         :class="[
-          'relative cursor-default select-none py-2 pl-3 pr-9',
-          activeIndex === index ? 'bg-blue-600 text-white' : 'text-gray-900 hover:bg-gray-100'
+          'relative cursor-pointer select-none py-3 px-6 transition-colors mx-2 rounded-2xl mb-1 last:mb-0',
+          activeIndex === index ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/10'
         ]"
       >
         <div class="flex items-start">
           <span class="mr-2 text-lg">{{ getFlagEmoji(suggestion.country_code) }}</span>
-          <div class="flex flex-col">
-            <span :class="['truncate font-medium', activeIndex === index ? 'text-white' : 'text-gray-900']">
+          <div class="flex flex-col min-w-0">
+            <span :class="['truncate font-black text-[11px] uppercase tracking-wider transition-colors', activeIndex === index ? 'text-white' : 'text-gray-900 dark:text-white']">
               {{ suggestion.name }}
             </span>
-            <span :class="['truncate text-xs', activeIndex === index ? 'text-blue-200' : 'text-gray-500']">
+            <span :class="['truncate text-[10px] font-medium transition-colors', activeIndex === index ? 'text-primary-100' : 'text-gray-400 dark:text-white/20']">
               {{ suggestion.formatted_address }}
             </span>
           </div>
           <span
             v-if="suggestion.city"
             :class="[
-              'ml-auto rounded-full px-2 py-0.5 text-xs',
-              activeIndex === index ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+              'ml-auto rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest transition-colors',
+              activeIndex === index ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-white/40'
             ]"
           >
             {{ suggestion.city }}

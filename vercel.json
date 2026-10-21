@@ -1,11 +1,24 @@
 {
   "rewrites": [
     {
+      "source": "/api/vedur-alerts",
+      "destination": "https://en.vedur.is/xhrreq?req=alert"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/api/vedur-alerts",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

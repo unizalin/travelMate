@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>travelMate UI 預覽 v5 — FB 式留言</title>
+<style>
+  :root{
+    --bg:#F7F8F6; --ink:#263331; --teal:#397D86; --moss:#E5EBDF; --lava:#C76B46;
+    --muted:#7a8783; --line:#dde3de; --bubble:#eef1ee;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; background:#e8ece8; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; color:var(--ink)}
+  .phone{max-width:390px; margin:0 auto; background:var(--bg); min-height:100vh; position:relative; padding-bottom:28px; box-shadow:0 0 24px rgba(38,51,49,.12)}
+  header{padding:14px 18px 8px}
+  .brandrow{display:flex; justify-content:space-between; align-items:center}
+  .brand{font-size:12px; letter-spacing:.18em; color:var(--teal); font-weight:700}
+  .sync{font-size:11px; color:var(--muted); background:var(--moss); padding:3px 9px; border-radius:999px}
+  h1{font-size:19px; margin:6px 0 2px}
+  h1 small{font-size:12.5px; color:var(--muted); font-weight:400; margin-left:6px}
+  .clocks{font-size:12px; color:var(--muted); margin:1px 0 0}
+  .clocks b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .clocks .sep{color:#c8cfcb; margin:0 5px}
+  .tabs{display:flex; gap:6px; padding:6px 18px 0}
+  .tab{flex:1; text-align:center; font-size:13.5px; padding:9px 0; border-radius:11px; color:var(--muted)}
+  .tab.on{background:var(--ink); color:#fff; font-weight:600}
+  .sticky{position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 18px 10px; border-bottom:1px solid var(--line)}
+  .legs{display:flex; background:var(--moss); border-radius:11px; padding:3px; margin-bottom:9px}
+  .leg{flex:1; text-align:center; font-size:12.5px; padding:6px 0; border-radius:8px; color:var(--muted)}
+  .leg.on{background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(38,51,49,.12)}
+  .leg span{display:block; font-size:11px; color:var(--muted); font-weight:400}
+  .days{display:flex; gap:7px; overflow-x:auto; scrollbar-width:none}
+  .days::-webkit-scrollbar{display:none}
+  .day{flex:0 0 auto; width:74px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:7px 0 8px; text-align:center}
+  .day i{display:block; font-style:normal; font-size:10px; letter-spacing:.1em; color:var(--muted)}
+  .day b{font-size:13px}
+  .day.on{background:var(--teal); border-color:var(--teal); color:#fff}
+  .day.on i{color:#cfe3e6}
+  main{padding:6px 18px 0}
+  .segmeta{font-size:12px; color:var(--teal); margin:8px 0 0}
+  .segname{font-size:21px; font-weight:700; margin:3px 0 2px}
+  .segname .tz{float:right; font-size:11.5px; color:var(--muted); font-weight:400; margin-top:8px}
+  .people{font-size:12.5px; color:var(--muted); margin:0 0 4px}
+  .daytitle{font-size:16.5px; font-weight:700; margin:14px 0 2px}
+  .daynote{font-size:12px; color:var(--muted); margin:0 0 6px; line-height:1.55}
+  .act{border-top:1px solid var(--line); padding:11px 0 8px}
+  .acthead{display:flex; align-items:baseline; gap:8px}
+  .num{color:var(--teal); font-size:12px; font-weight:700}
+  .actname{font-size:15px; font-weight:600; flex:1}
+  .acttime{font-size:12px; color:var(--teal); font-weight:600}
+  .note{font-size:12.5px; color:var(--muted); margin:3px 0 0; line-height:1.55}
+  .remind{margin:7px 0 0; font-size:12.5px; background:#fdf3ec; border:1px solid #f0d9c8; color:#8a4b28; border-radius:9px; padding:6px 9px; line-height:1.5}
+  .remind b{color:var(--lava)}
+  /* FB-style action row */
+  .fbbar{display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; border-top:1px solid var(--line); margin-top:9px; padding:8px 2px 2px; cursor:pointer; font:inherit}
+  .fbbar .a{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); font-weight:600}
+  .fbbar svg{width:16px; height:16px; fill:none; stroke:var(--muted); stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round}
+  .fbbar .meta{font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:5px}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--lava); display:inline-block}
+  /* FB-style comments */
+  .open{margin-top:6px}
+  .fb{display:flex; gap:8px; margin:0 0 9px}
+  .fb.reply{margin-left:40px}
+  .ava{flex:0 0 auto; width:32px; height:32px; border-radius:50%; color:#fff; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .bub{background:var(--bubble); border-radius:14px; padding:6px 11px 7px; max-width:100%}
+  .bub b{font-size:12.5px; display:block}
+  .bub p{font-size:13px; margin:1px 0 0; line-height:1.5}
+  .fmeta{font-size:11px; color:var(--muted); margin:2px 0 0 43px}
+  .fmeta b{color:var(--muted); font-weight:600}
+  .fmeta a{color:var(--muted); text-decoration:none; font-weight:600; cursor:pointer}
+  .fbinput{display:flex; gap:8px; align-items:center; margin-top:2px}
+  .fbinput .ava{width:30px; height:30px; font-size:11.5px; background:var(--lava)}
+  .fbinput .pill{flex:1; display:flex; background:var(--bubble); border-radius:999px; padding:4px 4px 4px 13px; align-items:center}
+  .fbinput input{flex:1; border:none; background:transparent; font-size:12.5px; font-family:inherit; outline:none; color:var(--ink)}
+  .fbinput button{background:var(--teal); color:#fff; border:none; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer}
+  .addrow{width:100%; margin-top:12px; background:none; border:1.5px dashed var(--line); border-radius:12px; padding:10px 0; font:inherit; font-size:13px; color:var(--muted); cursor:pointer}
+  .fallback{width:100%; background:none; border:none; border-top:1px solid var(--line); margin-top:14px; padding:12px 0 2px; display:flex; justify-content:space-between; font:inherit; font-size:14px; font-weight:600; cursor:pointer; color:var(--ink)}
+  .fallback span{color:var(--muted); font-size:12px}
+  .tealstrip{background:#eef4f1; border-radius:11px; font-size:12.5px; line-height:1.6; padding:9px 12px; margin:14px 0 0; color:#39544e}
+  .footedit{text-align:center; margin:16px 0 4px}
+  .footedit span{font-size:13px; color:var(--muted); border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 20px; display:inline-block}
+  .hint{font-size:11px; color:var(--muted); text-align:center; margin:10px 0 0}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="brandrow"><span class="brand">ICELAND · 2026</span><span class="sync">已同步</span></div>
+    <h1>一起去冰島<small>10 月 30 日 — 11 月 7 日 · 9 天 · 6 人</small></h1>
+    <p class="clocks">倫敦 <b id="clkLocal">--:--</b><span class="sep">·</span>台灣 <b id="clkTw">--:--</b></p>
+  </header>
+  <div class="tabs"><div class="tab on">每日行程</div><div class="tab">我的航班</div><div class="tab">行前準備</div></div>
+
+  <div class="sticky">
+    <div class="legs">
+      <div class="leg on">倫敦前段<span>10/24–29</span></div>
+      <div class="leg">冰島九天<span>10/30–11/7</span></div>
+    </div>
+    <div class="days">
+      <div class="day"><i>DAY 01</i><b>10/24（六）</b></div>
+      <div class="day"><i>DAY 02</i><b>10/25（日）</b></div>
+      <div class="day"><i>DAY 03</i><b>10/26（一）</b></div>
+      <div class="day"><i>DAY 04</i><b>10/27（二）</b></div>
+      <div class="day on"><i>DAY 05</i><b>10/28（三）</b></div>
+      <div class="day"><i>DAY 06</i><b>10/29（四）</b></div>
+    </div>
+  </div>
+
+  <main>
+    <p class="people" style="margin-top:12px">參加：jinyo、Kevin Ho か、Rosanne 🌹、YU</p>
+
+    <p class="daytitle">西敏、塔橋與河畔散步</p>
+    <p class="daynote">交通、營業時間依你提供的內容整理，並非預約或停留時段；出發前再確認。</p>
+
+    <div class="act">
+      <div class="acthead"><span class="num">01</span><span class="actname">Westminster Bridge</span></div>
+      <p class="note">清晨拍照</p>
+      <p class="remind"><b>提醒</b>　日出約 07:50，建議 07:20 前上橋，人最少。</p>
+      <button class="fbbar" data-t="c1"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount">1 則留言</span></span></button>
+      <div class="open" id="c1" hidden>
+        <div class="fb"><div class="ava" style="background:#c98aa6">R</div><div><div class="bub"><b>Rosanne</b><p>清晨光線最好，建議 7 點前到橋上。</p></div></div></div>
+        <p class="fmeta">10/19 21:03 · <a class="rep">回覆</a></p>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="act">
+      <div class="acthead"><span class="num">02</span><span class="actname">大笨鐘</span><span class="acttime">10:30</span></div>
+      <p class="remind"><b>提醒</b>　門票截圖在 YU 手機裡，入場直接刷；提早 15 分到。</p>
+      <button class="fbbar" data-t="c2"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="dot"></span><span class="ncount">3 則留言</span></span></button>
+      <div class="open" id="c2" hidden>
+        <div class="fb"><div class="ava" style="background:#397D86">Y</div><div><div class="bub"><b>YU</b><p>門票截圖我先存手機裡，入場直接刷</p></div></div></div>
+        <p class="fmeta">10/19 20:41 · <a class="rep">回覆</a></p>
+        <div class="fb"><div class="ava" style="background:#7d9b6a">j</div><div><div class="bub"><b>jinyo</b><p>好，那我負責帶行動電源</p></div></div></div>
+        <p class="fmeta">10/19 20:44 · <a class="rep">回覆</a></p>
+        <div class="fb"><div class="ava" style="background:#6a7f9b">K</div><div><div class="bub"><b>Kevin Ho</b><p>集合點改在橋頭星巴克前面好了</p></div></div></div>
+        <p class="fmeta">10/19 20:52 · <a class="rep">回覆</a></p>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <div class="act">
+      <div class="acthead"><span class="num">03</span><span class="actname">K2 Telephone Box</span></div>
+      <p class="note">橋邊順路拍，不必特地停留。</p>
+      <button class="fbbar" data-t="c3"><span class="a"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>留言</span><span class="meta"><span class="ncount"></span></span></button>
+      <div class="open" id="c3" hidden>
+        <div class="fbinput"><div class="ava">U</div><div class="pill"><input placeholder="寫下留言..."><button>送出</button></div></div>
+      </div>
+    </div>
+
+    <button class="addrow">＋ 加行程</button>
+
+    <button class="fallback" id="fbBtn">備選景點與餐廳 <span id="fbArrow">展開 ▾</span></button>
+    <div id="fbBody" hidden>
+      <p class="note" style="margin-top:6px">景點備選：Borough Market、Sky Garden（需預約）、泰特現代。</p>
+      <p class="note">餐廳備選：Dishoom、Padella、Wild Mushroom Risotto（店家待確認）。</p>
+    </div>
+
+    <p class="tealstrip">10/30 接續冰島九天行程。倫敦往冰島的航班請到「我的航班」依各自訂票選擇。</p>
+
+    <div class="footedit"><span>編輯行程</span></div>
+    <p class="hint">點「留言」展開，就是 FB 那種頭像＋泡泡的留言串</p>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('.fbbar').forEach(function(b){
+    b.addEventListener('click', function(){
+      var el = document.getElementById(b.getAttribute('data-t'));
+      el.hidden = !el.hidden;
+    });
+  });
+  document.querySelectorAll('.fbinput button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pill = btn.parentElement, input = pill.querySelector('input');
+      var v = input.value.trim(); if(!v) return;
+      var box = pill.parentElement.parentElement;
+      var wrap = document.createElement('div');
+      wrap.innerHTML = '<div class="fb"><div class="ava" style="background:#C76B46">U</div><div><div class="bub"><b>U</b><p></p></div></div></div><p class="fmeta">剛剛 · <a class="rep">回覆</a></p>';
+      wrap.querySelector('.bub p').textContent = v;
+      box.insertBefore(wrap, pill.parentElement);
+      input.value = '';
+      var act = box.closest('.act'), cnt = act.querySelector('.ncount');
+      var n = (parseInt(cnt.textContent, 10) || 0) + 1;
+      cnt.textContent = n + ' 則留言';
+    });
+  });
+  document.querySelectorAll('.rep').forEach(function(a){
+    a.addEventListener('click', function(){
+      var box = a.closest('.open');
+      var input = box.querySelector('.fbinput input');
+      if(input) input.focus();
+    });
+  });
+  var fb = document.getElementById('fbBtn'), fbBody = document.getElementById('fbBody');
+  fb.addEventListener('click', function(){
+    var open = fbBody.hidden; fbBody.hidden = !open;
+    document.getElementById('fbArrow').textContent = open ? '收合 ▴' : '展開 ▾';
+  });
+  function tick(){
+    var f = function(tz){ return new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date()); };
+    document.getElementById('clkLocal').textContent = f('Europe/London');
+    document.getElementById('clkTw').textContent = f('Asia/Taipei');
+  }
+  tick(); setInterval(tick, 20000);
+</script>
+</body>
+</html>

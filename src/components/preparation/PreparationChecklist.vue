@@ -1,393 +1,235 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { preparationService, type PreparationItem } from '@/services/preparationService'
-import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
-import { tripService } from '@/services/tripService'
-import { 
-  PlusIcon, 
-  PencilSquareIcon, 
-  TrashIcon, 
-  UserIcon, 
-  UsersIcon,
-  PaperAirplaneIcon,
-  CheckIcon
-} from '@heroicons/vue/24/outline'
-import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/vue/24/solid'
+import { computed, onMounted, ref, watch } from 'vue'
+import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { PACKING_TEMPLATE, type PackingCategory, type PackingItem } from '@/domain/packingChecklist'
+import { preparationService } from '@/services/preparationService'
 
-const props = defineProps<{
-  tripId: string
-}>()
-
-const { showToast } = useToast()
-const authStore = useAuthStore()
-const items = ref<PreparationItem[]>([])
-const tripMembers = ref<any[]>([])
+const props = withDefaults(defineProps<{ tripId: string; ownerId?: string | null; canEditShared?: boolean; embedded?: boolean }>(), { ownerId: null, canEditShared: false, embedded: false })
+const items = ref<PackingItem[]>([])
 const loading = ref(true)
-const activeMode = ref<'personal' | 'shared'>('personal')
-const editingItemId = ref<string | null>(null)
-const editTitle = ref('')
-const newItemTitle = ref('')
-const filterStatus = ref<'pending' | 'completed'>('pending')
+const error = ref('')
+const activeCategory = ref<PackingCategory>('出發前')
+const newTitle = ref('')
+const addingShared = ref(false)
+const editingId = ref<string | null>(null)
+const editingTitle = ref('')
+const localKey = computed(() => `travelmate:packing:${props.tripId}:${props.ownerId ?? 'unclaimed'}`)
+const isRemote = computed(() => Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && /^[0-9a-f-]{36}$/i.test(props.tripId)))
+const categories = computed(() => PACKING_TEMPLATE.map(category => category.category))
+const visibleItems = computed(() => items.value.filter(item => item.category === activeCategory.value))
+const completedCount = computed(() => items.value.filter(item => item.completed).length)
+const progress = computed(() => items.value.length ? Math.round((completedCount.value / items.value.length) * 100) : 0)
+const pendingKey = computed(() => `${localKey.value}:pending`)
+const offline = ref(false)
+type PendingOperation =
+  | { kind: 'toggle'; category: PackingCategory; title: string; completed: boolean }
+  | { kind: 'add'; category: PackingCategory; title: string; isShared: boolean }
+const loadEpoch = ref(0)
 
-const filteredItems = computed(() => {
-  return items.value
-    .filter(item => {
-      const modeMatch = activeMode.value === 'shared' ? item.is_shared : !item.is_shared
-      
-      let isItemCompleted = item.is_completed
-      if (item.is_shared && tripMembers.value.length > 0) {
-        const completionUserIds = item.completions?.map(c => c.user_id) || []
-        isItemCompleted = tripMembers.value.every(m => completionUserIds.includes(m.user_id))
+function saveLocal(): void {
+  try { localStorage.setItem(localKey.value, JSON.stringify(items.value)) } catch { /* cache is optional; remote state remains authoritative */ }
+}
+
+function loadLocal(): PackingItem[] {
+  try { return JSON.parse(localStorage.getItem(localKey.value) ?? '[]') as PackingItem[] } catch { return [] }
+}
+
+function loadPending(): PendingOperation[] {
+  try { return JSON.parse(localStorage.getItem(pendingKey.value) ?? '[]') as PendingOperation[] } catch { return [] }
+}
+
+function savePending(operations: PendingOperation[]): void {
+  try {
+    if (operations.length) localStorage.setItem(pendingKey.value, JSON.stringify(operations))
+    else localStorage.removeItem(pendingKey.value)
+  } catch { /* quota or private-mode storage must not break checklist actions */ }
+}
+
+function itemKey(item: Pick<PackingItem, 'category' | 'title'>): string {
+  return `${item.category}:${item.title.trim().toLocaleLowerCase('zh-TW')}`
+}
+
+function queue(operation: PendingOperation): void {
+  const operations = loadPending()
+  const index = operations.findIndex(candidate => candidate.kind === operation.kind && candidate.category === operation.category && candidate.title === operation.title)
+  if (index >= 0) operations[index] = operation
+  else operations.push(operation)
+  savePending(operations)
+}
+
+async function flushPending(epoch: number): Promise<void> {
+  const pending = loadPending()
+  if (!pending.length) { offline.value = false; return }
+  const remaining: PendingOperation[] = []
+  for (const operation of pending) {
+    if (epoch !== loadEpoch.value) return
+    try {
+      if (operation.kind === 'add') {
+        const exists = items.value.some(item => itemKey(item) === itemKey(operation))
+        const local = items.value.find(item => itemKey(item) === itemKey(operation) && item.id.startsWith('local-'))
+        if (!exists || local) {
+          const created = await preparationService.addItem(props.tripId, operation.category, operation.title, operation.isShared, items.value.length + 1)
+          if (local) items.value = items.value.map(item => item.id === local.id ? created : item)
+          else items.value.push(created)
+        }
+      } else {
+        const item = items.value.find(candidate => itemKey(candidate) === itemKey(operation))
+        if (item) {
+          await preparationService.toggleItem(item, operation.completed)
+          item.completed = operation.completed
+        }
+        else remaining.push(operation)
       }
+    } catch { remaining.push(operation) }
+  }
+  if (epoch === loadEpoch.value) { savePending(remaining); offline.value = remaining.length > 0; saveLocal() }
+}
 
-      const statusMatch = filterStatus.value === 'completed' ? isItemCompleted : !isItemCompleted
-      return modeMatch && statusMatch
-    })
-    .sort((a, b) => {
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    })
-})
-
-const modeProgress = computed(() => {
-  const modeItems = items.value.filter(item => activeMode.value === 'shared' ? item.is_shared : !item.is_shared)
-  if (modeItems.length === 0) return 0
-  
-  let completedCount = 0
-  modeItems.forEach(item => {
-    if (item.is_shared && tripMembers.value.length > 0) {
-       const completionUserIds = item.completions?.map(c => c.user_id) || []
-       if (tripMembers.value.every(m => completionUserIds.includes(m.user_id))) completedCount++
-    } else if (item.is_completed) {
-      completedCount++
+async function load(): Promise<void> {
+  const epoch = ++loadEpoch.value
+  loading.value = true
+  error.value = ''
+  try {
+    if (!isRemote.value) {
+      items.value = withMissingTemplateItems(loadLocal())
+      saveLocal()
+      return
     }
-  })
+    let templateUnavailable = false
+    try { await preparationService.ensureDefaults(props.tripId) } catch { templateUnavailable = true }
+    const loaded = await preparationService.getItems(props.tripId, props.ownerId)
+    if (epoch !== loadEpoch.value) return
+    items.value = loaded
+    offline.value = false
+    if (templateUnavailable) error.value = '行前清單範本暫時無法更新；既有項目仍可使用。'
+    saveLocal()
+    await flushPending(epoch)
+  } catch (reason) {
+    if (epoch !== loadEpoch.value) return
+    items.value = withMissingTemplateItems(loadLocal())
+    saveLocal()
+    offline.value = true
+    error.value = `目前離線，顯示這個帳號的本機副本；${loadPending().length} 項變更待恢復連線後同步。`
+  } finally { if (epoch === loadEpoch.value) loading.value = false }
+}
 
-  return Math.round((completedCount / modeItems.length) * 100)
-})
+function buildLocalTemplate(): PackingItem[] {
+  return PACKING_TEMPLATE.flatMap((category, categoryIndex) => category.items.map((title, itemIndex) => ({ id: `local-template-${categoryIndex}-${itemIndex}`, tripId: props.tripId, category: category.category, title, isShared: true, ownerId: null, orderIndex: categoryIndex * 100 + itemIndex, completed: false })))
+}
 
-async function fetchItems() {
+function withMissingTemplateItems(existing: PackingItem[]): PackingItem[] {
+  const existingKeys = new Set(existing.map(itemKey))
+  return [...existing, ...buildLocalTemplate().filter(item => !existingKeys.has(itemKey(item)))]
+}
+
+async function toggle(item: PackingItem): Promise<void> {
+  const epoch = loadEpoch.value
+  item.completed = !item.completed
   try {
-    loading.value = true
-    await preparationService.initializeDefaults(props.tripId)
-    items.value = await preparationService.getItems(props.tripId)
-    
-    // Fetch trip members for status tracking
-    const trip = await tripService.getTripById(props.tripId) as any
-    tripMembers.value = trip.trip_members
-  } catch (error) {
-    showToast('無法獲取清單', 'error')
-  } finally {
-    loading.value = false
+    if (isRemote.value && !offline.value) await preparationService.toggleItem(item, item.completed)
+    else { queue({ kind: 'toggle', category: item.category, title: item.title, completed: item.completed }); offline.value = true; saveLocal() }
+  } catch { if (epoch === loadEpoch.value) { queue({ kind: 'toggle', category: item.category, title: item.title, completed: item.completed }); offline.value = true; saveLocal(); error.value = '目前離線，勾選已保留，恢復連線後同步。' } }
+}
+
+async function addItem(): Promise<void> {
+  const epoch = loadEpoch.value
+  const title = newTitle.value.trim()
+  if (!title || (!addingShared.value && !props.ownerId)) { error.value = '請先到「我的航班」選擇自己，再新增個人項目。'; return }
+  try {
+    const item = isRemote.value && !offline.value
+      ? await preparationService.addItem(props.tripId, activeCategory.value, title, addingShared.value, items.value.length + 1)
+      : { id: `local-${Date.now()}`, tripId: props.tripId, category: activeCategory.value, title, isShared: addingShared.value, ownerId: addingShared.value ? null : props.ownerId, orderIndex: items.value.length + 1, completed: false }
+    if (epoch !== loadEpoch.value) return
+    items.value.push(item)
+    newTitle.value = ''
+    if (!isRemote.value || offline.value) { queue({ kind: 'add', category: activeCategory.value, title, isShared: addingShared.value }); offline.value = true; saveLocal(); error.value = '目前離線，新增項目已保留，恢復連線後同步。' }
+  } catch {
+    if (epoch !== loadEpoch.value) return
+    items.value.push({ id: `local-${Date.now()}`, tripId: props.tripId, category: activeCategory.value, title, isShared: addingShared.value, ownerId: addingShared.value ? null : props.ownerId, orderIndex: items.value.length + 1, completed: false }); queue({ kind: 'add', category: activeCategory.value, title, isShared: addingShared.value }); offline.value = true; saveLocal(); error.value = '目前離線，新增項目已保留，恢復連線後同步。'
   }
 }
 
-function isUserCompleted(item: PreparationItem) {
-  if (!authStore.user) return false
-  if (!item.is_shared) return item.is_completed
-  return item.completions?.some(c => c.user_id === authStore.user!.id) || false
-}
-
-function isMemberCompleted(item: PreparationItem, userId: string) {
-  return item.completions?.some(c => c.user_id === userId) || false
-}
-
-async function toggleItem(item: PreparationItem) {
-  if (editingItemId.value === item.id) return
-  try {
-    const isCompleted = isUserCompleted(item)
-    const newStatus = !isCompleted
-    
-    await preparationService.toggleItem(item, newStatus)
-    
-    // Refresh items to get updated completions from server
-    items.value = await preparationService.getItems(props.tripId)
-  } catch (error) {
-    showToast('更新失敗', 'error')
-  }
-}
-
-async function handleAddItem() {
-  const title = newItemTitle.value.trim()
+function startEdit(item: PackingItem): void { editingId.value = item.id; editingTitle.value = item.title }
+async function saveEdit(item: PackingItem): Promise<void> {
+  const epoch = loadEpoch.value
+  const title = editingTitle.value.trim()
   if (!title) return
-
-  try {
-    const newItem = await preparationService.addItem({
-      trip_id: props.tripId,
-      category: '其他',
-      title,
-      is_shared: activeMode.value === 'shared',
-      order_index: 0
-    })
-    items.value.unshift(newItem)
-    newItemTitle.value = ''
-    showToast('記事已新增', 'success')
-  } catch (error) {
-    showToast('新增失敗', 'error')
-  }
+  try { if (isRemote.value) await preparationService.updateItem(item.id, title); if (epoch !== loadEpoch.value) return; item.title = title; if (!isRemote.value) saveLocal(); editingId.value = null } catch { error.value = '旅伴項目只有 Owner／Editor 可以修改。' }
+}
+async function remove(item: PackingItem): Promise<void> {
+  const epoch = loadEpoch.value
+  try { if (isRemote.value) await preparationService.deleteItem(item.id); if (epoch !== loadEpoch.value) return; items.value = items.value.filter(candidate => candidate.id !== item.id); if (!isRemote.value) saveLocal() } catch { error.value = '這個項目目前無法刪除。' }
 }
 
-function startEditing(item: PreparationItem) {
-  editingItemId.value = item.id
-  editTitle.value = item.title
-}
-
-async function saveEdit(item: PreparationItem) {
-  if (!editTitle.value.trim()) {
-    editingItemId.value = null
-    return
-  }
-  try {
-    await preparationService.updateItem(item.id, { title: editTitle.value })
-    item.title = editTitle.value
-    editingItemId.value = null
-    showToast('已更新', 'success')
-  } catch (error) {
-    showToast('更新失敗', 'error')
-  }
-}
-
-async function deleteItem(itemId: string) {
-  try {
-    await preparationService.deleteItem(itemId)
-    items.value = items.value.filter(i => i.id !== itemId)
-    showToast('已刪除', 'success')
-  } catch (error) {
-    showToast('刪除失敗', 'error')
-  }
-}
-
-onMounted(fetchItems)
-
-const vFocus = {
-  mounted: (el: HTMLElement) => el.focus()
-}
+onMounted(load)
+watch(() => [props.ownerId, props.canEditShared, props.tripId], () => { void load() })
 </script>
 
 <template>
-  <div class="preparation-notes mt-10 animate-fade-in font-sans pb-20">
-    <!-- Premium Header Area -->
-    <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between mb-12 gap-8">
-      <div class="space-y-4">
-        <h3 class="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
-          出發記事本
-        </h3>
+  <section class="preparation-checklist rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:p-6" :class="{ 'packing-embedded': embedded }" aria-labelledby="packing-heading">
+    <template v-if="embedded">
+      <div class="embedded-heading">
+        <h2 id="packing-heading">行前清單 <small>{{ completedCount }}/{{ items.length }}</small></h2>
+        <p>五類項目分開勾選；個人新增項目只會在自己的帳號出現。</p>
       </div>
-
-      <div class="flex flex-wrap items-center gap-6">
-        <!-- Progress Circular Widget -->
-        <div class="flex items-center gap-4 bg-white dark:bg-white/5 p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
-          <div class="relative w-14 h-14">
-            <svg class="w-full h-full -rotate-90">
-              <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" stroke-width="5" class="text-slate-100 dark:text-white/5" />
-              <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" stroke-width="5" 
-                class="text-primary-500 transition-all duration-1000"
-                stroke-linecap="round"
-                :stroke-dasharray="2 * Math.PI * 24"
-                :stroke-dashoffset="2 * Math.PI * 24 * (1 - modeProgress / 100)"
-              />
-            </svg>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <span class="text-xs font-black text-slate-900 dark:text-white">{{ modeProgress }}%</span>
-            </div>
+      <p v-if="error" class="embedded-error" role="status">{{ error }}</p>
+      <p v-if="loading" class="embedded-empty">載入行李清單…</p>
+      <template v-else>
+        <details v-for="(category, index) in categories" :key="category" class="embedded-category" :open="index === 0">
+          <summary>{{ category }}</summary>
+          <div v-for="item in items.filter(item => item.category === category)" :key="item.id" class="embedded-item">
+            <label class="embedded-check">
+              <input type="checkbox" :checked="item.completed" :aria-label="item.title" @change="toggle(item)" />
+              <span v-if="editingId !== item.id" :class="{ completed: item.completed }">{{ item.title }}</span>
+            </label>
+            <template v-if="editingId === item.id">
+              <input v-model="editingTitle" class="embedded-edit" :aria-label="`編輯${item.title}`" @keyup.enter="saveEdit(item)" />
+              <button type="button" class="embedded-action" @click="saveEdit(item)">儲存</button>
+            </template>
+            <template v-else>
+              <small v-if="!item.isShared" class="embedded-kind">我的</small>
+              <button v-if="item.isShared ? canEditShared : item.ownerId === ownerId" type="button" class="embedded-icon" :aria-label="`編輯${item.title}`" @click="startEdit(item)"><PencilSquareIcon class="h-4 w-4" /></button>
+              <button v-if="!item.isShared && item.ownerId === ownerId" type="button" class="embedded-icon" :aria-label="`刪除${item.title}`" @click="remove(item)"><TrashIcon class="h-4 w-4" /></button>
+            </template>
           </div>
-          <div class="pr-2">
-            <p class="text-xs font-black text-slate-900 dark:text-white">完成進度</p>
-          </div>
+          <p v-if="!items.some(item => item.category === category)" class="embedded-empty">這個分類還沒有項目。</p>
+        </details>
+      </template>
+      <div class="embedded-add">
+        <div class="embedded-selects">
+          <select v-model="activeCategory" aria-label="新增項目分類"><option v-for="category in categories" :key="category" :value="category">{{ category }}</option></select>
+          <select v-model="addingShared" aria-label="新增項目範圍" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">旅伴項目</option></select>
         </div>
-
-        <!-- Mode Toggle Switch (iOS Style) -->
-        <div class="flex flex-col gap-4">
-          <div class="flex bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner">
-            <button 
-              @click="activeMode = 'personal'"
-              :class="activeMode === 'personal' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-xl' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'"
-              class="flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-            >
-              <UserIcon class="w-4 h-4" />
-              個人私有
-            </button>
-            <button 
-              @click="activeMode = 'shared'"
-              :class="activeMode === 'shared' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-xl' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'"
-              class="flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-            >
-              <UsersIcon class="w-4 h-4" />
-              團體共用
-            </button>
-          </div>
-
-          <!-- Status Filter Tabs -->
-          <div class="flex justify-center lg:justify-end gap-6 px-2">
-            <button 
-              @click="filterStatus = 'pending'"
-              class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
-              :class="filterStatus === 'pending' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-300 dark:text-white/20 hover:text-slate-500'"
-            >
-              未完成
-              <div v-if="filterStatus === 'pending'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
-            </button>
-            <button 
-              @click="filterStatus = 'completed'"
-              class="text-[10px] font-black uppercase tracking-[0.2em] transition-all relative pb-2"
-              :class="filterStatus === 'completed' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-300 dark:text-white/20 hover:text-slate-500'"
-            >
-              已完成
-              <div v-if="filterStatus === 'completed'" class="absolute bottom-0 left-0 right-0 h-1 bg-primary-500 rounded-full animate-slide-right"></div>
-            </button>
-          </div>
-        </div>
+        <div class="embedded-add-row"><input v-model="newTitle" aria-label="新增行李項目" placeholder="新增行李項目" @keyup.enter="addItem" /><button type="button" :disabled="!newTitle.trim() || (addingShared && !canEditShared)" @click="addItem"><PlusIcon class="h-4 w-4" />新增</button></div>
+        <p>旅伴項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p>
       </div>
+    </template>
+    <template v-else>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div><h2 id="packing-heading" class="text-sm font-semibold text-[#263331]">行前清單</h2><p class="mt-1 text-xs leading-5 text-[#7A8783]">五類項目分開勾選；個人新增項目只會在自己的帳號出現。</p></div>
+      <div class="packing-progress rounded-2xl bg-teal-50 px-4 py-3 text-right"><span class="block text-2xl font-black text-teal-800">{{ progress }}%</span><span class="text-[10px] font-bold text-teal-700">{{ completedCount }}/{{ items.length }} 已完成</span></div>
     </div>
-
-    <!-- Minimal Input Area -->
-    <div class="max-w-3xl mx-auto mb-16 relative">
-      <div class="relative bg-white dark:bg-white/5 p-2 rounded-2.5xl border-2 border-slate-100 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-3xl flex items-center group focus-within:border-primary-500/50 transition-all">
-        <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-secondary-900 flex items-center justify-center text-slate-400 dark:text-white/20 group-focus-within:text-primary-500 transition-colors">
-          <PlusIcon class="w-6 h-6" />
-        </div>
-        <input 
-          v-model="newItemTitle"
-          type="text" 
-          :placeholder="activeMode === 'shared' ? '建立一項團隊共用記事...' : '紀錄個人的準備事項...'"
-          class="flex-1 py-6 px-2 bg-transparent border-none text-base font-bold text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 outline-none"
-          @keyup.enter="handleAddItem"
-        />
-        <button 
-          @click="handleAddItem"
-          :disabled="!newItemTitle.trim()"
-          class="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-secondary-900 text-[10px] font-black rounded-2xl transition-all disabled:opacity-20 uppercase tracking-widest active:scale-95 shadow-xl"
-        >
-          <PaperAirplaneIcon class="w-4 h-4" />
-          新增
-        </button>
-      </div>
+    <p v-if="error" class="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900" role="status">{{ error }}</p>
+    <div class="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><button v-for="category in categories" :key="category" type="button" :aria-pressed="activeCategory === category" class="packing-category min-h-10 shrink-0 rounded-full border px-4 text-xs font-bold" :class="activeCategory === category ? 'border-teal-800 bg-teal-800 text-white' : 'border-slate-200 text-slate-600'" @click="activeCategory = category">{{ category }}</button></div>
+    <div v-if="loading" class="py-10 text-center text-sm text-slate-400">載入行李清單…</div>
+    <div v-else class="mt-4 space-y-2">
+      <article v-for="item in visibleItems" :key="item.id" class="flex items-center gap-3 rounded-2xl border border-slate-200 px-3 py-3" :class="item.completed ? 'bg-teal-50/70' : 'bg-white'">
+        <button type="button" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-black" :class="item.completed ? 'border-teal-700 bg-teal-700 text-white' : 'border-slate-300 text-transparent'" :aria-label="`${item.title}：${item.completed ? '已完成' : '未完成'}`" @click="toggle(item)">✓</button>
+        <div v-if="editingId === item.id" class="flex min-w-0 flex-1 gap-2"><input v-model="editingTitle" class="min-h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-2 text-sm" @keyup.enter="saveEdit(item)" /><button type="button" class="text-xs font-bold text-teal-700" @click="saveEdit(item)">儲存</button></div>
+        <span v-else class="min-w-0 flex-1 text-sm font-semibold" :class="item.completed ? 'text-slate-400 line-through' : 'text-slate-700'">{{ item.title }}</span>
+        <span v-if="!item.isShared" class="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">我的</span>
+        <button v-if="item.isShared ? canEditShared : item.ownerId === ownerId" type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="編輯項目" @click="startEdit(item)"><PencilSquareIcon class="h-4 w-4" /></button>
+        <button v-if="!item.isShared && item.ownerId === ownerId" type="button" class="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-700" aria-label="刪除項目" @click="remove(item)"><TrashIcon class="h-4 w-4" /></button>
+      </article>
+      <p v-if="visibleItems.length === 0" class="py-6 text-center text-sm text-slate-400">這個分類還沒有你的項目。</p>
     </div>
-
-    <!-- List Layout -->
-    <div class="max-w-3xl mx-auto space-y-3">
-      <div v-if="loading" class="space-y-4">
-        <div v-for="i in 5" :key="i" class="h-24 bg-slate-100 dark:bg-white/5 animate-pulse rounded-[2rem]"></div>
-      </div>
-
-      <div v-else-if="filteredItems.length === 0" class="py-20 text-center bg-slate-50 dark:bg-white/5 rounded-[3rem] border-4 border-dashed border-slate-100 dark:border-white/5 shadow-inner">
-         <div class="w-20 h-20 bg-slate-100 dark:bg-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-slate-300 dark:text-white/10">
-           <PaperAirplaneIcon class="w-10 h-10 -rotate-45" />
-         </div>
-         <h5 class="text-xl font-black text-slate-900 dark:text-white mb-2">清單目前部署完成</h5>
-         <p class="text-sm font-medium text-slate-400 dark:text-white/20">輸入指令來新增新的準備項目</p>
-      </div>
-
-      <div v-else class="grid gap-3 animate-fade-in">
-        <div 
-          v-for="item in filteredItems" 
-          :key="item.id"
-          class="group/item relative bg-white dark:bg-white/5 p-6 rounded-[2.2rem] border border-slate-100 dark:border-white/5 hover:border-primary-200 dark:hover:border-primary-500/50 transition-all duration-500 overflow-hidden flex items-center justify-between gap-6 hover:shadow-2xl hover:shadow-primary-100/30 dark:shadow-none"
-          :class="isUserCompleted(item) ? 'bg-slate-50/50 dark:bg-white/2' : ''"
-        >
-          <!-- Left side -->
-          <div class="flex items-center gap-6 flex-1 min-w-0">
-            <button 
-              @click="toggleItem(item)"
-              class="w-8 h-8 flex-shrink-0 rounded-2xl border-2 transition-all duration-300 flex items-center justify-center relative shadow-sm"
-              :class="isUserCompleted(item) ? 'bg-emerald-500 border-emerald-500 scale-100 shadow-emerald-500/20' : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 group-hover/item:border-primary-400 scale-95 hover:scale-105'"
-            >
-              <CheckCircleSolid v-if="isUserCompleted(item)" class="w-5 h-5 text-white animate-pop-in" />
-              <div v-else class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/10 group-hover/item:bg-primary-300 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
-            </button>
-
-            <div class="flex-1 min-w-0">
-              <div v-if="editingItemId === item.id" class="flex items-center pr-4">
-                <input 
-                  v-model="editTitle"
-                  @keyup.enter="saveEdit(item)"
-                  @blur="saveEdit(item)"
-                  v-focus
-                  class="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/10 font-black tracking-tight py-4"
-                />
-              </div>
-              <div v-else class="flex flex-col group/text" @click="toggleItem(item)">
-                <span 
-                  class="text-base font-black transition-all cursor-pointer truncate tracking-tight pr-4"
-                  :class="isUserCompleted(item) ? 'text-slate-300 dark:text-white/20 line-through decoration-slate-200/50 dark:decoration-white/10 decoration-[2px]' : 'text-slate-800 dark:text-white/80 group-hover:text-slate-900 dark:group-hover:text-white'"
-                >
-                  {{ item.title }}
-                </span>
-
-                <div v-if="activeMode === 'shared' && tripMembers.length > 0" class="flex items-center gap-1.5 mt-2.5">
-                   <div v-for="member in tripMembers" :key="member.user_id" class="relative">
-                      <img 
-                        :src="member.profiles.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.profiles.display_name)}&background=random`"
-                        class="w-6 h-6 rounded-full border-2 transition-all duration-500"
-                        :class="isMemberCompleted(item, member.user_id) ? 'border-primary-400 scale-110 shadow-sm' : 'border-slate-100 dark:border-white/5 grayscale opacity-30 scale-90'"
-                        :title="member.profiles.display_name"
-                      />
-                      <div v-if="isMemberCompleted(item, member.user_id)" class="absolute -top-1 -right-1 bg-primary-500 rounded-full p-0.5 shadow-sm border border-white dark:border-secondary-900">
-                        <CheckIcon class="w-1.5 h-1.5 text-white" />
-                      </div>
-                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-2 transition-all translate-x-4 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100">
-            <button 
-              @click.stop="startEditing(item)"
-              class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-slate-400 dark:text-white/40 hover:text-primary-600 dark:hover:text-primary-400 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/10 shadow-sm hover:shadow-md"
-            >
-              <PencilSquareIcon class="w-4 h-4" />
-            </button>
-            <button 
-              @click.stop="deleteItem(item.id)"
-              class="w-10 h-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-slate-400 dark:text-white/40 hover:text-red-600 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/10 shadow-sm hover:shadow-md"
-            >
-              <TrashIcon class="w-4 h-4" />
-            </button>
-          </div>
-
-          <!-- Highlight Decoration -->
-          <div class="absolute left-0 top-0 bottom-0 w-1 bg-transparent group-hover/item:bg-primary-500 transition-all duration-500"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <div class="mt-5 rounded-2xl border border-dashed border-teal-200 bg-teal-50/40 p-3"><div class="flex gap-2"><select v-model="addingShared" class="min-h-10 rounded-xl border border-teal-200 bg-white px-2 text-xs font-bold" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">旅伴項目</option></select><input v-model="newTitle" class="min-h-10 min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 text-sm" placeholder="新增準備項目" @keyup.enter="addItem" /><button type="button" class="packing-add flex min-h-10 items-center gap-1 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white disabled:opacity-40" :disabled="!newTitle.trim() || (addingShared && !canEditShared)" @click="addItem"><PlusIcon class="h-4 w-4" />新增</button></div><p class="mt-2 text-[11px] text-slate-500">旅伴項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p></div>
+    </template>
+  </section>
 </template>
 
 <style scoped>
-.font-sans {
-  font-family: 'Outfit', sans-serif, "Microsoft JhengHei", "微軟正黑體";
-}
-
-@keyframes pop-in {
-  0% { transform: scale(0.5); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.animate-pop-in {
-  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes slide-right {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-slide-right {
-  animation: slide-right 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.decoration-2 {
-  text-decoration-thickness: 2px;
-}
+.preparation-checklist{border-radius:14px;box-shadow:none}.packing-category[aria-pressed="true"],.packing-add{background:var(--iceland-action,#115e59);border-color:var(--iceland-action,#115e59);min-height:44px}.packing-progress{background:var(--iceland-mist,#f0fdfa)}.packing-progress span{color:var(--iceland-glacier,#115e59)}
+.preparation-checklist.packing-embedded{border:0;border-radius:0;box-shadow:none;padding:0;background:transparent}
+.embedded-heading h2{font-size:13px;font-weight:600;line-height:1.5;color:#263331;margin:0 0 6px}.embedded-heading h2 small{font-size:11.5px;font-weight:400;color:#7a8783;margin-left:5px}.embedded-heading p,.embedded-add p{font-size:11px;line-height:1.5;color:#7a8783;margin:0 0 7px}.embedded-category{border-top:1px solid #dde3de;padding:5px 0}.embedded-category summary{cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:space-between;color:#263331;font-size:13px;font-weight:600}.embedded-item{display:flex;align-items:center;gap:6px;min-width:0;border-top:1px dashed #dde3de;padding:6px 0 6px 10px}.embedded-check{display:flex;align-items:flex-start;gap:9px;min-width:0;flex:1;cursor:pointer;color:#263331;font-size:13px;line-height:1.5}.embedded-check input{width:17px;height:17px;flex:none;margin-top:1px;accent-color:#397d86}.embedded-check span{overflow-wrap:anywhere}.embedded-check .completed{color:#7a8783;text-decoration:line-through}.embedded-kind{font-size:10px;color:#7a8783;white-space:nowrap}.embedded-icon,.embedded-action{min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;color:#397d86}.embedded-edit{min-width:0;flex:1;min-height:38px;border:1px solid #dde3de;border-radius:8px;padding:7px;font-size:13px}.embedded-empty{font-size:12px;color:#7a8783;padding:8px 0}.embedded-error{font-size:12px;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;border-radius:9px;padding:6px 9px}.embedded-add{border-top:1px solid #dde3de;padding-top:12px;margin-top:8px}.embedded-selects,.embedded-add-row{display:flex;gap:8px;margin-bottom:8px}.embedded-selects select,.embedded-add-row input{min-width:0;flex:1;min-height:40px;border:1px solid #dde3de;border-radius:9px;background:#fff;padding:7px 9px;color:#263331;font-size:12px}.embedded-add-row button{display:inline-flex;align-items:center;gap:3px;min-height:40px;border:1px solid #397d86;border-radius:9px;padding:7px 11px;color:#397d86;font-size:12px;font-weight:600}.embedded-add-row button:disabled{opacity:.5}.packing-embedded :is(button,input,select,summary):focus-visible{outline:3px solid #83b3b6;outline-offset:2px}
 </style>

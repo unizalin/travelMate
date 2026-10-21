@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-share/
 dist-ssr
 *.local
 
@@ -34,3 +35,6 @@ dist-ssr
 *.tmp
 INITIAL_PROMPT.md
 commit_msg.txt
+
+# Local-only push keys and subscription endpoints
+.local/

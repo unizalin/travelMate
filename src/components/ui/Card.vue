@@ -1,19 +1,20 @@
 <template>
   <div
     :class="[
-      'bg-white rounded-xl border border-secondary-100 transition-all duration-300',
+      glass ? 'glass-card' : 'bg-white dark:bg-secondary-900 border border-gray-100 dark:border-white/5',
+      'rounded-3xl shadow-xl transition-all duration-500 overflow-hidden',
       shadowClasses[shadow],
-      { 'hover:shadow-lg hover:-translate-y-1 cursor-pointer': hoverable }
+      { 'hover:shadow-2xl hover:-translate-y-1 cursor-pointer': hoverable }
     ]"
     @click="hoverable && $emit('click')"
   >
-    <div v-if="$slots.header" class="px-5 py-4 border-b border-secondary-50">
+    <div v-if="$slots.header" class="px-6 py-5 border-b border-gray-50 dark:border-white/5">
       <slot name="header"></slot>
     </div>
-    <div :class="[bodyClass ? bodyClass : 'px-5 py-4']">
+    <div :class="[bodyClass ? bodyClass : 'px-6 py-5']">
       <slot></slot>
     </div>
-    <div v-if="$slots.footer" class="px-5 py-3 bg-secondary-50/50 border-t border-secondary-50 rounded-b-xl">
+    <div v-if="$slots.footer" class="px-6 py-4 bg-gray-50/50 dark:bg-black/20 border-t border-gray-50 dark:border-white/5 transition-colors">
       <slot name="footer"></slot>
     </div>
   </div>
@@ -23,12 +24,14 @@
 interface Props {
   shadow?: 'none' | 'sm' | 'md' | 'lg'
   hoverable?: boolean
+  glass?: boolean
   bodyClass?: string
 }
 
 withDefaults(defineProps<Props>(), {
-  shadow: 'sm',
+  shadow: 'none',
   hoverable: false,
+  glass: false,
   bodyClass: ''
 })
 

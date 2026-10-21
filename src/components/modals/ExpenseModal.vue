@@ -3,83 +3,83 @@
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <!-- Amount Input -->
       <div class="space-y-2">
-        <label class="block text-sm font-bold text-secondary-700">支出金額</label>
-        <div class="relative group">
-          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-secondary-300 group-focus-within:text-primary-500 transition-colors">$</span>
+        <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">支出金額</label>
+        <div class="relative group transition-all">
+          <span class="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-300 dark:text-white/20 group-focus-within:text-primary-500 transition-colors">$</span>
           <input 
             v-model="form.amount"
             type="number" 
             placeholder="0"
             required
-            class="w-full pl-10 pr-4 py-4 bg-secondary-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-2xl text-3xl font-black text-secondary-900 placeholder:text-secondary-200 transition-all outline-none"
+            class="w-full pl-14 pr-6 py-6 bg-gray-50 dark:bg-white/5 border-none rounded-2xl text-4xl font-black text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 transition-all outline-none"
           />
         </div>
       </div>
 
       <!-- Expense Name -->
       <div class="space-y-2">
-        <label class="block text-sm font-bold text-secondary-700">支出名稱</label>
+        <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">支出名稱</label>
         <input 
           v-model="form.name"
           type="text" 
           placeholder="例如：晚餐、交通費..."
           required
-          class="w-full px-4 py-3 bg-secondary-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-xl text-secondary-900 placeholder:text-secondary-200 transition-all outline-none"
+          class="w-full px-6 py-4 bg-gray-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 transition-all outline-none"
         />
       </div>
 
       <!-- Categories -->
-      <div class="space-y-2">
-        <label class="block text-sm font-bold text-secondary-700">分類</label>
+      <div class="space-y-4">
+        <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">分類</label>
         <div class="grid grid-cols-4 gap-2">
           <button 
             v-for="cat in categories" 
             :key="cat.name"
             type="button"
             @click="form.category = cat.name"
-            class="flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all"
-            :class="form.category === cat.name ? 'border-primary-500 bg-primary-50/50' : 'border-secondary-50 hover:border-secondary-100'"
+            class="flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all active:scale-95"
+            :class="form.category === cat.name ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-lg shadow-primary-500/10' : 'border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 hover:border-gray-200 dark:hover:border-white/10'"
           >
-            <component :is="cat.icon" class="w-5 h-5" :class="form.category === cat.name ? 'text-primary-600' : 'text-secondary-400'" />
-            <span class="text-[10px] font-bold" :class="form.category === cat.name ? 'text-primary-700' : 'text-secondary-500'">{{ cat.name }}</span>
+            <component :is="cat.icon" class="w-5 h-5 transition-colors" :class="form.category === cat.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-white/20'" />
+            <span class="text-[9px] font-black uppercase tracking-widest transition-colors" :class="form.category === cat.name ? 'text-primary-700 dark:text-primary-400' : 'text-gray-400 dark:text-white/20'">{{ cat.name }}</span>
           </button>
         </div>
       </div>
 
       <!-- Payment Mode -->
-      <div class="space-y-3 p-4 bg-secondary-50 rounded-2xl">
+      <div class="space-y-4 p-6 bg-gray-50 dark:bg-white/5 rounded-[2rem] transition-colors">
         <div class="flex items-center justify-between">
-          <label class="text-sm font-bold text-secondary-700">自付或分帳</label>
-          <div class="flex bg-white p-1 rounded-lg border border-secondary-100">
+          <label class="text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">自付或分帳</label>
+          <div class="flex bg-white dark:bg-secondary-900 p-1.5 rounded-xl border border-gray-100 dark:border-white/10 transition-colors shadow-sm">
             <button 
               type="button"
               @click="form.expense_type = 'personal'"
-              class="px-3 py-1 text-xs font-bold rounded-md transition-all"
-              :class="form.expense_type === 'personal' ? 'bg-primary-600 text-white shadow-sm' : 'text-secondary-400 hover:bg-secondary-50'"
+              class="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
+              :class="form.expense_type === 'personal' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 dark:text-white/20 hover:bg-gray-50 dark:hover:bg-white/5'"
             >個人</button>
             <button 
               type="button"
               @click="form.expense_type = 'shared'"
-              class="px-3 py-1 text-xs font-bold rounded-md transition-all"
-              :class="form.expense_type === 'shared' ? 'bg-primary-600 text-white shadow-sm' : 'text-secondary-400 hover:bg-secondary-50'"
+              class="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
+              :class="form.expense_type === 'shared' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 dark:text-white/20 hover:bg-gray-50 dark:hover:bg-white/5'"
             >分帳</button>
           </div>
         </div>
 
         <!-- Split Members -->
-        <div v-if="form.expense_type === 'shared'" class="space-y-2 mt-4 pt-4 border-t border-secondary-100">
-          <p class="text-[10px] font-bold text-secondary-400 uppercase tracking-widest">選擇平分成員</p>
+        <div v-if="form.expense_type === 'shared'" class="space-y-3 mt-4 pt-6 border-t border-gray-100 dark:border-white/5 transition-colors">
+          <p class="text-[9px] font-black text-gray-400 dark:text-white/20 uppercase tracking-widest px-1 transition-colors">選擇平分成員</p>
           <div class="flex flex-wrap gap-2">
             <button 
               v-for="member in members" 
               :key="member.id"
               type="button"
               @click="toggleMember(member.user_id)"
-              class="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border-2 transition-all"
-              :class="form.selectedMembers.includes(member.user_id) ? 'border-primary-500 bg-white' : 'border-transparent bg-secondary-100/50 grayscale opacity-60'"
+              class="flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border transition-all active:scale-95"
+              :class="form.selectedMembers.includes(member.user_id) ? 'border-primary-500 bg-white dark:bg-white/10 shadow-lg shadow-primary-500/5' : 'border-transparent bg-gray-100 dark:bg-white/5 grayscale opacity-40'"
             >
-              <img :src="member.profiles?.avatar_url || 'https://via.placeholder.com/24'" class="w-5 h-5 rounded-full" />
-              <span class="text-xs font-bold transition-colors" :class="form.selectedMembers.includes(member.user_id) ? 'text-primary-700' : 'text-secondary-500'">{{ member.profiles?.display_name }}</span>
+              <img :src="member.profiles?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + member.user_id" class="w-6 h-6 rounded-full border border-gray-100 dark:border-white/10 bg-secondary-100" />
+              <span class="text-[10px] font-black uppercase tracking-widest transition-colors" :class="form.selectedMembers.includes(member.user_id) ? 'text-primary-700 dark:text-primary-400' : 'text-gray-400 dark:text-white/20'">{{ member.profiles?.display_name }}</span>
             </button>
           </div>
         </div>
@@ -89,9 +89,9 @@
       <button 
         type="submit" 
         :disabled="loading"
-        class="w-full py-4 bg-secondary-900 hover:bg-black text-white rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        class="w-full py-5 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-xl shadow-gray-900/20 dark:shadow-white/10 active:scale-95"
       >
-        <span v-if="loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+        <span v-if="loading" class="w-4 h-4 border-2 border-white/30 dark:border-gray-300 border-t-white dark:border-t-gray-900 rounded-full animate-spin"></span>
         {{ loading ? '保存中...' : '確認添加' }}
       </button>
     </form>

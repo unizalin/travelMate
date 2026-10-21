@@ -66,7 +66,7 @@ async function handleSubmit() {
     <Dialog as="div" @close="emit('close')" class="relative z-50">
       <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0" enter-to="opacity-100"
         leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0">
-        <div class="fixed inset-0 bg-secondary-900/40 backdrop-blur-sm" />
+        <div class="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md transition-opacity" />
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
@@ -75,47 +75,47 @@ async function handleSubmit() {
             enter-to="opacity-100 scale-100" leave="duration-200 ease-in" leave-from="opacity-100 scale-100"
             leave-to="opacity-0 scale-95">
             <DialogPanel
-              class="w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-6 md:p-8 text-left align-middle shadow-2xl transition-all">
-              <DialogTitle as="h3" class="text-2xl font-black leading-6 text-gray-900 mb-6">
+              class="w-full max-w-md transform overflow-hidden rounded-[2.5rem] bg-white dark:bg-secondary-950 p-6 md:p-8 text-left align-middle shadow-2xl border border-gray-100 dark:border-white/5 transition-all">
+              <DialogTitle as="h3" class="text-2xl font-black leading-6 text-gray-900 dark:text-white mb-6 tracking-tight transition-colors">
                 建立新旅程
               </DialogTitle>
 
               <form @submit.prevent="handleSubmit" class="space-y-4">
-                <div v-if="error" class="p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100">{{ error }}</div>
+                <div v-if="error" class="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-black border border-red-100 dark:border-red-500/20 transition-colors uppercase tracking-widest">{{ error }}</div>
 
                 <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-1">旅程名稱</label>
+                  <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">旅程名稱</label>
                   <input v-model="name" type="text" required placeholder="例如：東京賞櫻"
-                    class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
+                    class="block w-full rounded-2xl bg-gray-50 dark:bg-white/5 border-none shadow-none focus:ring-4 focus:ring-primary-500/10 py-4 px-6 text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 transition-all outline-none" />
                 </div>
 
                 <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-1">目的地</label>
+                  <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">目的地</label>
                   <input v-model="destination" type="text" required placeholder="例如：東京, 日本"
-                    class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
+                    class="block w-full rounded-2xl bg-gray-50 dark:bg-white/5 border-none shadow-none focus:ring-4 focus:ring-primary-500/10 py-4 px-6 text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/10 transition-all outline-none" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">開始日期</label>
+                    <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">開始日期</label>
                     <input v-model="startDate" type="date" required
-                      class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
+                      class="block w-full rounded-2xl bg-gray-50 dark:bg-white/5 border-none shadow-none focus:ring-4 focus:ring-primary-500/10 py-4 px-6 text-sm font-bold text-gray-900 dark:text-white transition-all outline-none" />
                   </div>
                   <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">結束日期</label>
+                    <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 mb-1.5 uppercase tracking-widest px-1 transition-colors">結束日期</label>
                     <input v-model="endDate" type="date" required
-                      class="block w-full rounded-xl border-gray-200 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4 border transition-all" />
+                      class="block w-full rounded-2xl bg-gray-50 dark:bg-white/5 border-none shadow-none focus:ring-4 focus:ring-primary-500/10 py-4 px-6 text-sm font-bold text-gray-900 dark:text-white transition-all outline-none" />
                   </div>
                 </div>
 
-                <div class="mt-8 flex justify-end space-x-3">
+                <div class="mt-8 flex justify-end gap-3 transition-colors">
                   <button type="button"
-                    class="rounded-xl px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 transition-all"
+                    class="rounded-2xl px-6 py-4 text-[10px] font-black text-gray-400 dark:text-white/20 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 focus:outline-none transition-all uppercase tracking-widest"
                     @click="emit('close')">
                     取消
                   </button>
                   <button type="submit" :disabled="loading"
-                    class="rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-200 hover:bg-primary-500 hover:shadow-primary-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 transition-all transform active:scale-95">
+                    class="rounded-2xl bg-primary-600 px-8 py-4 text-[10px] font-black text-white shadow-xl shadow-primary-500/20 hover:bg-primary-500 focus:outline-none disabled:opacity-50 transition-all transform active:scale-95 uppercase tracking-widest">
                     {{ loading ? '建立中...' : '建立旅程' }}
                   </button>
                 </div>

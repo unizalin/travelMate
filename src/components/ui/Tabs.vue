@@ -1,21 +1,21 @@
 <template>
   <div class="w-full">
-    <div class="flex border-b border-secondary-100">
+    <div class="flex border-b border-gray-100 dark:border-white/5 transition-colors overflow-x-auto no-scrollbar">
       <button
         v-for="tab in tabs"
         :key="tab.value"
         @click="$emit('update:modelValue', tab.value)"
         :class="[
-          'px-6 py-3 text-sm font-medium transition-all duration-200 relative',
+          'px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 relative whitespace-nowrap',
           modelValue === tab.value 
-            ? 'text-primary-600' 
-            : 'text-secondary-500 hover:text-secondary-700 hover:bg-secondary-50/50'
+            ? 'text-primary-600 dark:text-primary-400' 
+            : 'text-gray-400 dark:text-white/20 hover:text-gray-600 dark:hover:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5'
         ]"
       >
         {{ tab.label }}
         <div
           v-if="modelValue === tab.value"
-          class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 rounded-full animate-fade-in"
+          class="absolute bottom-0 left-6 right-6 h-1 bg-primary-600 dark:bg-primary-500 rounded-full animate-pop-in shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
         ></div>
       </button>
     </div>

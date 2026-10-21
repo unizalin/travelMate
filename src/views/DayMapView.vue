@@ -1,9 +1,9 @@
 <template>
-  <div class="h-screen w-screen flex flex-col overflow-hidden bg-gray-50"
+  <div class="h-screen w-screen flex flex-col overflow-hidden bg-[#020617] mesh-gradient-dark text-white selection:bg-primary-500/30 font-sans"
        @touchstart="handleTouchStart"
        @touchend="handleTouchEnd">
       <!-- Map Area (Top) -->
-      <div class="h-[40vh] relative flex-shrink-0">
+      <div class="h-[40vh] relative flex-shrink-0 animate-fade-in shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20">
           <TripMapView
             v-if="dayActivities.length > 0"
             :activities="dayActivities"
@@ -11,51 +11,56 @@
             :origin="originCoords"
             @marker-click="scrollToActivity"
           />
-           <div v-else class="h-full w-full bg-gray-200 flex items-center justify-center text-gray-500">
-              地圖載入中或無景點...
+           <div v-else class="h-full w-full bg-secondary-900/40 backdrop-blur-3xl flex items-center justify-center text-white/30 text-[10px] font-black uppercase tracking-[0.2em]">
+               Initialize Orbital Mapping System...
            </div>
 
           <!-- Back Button -->
-          <button @click="$router.push(`/trips/${tripId}`)" class="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-full shadow hover:bg-white">
-             <ChevronLeftIcon class="w-6 h-6 text-gray-800" />
+          <button @click="$router.push(`/trips/${tripId}`)" class="absolute top-6 left-6 z-30 bg-secondary-900/40 backdrop-blur-3xl p-3 rounded-2xl shadow-2xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90 ring-1 ring-white/5">
+             <ChevronLeftIcon class="w-6 h-6" />
           </button>
           
            <!-- Map Controls -->
-          <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
-              <button class="bg-white/90 px-3 py-1.5 rounded-lg shadow text-xs font-medium text-gray-700 hover:bg-white" @click="scrollToActivity(dayActivities[0]?.id)">
-                  重點順序
+          <div class="absolute top-6 right-6 z-30 flex flex-col gap-3">
+              <button class="bg-secondary-900/40 backdrop-blur-3xl px-6 py-2.5 rounded-2xl shadow-2xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95 ring-1 ring-white/5" @click="scrollToActivity(dayActivities[0]?.id)">
+                  Sequence View
               </button>
-             <button class="bg-white/90 px-3 py-1.5 rounded-lg shadow text-xs font-medium text-gray-700 hover:bg-white">
-                  顯示全部
+             <button class="bg-secondary-900/40 backdrop-blur-3xl px-6 py-2.5 rounded-2xl shadow-2xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95 ring-1 ring-white/5">
+                  Expand Map
               </button>
           </div>
       </div>
 
        <!-- Day Controls / Header -->
-       <div class="bg-white px-4 py-3 shadow-sm border-b flex items-center justify-between shrink-0 z-10">
-           <div class="flex items-center gap-3">
-               <button @click="$router.push(`/trips/${tripId}`)" class="p-1 -ml-1 text-gray-400">
+       <div class="bg-secondary-900/40 backdrop-blur-3xl px-8 py-5 border-b border-white/5 flex items-center justify-between shrink-0 z-10 shadow-xl ring-1 ring-white/5">
+           <div class="flex items-center gap-5">
+               <button @click="$router.push(`/trips/${tripId}`)" class="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-90 text-white/40">
                     <ChevronLeftIcon class="w-5 h-5" />
                </button>
                <div>
-                   <div class="flex items-center gap-2">
-                       <h2 class="font-bold text-gray-900 text-lg">第 {{ dayNumber }} 天</h2>
-                       <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{{ currentDateFormatted }}</span>
+                   <div class="flex items-center gap-3">
+                       <h2 class="font-black text-white text-2xl tracking-tight uppercase tabular-nums">Day {{ dayNumber }}</h2>
+                       <span class="text-[10px] font-black text-primary-400 bg-primary-500/10 border border-primary-500/20 px-3 py-1 rounded-full uppercase tracking-widest">{{ currentDateFormatted }}</span>
                    </div>
-                   <p class="text-xs text-gray-500 mt-0.5">{{ dayActivities.length }} 個景點</p>
+                   <p class="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mt-1">{{ dayActivities.length }} Target Waypoints</p>
                </div>
            </div>
            
-           <button @click="isAIOpen = true" class="flex items-center gap-1 bg-primary-50 text-primary-600 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-primary-100">
+           <button @click="isAIOpen = true" class="flex items-center gap-2 bg-primary-500 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.26em] hover:bg-primary-600 shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
                <PlusIcon class="w-4 h-4" />
-               新增景點
+               Manual Entry
            </button>
        </div>
 
       <!-- Activities List (Bottom, Scrollable) -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-3 relative" ref="listContainer">
-          <div v-if="dayActivities.length === 0" class="text-center text-gray-500 py-10">
-              這天還沒有行程，請點擊右下角 AI 助手開始規劃！
+      <div class="flex-1 overflow-y-auto p-6 space-y-4 relative scroll-smooth" ref="listContainer">
+          <div v-if="dayActivities.length === 0" class="flex flex-col items-center justify-center text-center py-20 animate-fade-in">
+              <div class="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center text-4xl mb-6 shadow-inner">🗺️</div>
+              <h3 class="text-xl font-black mb-2 uppercase tracking-tight">Mission Log Empty</h3>
+              <p class="text-white/30 text-xs max-w-xs mx-auto mb-8 font-medium leading-relaxed">No itineraries detected for this sector. Deploy the AI assistant to populate the schedule.</p>
+              <button @click="isAIOpen = true" class="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                  Initialize Pilot System
+              </button>
           </div>
           
           <ActivityCard
@@ -63,21 +68,23 @@
              :key="activity.id"
              :id="'activity-' + activity.id"
              :activity="activity"
-             :index="index + 1"
+             :index="(index as number) + 1"
+             class="animate-fade-in-up [animation-delay:calc(index*100ms)]"
           />
       </div>
 
       <!-- AI Assistant Button -->
       <button 
         @click="isAIOpen = true"
-        class="absolute bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition-transform z-20"
+        class="absolute bottom-10 right-10 w-16 h-16 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-3xl shadow-[0_20px_50px_rgba(79,70,229,0.3)] flex items-center justify-center text-white hover:scale-110 active:scale-90 transition-all z-30 group"
       >
-        <SparklesIcon class="w-7 h-7" />
+        <SparklesIcon class="w-8 h-8 group-hover:rotate-12 transition-transform" />
       </button>
 
       <!-- AI Assistant Overlay -->
       <AIAssistant
         :is-open="isAIOpen"
+        :trip-id="tripId"
         :destination="trip?.destination || ''"
         :day-number="dayNumber"
         @close="isAIOpen = false"

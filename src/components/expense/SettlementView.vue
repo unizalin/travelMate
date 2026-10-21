@@ -37,7 +37,7 @@
             <!-- Avatars with Flow Indicator -->
             <div class="flex items-center">
               <div class="relative">
-                <img :src="payment.payer_profile?.avatar_url || 'https://via.placeholder.com/40'" class="w-10 h-10 rounded-full border-2 border-white ring-2 ring-secondary-50 shadow-sm" />
+                <img :src="payment.payer_profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + payment.payer_id" class="w-10 h-10 rounded-full border-2 border-white ring-2 ring-secondary-50 shadow-sm bg-secondary-100" />
                 <div class="absolute -top-1 -left-1 w-4 h-4 bg-red-100 rounded-full flex items-center justify-center border border-red-200">
                   <ArrowUpRightIcon class="w-2 h-2 text-red-600" />
                 </div>
@@ -47,7 +47,7 @@
                 <div class="h-0.5 w-4 bg-secondary-100 rounded-full opacity-50"></div>
               </div>
               <div class="relative">
-                <img :src="payment.expense?.paid_by_profile?.avatar_url || 'https://via.placeholder.com/40'" class="w-10 h-10 rounded-full border-2 border-white ring-2 ring-secondary-50 shadow-sm" />
+                <img :src="payment.expense?.paid_by_profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + payment.expense?.paid_by" class="w-10 h-10 rounded-full border-2 border-white ring-2 ring-secondary-50 shadow-sm bg-secondary-100" />
                 <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center border border-emerald-200">
                   <ArrowDownLeftIcon class="w-2 h-2 text-emerald-600" />
                 </div>
@@ -122,7 +122,7 @@
           >
             <div class="relative z-10 flex justify-between items-start mb-6">
               <div class="flex items-center gap-3">
-                <img :src="debt.expense?.paid_by_profile?.avatar_url || 'https://via.placeholder.com/40'" class="w-11 h-11 rounded-full border-2 border-white shadow-sm" />
+                <img :src="debt.expense?.paid_by_profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + debt.expense?.paid_by" class="w-11 h-11 rounded-full border-2 border-white shadow-sm bg-secondary-100" />
                 <div>
                   <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">{{ debt.expense?.name }}</p>
                   <p class="text-sm font-bold text-secondary-900">給 {{ debt.expense?.paid_by_profile?.display_name }}</p>
@@ -172,7 +172,7 @@
           >
             <div class="relative z-10 flex justify-between items-start mb-6">
               <div class="flex items-center gap-3">
-                <img :src="credit.payer_profile?.avatar_url || 'https://via.placeholder.com/40'" class="w-11 h-11 rounded-full border-2 border-white shadow-sm" />
+                <img :src="credit.payer_profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + credit.payer_id" class="w-11 h-11 rounded-full border-2 border-white shadow-sm bg-secondary-100" />
                 <div>
                   <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{{ credit.expense?.name }}</p>
                   <p class="text-sm font-bold text-secondary-900">來自 {{ credit.payer_profile?.display_name }}</p>

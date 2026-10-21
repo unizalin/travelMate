@@ -1,142 +1,163 @@
 <template>
   <div class="space-y-8 max-w-lg mx-auto p-1">
     <!-- Amount & Currency Section -->
-    <div class="space-y-3">
-      <label class="block text-sm font-black text-secondary-500 uppercase tracking-widest">支出金額與幣值</label>
-      <div class="space-y-3">
-        <div class="flex gap-2">
+    <div class="space-y-4">
+      <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em] px-1 transition-colors">支出金額與幣值</label>
+      <div class="space-y-4">
+        <div class="flex gap-3">
           <!-- Currency Dropdown -->
-          <div class="relative w-32 flex-shrink-0">
+          <div class="relative w-36 flex-shrink-0 group">
             <select 
               v-model="form.currency"
-              class="w-full appearance-none px-4 py-4 bg-secondary-50 border-2 border-secondary-100 focus:border-primary-500 rounded-2xl text-base font-bold text-secondary-900 outline-none transition-all cursor-pointer"
+              class="w-full appearance-none px-5 py-4.5 bg-gray-50 dark:bg-white/5 border-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 rounded-[1.25rem] text-sm font-black text-gray-900 dark:text-white outline-none transition-all cursor-pointer shadow-sm"
             >
               <option v-for="c in currencies" :key="c.code" :value="c.code">
                 {{ c.symbol }} {{ c.code }}
               </option>
             </select>
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary-400">
+            <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-300 dark:text-white/10 group-hover:text-primary-500 transition-colors">
               <ChevronDownIcon class="w-4 h-4" />
             </div>
           </div>
 
           <!-- Amount Input -->
           <div class="relative flex-1 group">
+            <div class="absolute -inset-0.5 bg-primary-500/20 rounded-[1.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
             <input 
               v-model.number="form.amount"
               type="number" 
               placeholder="0"
               required
-              class="w-full px-5 py-4 bg-secondary-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-2xl text-3xl font-black text-secondary-900 placeholder:text-secondary-200 transition-all outline-none"
+              class="relative w-full px-6 py-4.5 bg-gray-50 dark:bg-white/5 border-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 rounded-[1.5rem] text-3xl font-black text-gray-900 dark:text-white placeholder:text-gray-200 dark:placeholder:text-white/5 transition-all outline-none shadow-sm"
             />
           </div>
         </div>
 
         <!-- Conversion Preview -->
-        <div v-if="form.amount && form.currency !== preferredCurrency" class="flex items-center gap-2 px-4 py-2 bg-primary-50/50 rounded-xl border border-primary-100 animate-fade-in">
-          <span class="text-xs font-bold text-primary-600">約等同於</span>
-          <span class="text-sm font-black text-primary-700">{{ formatConvertedAmount }}</span>
-          <span class="text-[10px] font-black text-primary-400 uppercase tracking-widest">使用即時匯率</span>
+        <div v-if="form.amount && form.currency !== preferredCurrency" class="flex items-center gap-2.5 px-5 py-3.5 bg-primary-50 dark:bg-primary-900/10 rounded-2xl border border-primary-100/50 dark:border-primary-500/20 animate-fade-in transition-colors">
+          <span class="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">約等同於</span>
+          <span class="text-base font-black text-primary-700 dark:text-primary-300">{{ formatConvertedAmount }}</span>
+          <div class="ml-auto flex items-center gap-1.5 bg-primary-500/10 px-2 py-1 rounded-lg">
+            <SparklesIcon class="w-3 h-3 text-primary-600 dark:text-primary-400" />
+            <span class="text-[8px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.2em]">即時匯率</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Expense Name Section -->
-    <div class="space-y-3">
-      <label class="block text-sm font-black text-secondary-500 uppercase tracking-widest">
-        支出名稱 <span class="text-[10px] text-secondary-300 font-bold ml-1">(選填)</span>
+    <div class="space-y-4">
+      <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em] px-1 transition-colors">
+        支出名稱 <span class="text-[8px] opacity-50 ml-1">(選填)</span>
       </label>
-      <input 
-        v-model="form.name"
-        type="text" 
-        placeholder="例如：一蘭拉麵、新宿地鐵..."
-        class="w-full px-5 py-4 bg-secondary-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-2xl text-secondary-900 placeholder:text-secondary-200 transition-all outline-none font-bold"
-      />
+      <div class="relative group">
+        <div class="absolute -inset-0.5 bg-primary-500/10 rounded-[1.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+        <input 
+          v-model="form.name"
+          type="text" 
+          placeholder="例如：一蘭拉麵、新宿地鐵..."
+          class="relative w-full px-6 py-4.5 bg-gray-50 dark:bg-white/5 border-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white dark:focus:bg-secondary-900 rounded-[1.5rem] text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/5 transition-all outline-none shadow-sm"
+        />
+      </div>
     </div>
 
     <!-- Category Grid Section -->
-    <div class="space-y-3">
-      <label class="block text-sm font-black text-secondary-500 uppercase tracking-widest">分類</label>
-      <div class="grid grid-cols-4 gap-2">
+    <div class="space-y-4">
+      <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em] px-1 transition-colors">分類</label>
+      <div class="grid grid-cols-4 gap-3">
         <button 
           v-for="cat in categories" 
           :key="cat.name"
           type="button"
           @click="form.category = cat.name"
-          class="flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all group"
-          :class="form.category === cat.name ? `border-current ${cat.bg} ${cat.text}` : 'border-secondary-50 hover:border-secondary-100 bg-white'"
+          class="flex flex-col items-center gap-2 p-3.5 rounded-[1.5rem] border-2 transition-all group/cat relative overflow-hidden"
+          :class="form.category === cat.name 
+            ? `border-current ${cat.bg} dark:bg-opacity-10 ${cat.text} shadow-xl scale-[1.05] z-10` 
+            : 'border-transparent bg-gray-50 dark:bg-white/5 hover:border-gray-100 dark:hover:border-white/10 hover:bg-white dark:hover:bg-secondary-800'"
         >
+          <div class="absolute inset-0 bg-white/20 dark:bg-black/20 opacity-0 group-hover/cat:opacity-100 transition-opacity"></div>
           <component 
             :is="cat.icon" 
-            class="w-6 h-6 transition-transform group-hover:scale-110" 
-            :class="form.category === cat.name ? cat.text : 'text-secondary-400'" 
+            class="w-7 h-7 transition-all duration-300 group-hover/cat:scale-110 relative z-10" 
+            :class="form.category === cat.name ? cat.text : 'text-gray-400 dark:text-white/20'" 
           />
-          <span class="text-[10px] font-black" :class="form.category === cat.name ? cat.text : 'text-secondary-500'">{{ cat.name }}</span>
+          <span class="text-[10px] font-black relative z-10 transition-colors" :class="form.category === cat.name ? cat.text : 'text-gray-500 dark:text-white/40'">{{ cat.name }}</span>
         </button>
       </div>
     </div>
 
     <!-- Split Mode Section -->
-    <div class="space-y-4">
-      <label class="block text-sm font-black text-secondary-500 uppercase tracking-widest">分帳方式</label>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="space-y-6">
+      <label class="block text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em] px-1 transition-colors">分帳方式</label>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button 
           v-for="mode in splitModes" 
           :key="mode.value"
           type="button"
           @click="form.splitMode = mode.value"
-          class="relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left group"
-          :class="form.splitMode === mode.value ? 'border-primary-500 bg-primary-50/50 ring-4 ring-primary-500/10' : 'border-secondary-50 bg-white hover:border-secondary-100'"
+          class="relative flex flex-col items-center gap-3 p-5 rounded-[2.5rem] border-2 transition-all text-left group/mode overflow-hidden"
+          :class="form.splitMode === mode.value 
+            ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20 shadow-2xl shadow-primary-500/20 scale-[1.02]' 
+            : 'border-transparent bg-gray-50 dark:bg-white/5 hover:border-gray-100 dark:hover:border-white/10 hover:bg-white dark:hover:bg-secondary-800'"
         >
-          <div 
-            class="w-10 h-10 rounded-xl flex items-center justify-center mb-1"
-            :class="form.splitMode === mode.value ? 'bg-primary-600 text-white' : 'bg-secondary-100 text-secondary-500'"
-          >
-            <component :is="mode.icon" class="w-5 h-5" />
-          </div>
-          <p class="text-sm font-black" :class="form.splitMode === mode.value ? 'text-primary-900' : 'text-secondary-900'">{{ mode.label }}</p>
-          <p class="text-[10px] font-bold text-center" :class="form.splitMode === mode.value ? 'text-primary-600' : 'text-secondary-400'">{{ mode.desc }}</p>
+          <div class="absolute top-0 right-0 w-16 h-16 bg-primary-500/5 rounded-full blur-2xl -mr-8 -mt-8 opacity-0 group-hover/mode:opacity-100 transition-opacity"></div>
           
-          <div v-if="form.splitMode === mode.value" class="absolute top-2 right-2">
-            <CheckCircleIcon class="w-5 h-5 text-primary-600" />
+          <div 
+            class="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm"
+            :class="form.splitMode === mode.value ? 'bg-primary-600 text-white rotate-6' : 'bg-white dark:bg-secondary-800 text-gray-400 dark:text-white/20'"
+          >
+            <component :is="mode.icon" class="w-6 h-6" />
+          </div>
+          <div class="text-center relative z-10">
+            <p class="text-[11px] font-black uppercase tracking-widest mb-1 transition-colors" :class="form.splitMode === mode.value ? 'text-primary-900 dark:text-white' : 'text-gray-900 dark:text-white/60'">{{ mode.label }}</p>
+            <p class="text-[9px] font-bold transition-colors" :class="form.splitMode === mode.value ? 'text-primary-600 dark:text-primary-400/60' : 'text-gray-400 dark:text-white/20'">{{ mode.desc }}</p>
+          </div>
+          
+          <div v-if="form.splitMode === mode.value" class="absolute top-4 right-4 animate-pop-in">
+            <CheckCircleIcon class="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
         </button>
       </div>
 
       <!-- Custom Members Selection List -->
-      <div v-if="form.splitMode === 'custom'" class="bg-secondary-50 p-4 rounded-3xl space-y-3 animate-fade-in">
-        <div class="flex items-center justify-between mb-2">
-           <p class="text-[10px] font-black text-secondary-400 uppercase tracking-widest">選擇分帳成員 ({{ form.selectedUserIds.length }} 位)</p>
-           <p class="text-[10px] font-black text-primary-600">預計每人：{{ currentCurrencySymbol }}{{ perPersonAmount }}</p>
+      <div v-if="form.splitMode === 'custom'" class="bg-gray-50 dark:bg-white/5 p-6 rounded-[2.5rem] space-y-4 animate-fade-in-up transition-colors border border-gray-100 dark:border-white/5">
+        <div class="flex items-center justify-between px-1">
+           <p class="text-[9px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em]">選擇成員 ({{ form.selectedUserIds.length }} 位)</p>
+           <div class="flex items-center gap-1 bg-primary-500/10 px-2 py-0.5 rounded-full">
+             <span class="text-[8px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">每人</span>
+             <span class="text-[10px] font-black text-primary-600 dark:text-primary-400">{{ currentCurrencySymbol }}{{ perPersonAmount }}</span>
+           </div>
         </div>
-        <div class="grid gap-2">
+        <div class="grid gap-2.5">
           <button 
             v-for="member in members" 
             :key="member.user_id"
             type="button"
             @click="toggleMember(member.user_id)"
             :disabled="member.user_id === authStore.user?.id"
-            class="flex items-center justify-between p-3 rounded-xl border-2 transition-all bg-white"
+            class="flex items-center justify-between p-4 rounded-2xl border-2 transition-all relative overflow-hidden group/member"
             :class="[
-              form.selectedUserIds.includes(member.user_id) ? 'border-primary-500 shadow-sm' : 'border-transparent grayscale opacity-60',
+              form.selectedUserIds.includes(member.user_id) 
+                ? 'border-primary-500/50 bg-white dark:bg-secondary-900 shadow-lg shadow-primary-500/5' 
+                : 'border-transparent bg-white/50 dark:bg-black/20 opacity-40 grayscale',
               member.user_id === authStore.user?.id ? 'cursor-default' : 'cursor-pointer'
             ]"
           >
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-4 relative z-10">
               <div class="relative">
-                <img :src="member.profiles?.avatar_url || 'https://via.placeholder.com/32'" class="w-8 h-8 rounded-full border border-secondary-100" />
-                <div v-if="form.selectedUserIds.includes(member.user_id)" class="absolute -right-1 -bottom-1 bg-primary-600 text-white rounded-full p-0.5 ring-2 ring-white">
-                  <CheckIcon class="w-2 h-2 stroke-[4]" />
+                <img :src="member.profiles?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + member.user_id" class="w-10 h-10 rounded-full border-2 border-white dark:border-secondary-800 shadow-sm bg-secondary-100" />
+                <div v-if="form.selectedUserIds.includes(member.user_id)" class="absolute -right-1.5 -bottom-1.5 bg-primary-600 text-white rounded-full p-1 ring-4 ring-white dark:ring-secondary-800 shadow-lg animate-pop-in">
+                  <CheckIcon class="w-2.5 h-2.5 stroke-[4]" />
                 </div>
               </div>
               <div class="flex flex-col items-start">
-                <span class="text-sm font-black text-secondary-900">
+                <span class="text-sm font-black text-gray-900 dark:text-white transition-colors">
                   {{ member.profiles?.display_name }}
-                  <span v-if="member.user_id === authStore.user?.id" class="text-[10px] text-primary-500 font-bold ml-1">(本人)</span>
+                  <span v-if="member.user_id === authStore.user?.id" class="text-[9px] text-primary-500 dark:text-primary-400 font-black ml-1 uppercase bg-primary-500/10 px-1.5 py-0.5 rounded-md">本人</span>
                 </span>
               </div>
             </div>
-            <span v-if="form.selectedUserIds.includes(member.user_id)" class="text-xs font-mono font-bold text-primary-700">
+            <span v-if="form.selectedUserIds.includes(member.user_id)" class="text-xs font-black text-primary-700 dark:text-primary-400 relative z-10">
               {{ currentCurrencySymbol }}{{ perPersonAmount }}
             </span>
           </button>
@@ -145,11 +166,11 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex gap-4 pt-4">
+    <div class="flex gap-4 pt-6">
       <button 
         @click="$emit('cancel')"
         type="button" 
-        class="flex-1 py-4 bg-secondary-100 hover:bg-secondary-200 text-secondary-900 rounded-2xl font-black transition-all active:scale-95"
+        class="flex-1 py-4.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-white/40 hover:text-gray-900 dark:hover:text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-[1.5rem] transition-all active:scale-95"
       >
         取消
       </button>
@@ -157,10 +178,10 @@
         @click="handleSubmit"
         :disabled="loading || !form.amount"
         type="button" 
-        class="flex-[2] py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black shadow-xl shadow-primary-200 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        class="flex-[2] py-4.5 bg-primary-600 dark:bg-white text-white dark:text-gray-950 font-black text-[10px] uppercase tracking-[0.2em] rounded-[1.5rem] shadow-2xl shadow-primary-500/20 dark:shadow-white/5 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-3"
       >
-        <span v-if="loading" class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
-        {{ loading ? '保存中...' : '確認添加' }}
+        <span v-if="loading" class="w-5 h-5 border-3 border-current border-t-transparent rounded-full animate-spin"></span>
+        {{ loading ? '處理中...' : '確認添加' }}
       </button>
     </div>
   </div>

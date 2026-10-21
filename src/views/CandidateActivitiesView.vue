@@ -179,29 +179,29 @@ onMounted(fetchCandidates)
 </script>
 
 <template>
-  <div class="space-y-12 py-8 min-h-screen">
+  <div class="space-y-12 py-8 min-h-screen transition-colors duration-500">
     <!-- View Header (Filter & Sort) -->
-    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
       <!-- Filter Segmented Control -->
-      <div class="w-full xl:w-auto overflow-x-auto no-scrollbar pb-2 xl:pb-0">
-        <div class="inline-flex items-center gap-2 p-1.5 bg-white/50 dark:bg-white/5 backdrop-blur-3xl rounded-[1.5rem] border border-slate-200 dark:border-white/10 shadow-xl min-w-max">
+      <div class="w-full lg:w-auto overflow-x-auto no-scrollbar pb-2 lg:pb-0">
+        <div class="inline-flex items-center gap-2 p-1.5 bg-white dark:bg-secondary-900/40 backdrop-blur-3xl rounded-[1.5rem] border border-gray-100 dark:border-white/5 shadow-xl min-w-max">
           <button 
             @click="filterStatus = 'all'"
-            :class="filterStatus === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            :class="filterStatus === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white'"
             class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
           >
             全部地標
           </button>
           <button 
             @click="filterStatus = 'pending'"
-            :class="filterStatus === 'pending' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            :class="filterStatus === 'pending' ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20' : 'text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white'"
             class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
           >
             待部署
           </button>
           <button 
             @click="filterStatus = 'added'"
-            :class="filterStatus === 'added' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white'"
+            :class="filterStatus === 'added' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white'"
             class="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
           >
             已部署
@@ -210,24 +210,24 @@ onMounted(fetchCandidates)
       </div>
 
       <!-- Actions Bar -->
-      <div class="w-full xl:w-auto flex flex-wrap items-center gap-3">
+      <div class="w-full lg:w-auto flex flex-wrap items-center gap-3">
         <!-- Sort Dropdown -->
-        <div class="flex items-center gap-2 px-4 py-2.5 bg-white/50 dark:bg-white/5 backdrop-blur-3xl rounded-xl border border-slate-200 dark:border-white/10 shadow-lg group">
-          <ArrowsUpDownIcon class="w-3.5 h-3.5 text-slate-300 dark:text-white/20 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
-          <select v-model="sortBy" class="bg-transparent border-none text-[9px] font-black text-slate-600 dark:text-white/60 outline-none uppercase tracking-widest cursor-pointer appearance-none">
-            <option value="newest" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">最新收錄</option>
-            <option value="likes" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">最高評價</option>
-            <option value="name" class="bg-white dark:bg-secondary-900 text-slate-900 dark:text-white">名稱排序</option>
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-secondary-900/40 backdrop-blur-3xl rounded-xl border border-gray-100 dark:border-white/5 shadow-lg group transition-colors">
+          <ArrowsUpDownIcon class="w-3.5 h-3.5 text-gray-300 dark:text-white/20 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
+          <select v-model="sortBy" class="bg-transparent border-none text-[9px] font-black text-gray-600 dark:text-white/60 outline-none uppercase tracking-widest cursor-pointer appearance-none transition-colors">
+            <option value="newest" class="bg-white dark:bg-secondary-900 text-gray-900 dark:text-white">最新收錄</option>
+            <option value="likes" class="bg-white dark:bg-secondary-900 text-gray-900 dark:text-white">最高評價</option>
+            <option value="name" class="bg-white dark:bg-secondary-900 text-gray-900 dark:text-white">名稱排序</option>
           </select>
         </div>
 
         <div class="flex items-center gap-2 flex-1 sm:flex-none">
           <button 
             @click="isNearbyModalOpen = true"
-            class="flex-1 sm:flex-none group flex items-center justify-center gap-2 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 py-2.5 rounded-xl shadow-lg hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-95"
+            class="flex-1 sm:flex-none group flex items-center justify-center gap-2 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 px-4 py-2.5 rounded-xl shadow-lg hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95"
           >
             <MapPinIcon class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-            <span class="text-[9px] font-black text-slate-500 dark:text-white/60 uppercase tracking-widest">
+            <span class="text-[9px] font-black text-gray-500 dark:text-white/60 uppercase tracking-widest">
               偵測周邊
             </span>
           </button>
@@ -240,7 +240,7 @@ onMounted(fetchCandidates)
             <div class="flex items-center justify-center gap-2 relative z-10 text-white">
               <SparklesIcon class="w-3.5 h-3.5 animate-pulse" />
               <span class="text-[9px] font-black uppercase tracking-widest">
-                {{ isScheduling ? 'Analyzing...' : 'AI 排程' }}
+                {{ isScheduling ? '智慧分析中...' : 'AI 排程' }}
               </span>
             </div>
           </button>
@@ -258,24 +258,24 @@ onMounted(fetchCandidates)
     <!-- Stats Panel (Optional Decoration) -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
         <div 
-            v-for="(stat, label) in { 'Total Hubs': items.length, 'Pending': items.filter(i => i.status === 'pending').length, 'Deployed': items.filter(i => i.status === 'added').length, 'AI Ready': 1 }"
+            v-for="(stat, label) in { '地標總數': items.length, '待處理': items.filter(i => i.status === 'pending').length, '已部署': items.filter(i => i.status === 'added').length, 'AI 就緒': 1 }"
             :key="label"
-            class="bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center backdrop-blur-xl"
+            class="bg-white dark:bg-secondary-900/40 border border-gray-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center backdrop-blur-xl transition-all hover:border-primary-500/30 group"
         >
-            <span class="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/20 mb-1">{{ label }}</span>
+            <span class="text-[8px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-white/20 mb-1 group-hover:text-primary-500 transition-colors">{{ label }}</span>
             <span class="text-xl font-mono font-black text-primary-600 dark:text-primary-500">{{ stat }}</span>
         </div>
     </div>
 
     <!-- Empty State -->
-    <div v-if="!loading && filteredItems.length === 0" class="flex flex-col items-center justify-center py-24 px-6 text-center bg-white/50 dark:bg-white/5 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl">
-      <div class="w-24 h-24 rounded-[2.5rem] bg-slate-100 dark:bg-secondary-900 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-300 dark:text-white/10 mb-8 relative group">
+    <div v-if="!loading && filteredItems.length === 0" class="flex flex-col items-center justify-center py-24 px-6 text-center bg-white dark:bg-secondary-900/40 rounded-[3rem] border border-dashed border-gray-100 dark:border-white/10 backdrop-blur-2xl shadow-xl transition-colors">
+      <div class="w-24 h-24 rounded-[2.5rem] bg-gray-50 dark:bg-secondary-900 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-300 dark:text-white/10 mb-8 relative group transition-all">
         <ArchiveBoxIcon class="w-12 h-12 group-hover:scale-110 transition-transform" />
         <div class="absolute inset-0 bg-primary-500/10 dark:bg-primary-500/10 blur-3xl rounded-full"></div>
       </div>
-      <h4 class="text-2xl font-black text-slate-900 dark:text-white mb-4">資料庫目前為空</h4>
-      <p class="text-sm font-medium text-slate-400 dark:text-white/30 max-w-xs mx-auto mb-10 leading-relaxed">啟動地標收藏模組，將您感興趣的目的地加入願望清單，讓 AI 為您打造完美旅程。</p>
-      <button @click="isAddModalOpen = true" class="px-8 py-3.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all">手動新增地標</button>
+      <h4 class="text-2xl font-black text-gray-900 dark:text-white mb-4 transition-colors">資料庫目前為空</h4>
+      <p class="text-sm font-medium text-gray-400 dark:text-white/30 max-w-xs mx-auto mb-10 leading-relaxed transition-colors">啟動地標收藏模組，將您感興趣的目的地加入願望清單，讓 AI 為您打造完美旅程。</p>
+      <button @click="isAddModalOpen = true" class="px-8 py-3.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-all">手動新增地標</button>
     </div>
 
     <!-- Grid -->

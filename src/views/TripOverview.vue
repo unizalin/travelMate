@@ -1,22 +1,22 @@
 <template>
-  <div class="min-h-screen bg-secondary-50 flex flex-col">
+  <div class="min-h-screen bg-gray-50 dark:bg-secondary-950 flex flex-col transition-colors duration-300">
     <!-- Header: Refined Glassmorphism -->
-    <header class="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-secondary-100 px-6 flex items-center justify-between">
+    <header class="sticky top-0 z-30 h-16 bg-white/80 dark:bg-secondary-900/80 backdrop-blur-md border-b border-gray-100 dark:border-white/5 px-6 flex items-center justify-between transition-all">
       <div class="flex items-center gap-4">
-        <button @click="$router.back()" class="p-2 hover:bg-secondary-100 rounded-xl transition-colors text-secondary-600">
+        <button @click="$router.back()" class="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors text-gray-500 dark:text-gray-400">
           <ChevronLeftIcon class="w-5 h-5" />
         </button>
         <div>
-          <h1 class="text-xl font-heading font-bold text-secondary-900 leading-none">{{ trip?.destination }}</h1>
-          <p class="text-xs text-secondary-500 font-body mt-1">{{ tripDuration }}</p>
+          <h1 class="text-xl font-heading font-bold text-gray-900 dark:text-white leading-none">{{ trip?.destination }}</h1>
+          <p class="text-xs text-gray-400 dark:text-white/40 font-body mt-1">{{ tripDuration }}</p>
         </div>
       </div>
       
       <div class="flex items-center gap-3">
-        <div class="bg-secondary-100 p-1 rounded-xl flex gap-1">
+        <div class="bg-gray-100 dark:bg-white/5 p-1 rounded-xl flex gap-1 transition-colors">
           <button 
             @click="viewMode = 'list'"
-            :class="viewMode === 'list' ? 'bg-white text-primary-600 shadow-sm' : 'text-secondary-500 hover:text-secondary-700'"
+            :class="viewMode === 'list' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-sm' : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60'"
             class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
           >
             <ViewColumnsIcon class="w-4 h-4" />
@@ -24,7 +24,7 @@
           </button>
           <button 
             @click="viewMode = 'map'"
-            :class="viewMode === 'map' ? 'bg-white text-primary-600 shadow-sm' : 'text-secondary-500 hover:text-secondary-700'"
+            :class="viewMode === 'map' ? 'bg-white dark:bg-white/10 text-primary-600 dark:text-white shadow-sm' : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60'"
             class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
           >
             <MapIcon class="w-4 h-4" />
@@ -40,8 +40,8 @@
       <div v-if="viewMode === 'list'" class="max-w-[1440px] mx-auto p-6 md:p-10">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
-            <h2 class="text-3xl font-heading font-bold text-secondary-900">行程總覽</h2>
-            <p class="text-secondary-500 mt-2 font-body max-w-lg">
+            <h2 class="text-3xl font-heading font-bold text-gray-900 dark:text-white">行程總覽</h2>
+            <p class="text-gray-500 dark:text-white/40 mt-2 font-body max-w-lg">
               預計造訪 {{ totalActivitiesCount }} 個景點，包含 {{ totalDurationHours }} 小時的行程安排。
             </p>
           </div>
@@ -80,10 +80,10 @@
           @activity-click="handleActivityClick"
         />
         
-        <div v-else class="flex items-center justify-center h-full bg-secondary-50">
+        <div v-else class="flex items-center justify-center h-full bg-gray-50 dark:bg-secondary-950 transition-colors">
           <div class="text-center">
             <UISpinner size="lg" variant="primary" class="mx-auto mb-4" />
-            <p class="text-secondary-500 font-body">載入地圖中...</p>
+            <p class="text-gray-400 dark:text-white/40 font-body">載入地圖中...</p>
           </div>
         </div>
       </div>

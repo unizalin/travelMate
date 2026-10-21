@@ -17,7 +17,8 @@ import {
   PencilSquareIcon, 
   PlusIcon, 
   SparklesIcon, 
-  TrashIcon 
+  TrashIcon,
+  XMarkIcon
 } from '@heroicons/vue/24/outline';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -25,6 +26,8 @@ import draggable from 'vuedraggable';
 import { useToast } from '@/composables/useToast';
 import { useDialog } from '@/composables/useDialog';
 import { mapboxService } from '@/services/mapboxService';
+import { aiSchedulingService } from '@/services/aiSchedulingService';
+import ActivityTravelTime from '@/components/trip/ActivityTravelTime.vue';
 
 const route = useRoute();
 const tripId = route.params.tripId as string;
@@ -44,7 +47,9 @@ const activeMobileTab = ref<'itinerary' | 'ai'>('itinerary');
 const selectedActivity = ref<any>(null);
 const isEditMode = ref(false);
 const highlightedActivityId = ref<string | null>(null);
-const isOptimizing = ref(false);
+const routeOptimizing = ref(false); // Renamed from isOptimizing
+const smartBlocks = ref<any[]>([]); // Added for AI suggestions
+const loadingSmartBlocks = ref(false); // Added for AI suggestions loading state
 const showRoute = ref(true);
 
 // Refs
@@ -94,6 +99,31 @@ onMounted(async () => {
 });
 
 // Actions
+async function saveNewOrder() {
+  const updates = localActivities.value.map((activity, index) => ({
+    id: activity.id,
+    order_index: index
+  }));
+
+  // Optimistically update store
+  if (currentItinerary.value) {
+    currentItinerary.value.activities = [...localActivities.value];
+  }
+
+  try {
+    await Promise.all(updates.map(u => itineraryStore.updateActivity(u.id, { order_index: u.order_index })));
+    showToast('排序已更新', 'success');
+  } catch (e) {
+    console.error("Reorder failed", e);
+    showToast('排序更新失敗', 'error');
+    
+    // Revert on failure
+    // This part is tricky if `localActivities` is already updated by `optimizeRoute`
+    // For now, we'll just re-fetch to ensure consistency.
+    await itineraryStore.fetchItineraries(tripId, currentTrip.value?.start_date, currentTrip.value?.end_date);
+  }
+}
+
 async function onDragEnd() {
   const previousActivities = [...localActivities.value]; // Save for possible reversion
   
@@ -170,7 +200,7 @@ async function handleUpdate(activity: any) {
   }
 }
 
-async function handleOptimizeRoute() {
+async function optimizeRoute() {
   if (localActivities.value.length < 2) {
     showToast('景點數量不足，無法優化', 'info');
     return;
@@ -181,29 +211,49 @@ async function handleOptimizeRoute() {
   
   if (activitiesWithCoords.length < localActivities.value.length) {
     showToast('部分景點缺少座標，請先設定地點', 'warning');
-    // We could try to geocode here, but better to warn
     return;
   }
 
   try {
-    isOptimizing.value = true;
+    routeOptimizing.value = true;
     const coords: [number, number][] = localActivities.value.map(a => [
       a.longitude || a.start_location_lng,
       a.latitude || a.start_location_lat
     ]);
 
-    const optimizedOrder = await mapboxService.getOptimizedOrder(coords);
-    const optimizedActivities = optimizedOrder.map(index => localActivities.value[index]);
+    const optimizedIndices = await mapboxService.getOptimizedOrder(coords);
+    const optimizedList = optimizedIndices.map(index => localActivities.value[index]);
     
-    // Update local and store
-    await itineraryStore.updateActivitiesBatch(currentItinerary.value!.id, optimizedActivities);
+    localActivities.value = optimizedList;
+    await saveNewOrder(); // Save the new order to the backend
     showToast('順序已優化！', 'success');
   } catch (error) {
     console.error(error);
     showToast('排程優化失敗', 'error');
   } finally {
-    isOptimizing.value = false;
+    routeOptimizing.value = false;
   }
+}
+
+async function fetchSmartBlocks() {
+    if (localActivities.value.length === 0) return;
+    try {
+        loadingSmartBlocks.value = true;
+        const blocks = await aiSchedulingService.getSmartBlocks(localActivities.value, {
+            destination: currentTrip.value?.destination || ''
+        });
+        smartBlocks.value = blocks;
+        if (blocks.length > 0) {
+            showToast(`AI 建議了 ${blocks.length} 個行程優化點`, 'info');
+        } else {
+            showToast('AI 認為目前的行程安排非常完美！', 'success');
+        }
+    } catch (e) {
+        console.error('Smart blocks fetch error:', e);
+        showToast('AI 建議獲取失敗', 'error');
+    } finally {
+        loadingSmartBlocks.value = false;
+    }
 }
 
 async function handleAddAI(suggestion: ActivitySuggestion) {
@@ -259,10 +309,14 @@ function setActivityRef(id: string, el: any) {
     activityRefs.value[id] = el;
   }
 }
+
+function hasCoordinates(activity: any) {
+    return (activity.latitude && activity.longitude) || (activity.start_location_lat && activity.start_location_lng);
+}
 </script>
 
 <template>
-  <div class="h-[calc(100vh-64px)] flex flex-col overflow-hidden bg-white">
+  <div class="h-[calc(100vh-64px)] flex flex-col overflow-hidden bg-white dark:bg-secondary-950 transition-colors">
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
       
@@ -284,115 +338,126 @@ function setActivityRef(id: string, el: any) {
           />
           
           <!-- Loading Overlay -->
-          <div v-if="isLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div v-if="isLoading" class="absolute inset-0 bg-white/80 dark:bg-secondary-950/80 backdrop-blur-sm z-10 flex items-center justify-center transition-all">
+            <div class="relative w-12 h-12">
+              <div class="absolute inset-0 border-3 border-primary-500/10 rounded-full"></div>
+              <div class="absolute inset-0 border-3 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
           </div>
 
           <!-- Map Controls -->
-          <div class="absolute top-4 right-4 bg-white rounded-lg shadow-lg px-3 py-2 text-xs z-10 border border-gray-100 hidden md:block">
-            <div class="flex items-center gap-2">
-              <div class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
+          <div class="absolute top-6 right-6 bg-white/80 dark:bg-secondary-900/80 backdrop-blur-md rounded-2xl shadow-xl px-4 py-2.5 text-xs z-10 border border-gray-100 dark:border-white/5 hidden md:block transition-all">
+            <div class="flex items-center gap-2.5">
+              <div class="w-6 h-6 bg-primary-600 text-white rounded-lg flex items-center justify-center font-black text-[10px] shadow-lg shadow-primary-500/20">
                 1
               </div>
-              <span class="text-gray-600 font-medium">景點順序</span>
+              <span class="text-gray-900 dark:text-white font-black uppercase tracking-widest">{{ localActivities.length }} 個景點</span>
             </div>
           </div>
           
           <button 
             v-if="localActivities.length > 1"
             @click="mapRef?.fitBounds()"
-            class="absolute bottom-4 right-4 bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg text-xs font-medium transition-colors z-10 flex items-center gap-1.5 border border-gray-200"
+            class="absolute bottom-6 right-6 bg-white dark:bg-secondary-900 text-gray-900 dark:text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-black uppercase tracking-widest transition-all z-10 flex items-center gap-2 border border-gray-100 dark:border-white/5 hover:scale-105 active:scale-95"
           >
-            <MapIcon class="w-4 h-4 text-gray-500" />
+            <MapIcon class="w-4 h-4 text-primary-500" />
             顯示全部
           </button>
 
           <button 
             v-if="localActivities.length > 1"
             @click="showRoute = !showRoute"
-            class="absolute bottom-16 right-4 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg shadow-lg text-xs font-medium transition-colors z-10 flex items-center gap-1.5 border border-gray-200"
-            :class="showRoute ? 'text-blue-600 border-blue-100' : 'text-gray-700'"
+            class="absolute bottom-20 right-6 bg-white dark:bg-secondary-900 px-5 py-3 rounded-2xl shadow-xl text-xs font-black uppercase tracking-widest transition-all z-10 flex items-center gap-2 border border-gray-100 dark:border-white/5 hover:scale-105 active:scale-95"
+            :class="showRoute ? 'text-primary-600 dark:text-primary-400 border-primary-100 dark:border-primary-500/20' : 'text-gray-500 dark:text-white/40'"
           >
             <MapPinIcon class="w-4 h-4" />
             {{ showRoute ? '隱藏路線' : '顯示路線' }}
           </button>
 
           <!-- Mobile Tab Switcher (Floating) -->
-          <div class="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 flex bg-white rounded-full shadow-lg border border-gray-200 p-1 z-20">
+          <div class="lg:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex bg-white/80 dark:bg-secondary-900/80 backdrop-blur-md rounded-full shadow-2xl border border-gray-100 dark:border-white/10 p-1.5 z-20">
             <button 
               @click="activeMobileTab = 'itinerary'"
               :class="[
-                'px-4 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1',
-                activeMobileTab === 'itinerary' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                'px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2',
+                activeMobileTab === 'itinerary' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 dark:text-white/20'
               ]"
             >
-              <ListBulletIcon class="w-3.5 h-3.5" />
+              <ListBulletIcon class="w-4 h-4" />
               行程
             </button>
             <button 
               @click="activeMobileTab = 'ai'"
               :class="[
-                'px-4 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1',
-                activeMobileTab === 'ai' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                'px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2',
+                activeMobileTab === 'ai' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'text-gray-400 dark:text-white/20'
               ]"
             >
-              <SparklesIcon class="w-3.5 h-3.5" />
+              <SparklesIcon class="w-4 h-4" />
               AI 助手
             </button>
           </div>
         </div>
 
         <!-- Itinerary List Section (60% height) -->
-        <div class="flex-1 flex flex-col min-h-0 bg-slate-50">
+        <div class="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-secondary-950 transition-colors">
           <!-- List Toolbar -->
-          <div class="px-6 py-3 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm z-10">
-            <div class="flex items-center gap-3">
+          <div class="px-6 py-5 bg-white dark:bg-secondary-900 border-b border-gray-100 dark:border-white/5 flex flex-wrap gap-4 items-center justify-between shadow-sm z-10 transition-colors">
+            <div class="flex items-center gap-4">
               <button 
                 @click="$router.back()" 
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+                class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all text-gray-400 dark:text-white/20"
                 title="返回"
               >
-                <ChevronLeftIcon class="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                <ChevronLeftIcon class="w-6 h-6" />
               </button>
               
               <div>
-                <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <p class="text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em] mb-0.5">{{ formattedDate }}</p>
+                <h1 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-3">
                   第 {{ dayNumber }} 天
+                  <span class="px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-[10px] font-black rounded-lg border border-primary-100 dark:border-primary-500/10 uppercase tracking-widest">
+                    {{ localActivities.length }} 個景點
+                  </span>
                 </h1>
-                <p class="text-xs text-gray-500">{{ formattedDate }}</p>
               </div>
-              
-              <span class="hidden sm:inline-block px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
-                {{ localActivities.length }} 個景點
-              </span>
             </div>
             
             <div class="flex items-center gap-2">
               <button 
                 @click="isEditMode = !isEditMode"
                 :class="[
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border',
+                  'flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border',
                   isEditMode 
-                    ? 'bg-primary-50 text-primary-700 border-primary-200 shadow-inner' 
-                    : 'bg-white text-secondary-600 border-secondary-200 hover:bg-secondary-50'
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-primary-200 dark:border-primary-500/20 shadow-inner' 
+                    : 'bg-white dark:bg-white/5 text-gray-500 dark:text-white/40 border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10'
                 ]"
               >
                 <PencilSquareIcon class="w-4 h-4" />
-                {{ isEditMode ? '停止編輯' : '快速編輯' }}
+                {{ isEditMode ? '完成' : '編輯' }}
               </button>
-
+ 
               <button 
-                @click="handleOptimizeRoute"
-                :disabled="isOptimizing || localActivities.length < 2"
-                class="flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50"
-              >
-                <SparklesIcon class="w-4 h-4" :class="{'animate-pulse': isOptimizing}" />
-                {{ isOptimizing ? '優化中...' : '路徑優化' }}
-              </button>
+              @click="fetchSmartBlocks"
+              :disabled="loadingSmartBlocks || localActivities.length === 0"
+              class="flex items-center gap-2 px-4 py-2 bg-secondary-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 dark:shadow-white/5 disabled:opacity-20"
+            >
+              <SparklesIcon class="w-4 h-4" :class="{'animate-pulse text-primary-500': loadingSmartBlocks}" />
+              {{ loadingSmartBlocks ? '分析中...' : '智慧洞察' }}
+            </button>
 
+            <button 
+              @click="optimizeRoute"
+              :disabled="routeOptimizing || localActivities.length < 2"
+              class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-20"
+            >
+              <ArrowPathIcon class="w-4 h-4" :class="{'animate-spin': routeOptimizing}" />
+              路徑優化
+            </button>
+ 
               <button 
                 @click="isAddModalOpen = true"
-                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+                class="flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-primary-500/20 active:scale-95"
               >
                 <PlusIcon class="w-4 h-4" />
                 新增景點
@@ -413,131 +478,155 @@ function setActivityRef(id: string, el: any) {
                 class="space-y-4"
               >
                 <template #item="{ element: activity, index }">
-                  <div class="relative group">
-                    <EditableActivityCard 
-                      v-if="isEditMode"
-                      :activity="activity"
-                      :index="index"
-                      @update="handleUpdate"
-                      @delete="handleDelete"
-                    />
-                    
-                    <div
-                      v-else
-                      :ref="(el) => setActivityRef(activity.id, el)"
-                      @click="handleCardClick(activity)"
-                      class="bg-white rounded-xl p-4 border-2 transition-all duration-200 flex gap-4 group cursor-pointer relative overflow-hidden"
-                      :class="[
-                        highlightedActivityId === activity.id 
-                          ? 'border-blue-500 shadow-lg shadow-blue-100 scale-[1.01] z-10' 
-                          : 'border-transparent hover:border-gray-200 hover:shadow-md'
-                      ]"
-                    >
-                      <!-- Highlight Indicator -->
-                      <div 
-                        v-if="highlightedActivityId === activity.id"
-                        class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"
-                      ></div>
+                    <div class="relative group">
+                      <!-- Activity Card -->
+                      <EditableActivityCard 
+                        v-if="isEditMode"
+                        :activity="activity"
+                        :index="index"
+                        @update="handleUpdate"
+                        @delete="handleDelete"
+                      />
                       
-                      <!-- Index Badge -->
-                      <div class="flex-shrink-0 flex flex-col items-center pt-1">
+                      <div
+                        v-else
+                        :ref="(el) => setActivityRef(activity.id, el)"
+                        @click="handleCardClick(activity)"
+                        class="bg-white dark:bg-secondary-900/40 backdrop-blur-3xl rounded-[2rem] p-6 border-2 transition-all duration-500 flex gap-6 group cursor-pointer relative overflow-hidden"
+                        :class="[
+                          highlightedActivityId === activity.id 
+                            ? 'border-primary-500 shadow-2xl shadow-primary-500/20 scale-[1.02] z-10' 
+                            : 'border-transparent hover:border-gray-200 dark:hover:border-white/10 hover:shadow-xl dark:shadow-2xl'
+                        ]"
+                      >
+                        <!-- ... (Activity Card Content remains same) -->
+                        <!-- Highlight Indicator -->
                         <div 
-                          class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-all duration-300"
-                          :class="[
-                            highlightedActivityId === activity.id 
-                              ? 'bg-blue-600 text-white scale-110' 
-                              : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
-                          ]"
-                        >
-                          {{ index + 1 }}
-                        </div>
-                        <div 
-                          v-if="index < localActivities.length - 1" 
-                          class="w-0.5 flex-1 bg-gray-100 my-2 rounded-full"
+                          v-if="highlightedActivityId === activity.id"
+                          class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-500"
                         ></div>
-                      </div>
+                        
+                        <!-- Index Badge -->
+                        <div class="flex-shrink-0 flex flex-col items-center pt-1">
+                          <div 
+                            class="w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black shadow-lg transition-all duration-500"
+                            :class="[
+                              highlightedActivityId === activity.id 
+                                ? 'bg-primary-600 text-white translate-y-[-2px] rotate-6' 
+                                : 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-white/20 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/20 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                            ]"
+                          >
+                            {{ index + 1 }}
+                          </div>
+                        </div>
 
-                      <!-- Content -->
-                      <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-start mb-2">
-                          <h4 class="font-bold text-gray-900 text-base leading-tight group-hover:text-blue-700 transition-colors">
-                            {{ activity.name }}
-                          </h4>
-                          
-                          <!-- Actions -->
-                          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                            <button 
-                              @click.stop="handleEdit(activity)" 
-                              class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="編輯"
-                            >
-                              <PencilSquareIcon class="w-4 h-4" />
-                            </button>
-                            <button 
-                              @click.stop="handleDelete(activity.id)" 
-                              class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="刪除"
-                            >
-                              <TrashIcon class="w-4 h-4" />
-                            </button>
-                            <div class="drag-handle cursor-move p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors">
-                              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                          <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-black text-gray-900 dark:text-white text-lg leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                              {{ activity.name }}
+                            </h4>
+                            
+                            <!-- Actions -->
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                              <button 
+                                @click.stop="handleEdit(activity)" 
+                                class="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-all"
+                                title="編輯"
+                              >
+                                <PencilSquareIcon class="w-5 h-5" />
+                              </button>
+                              <button 
+                                @click.stop="handleDelete(activity.id)" 
+                                class="p-2 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                                title="刪除"
+                              >
+                                <TrashIcon class="w-5 h-5" />
+                              </button>
+                              <div class="drag-handle cursor-move p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-all">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <!-- Metadata -->
-                        <div class="flex items-center gap-3 text-sm mb-2 flex-wrap">
-                          <div v-if="activity.start_time" class="flex items-center gap-1.5 text-gray-700 font-medium">
-                            <ClockIcon class="w-4 h-4 text-blue-500" />
-                            <span>{{ activity.start_time?.substring(0, 5) }}</span>
-                            <span v-if="activity.end_time" class="text-gray-400">-</span>
-                            <span v-if="activity.end_time">{{ activity.end_time?.substring(0, 5) }}</span>
+                          <!-- Metadata -->
+                          <div class="flex items-center gap-4 text-sm mb-3 flex-wrap">
+                            <div v-if="activity.start_time" class="flex items-center gap-2 text-gray-900 dark:text-white font-black">
+                              <ClockIcon class="w-4 h-4 text-primary-500" />
+                              <span class="text-[10px] uppercase tracking-widest">{{ activity.start_time?.substring(0, 5) }}</span>
+                              <span v-if="activity.end_time" class="text-gray-300 dark:text-white/10">-</span>
+                              <span v-if="activity.end_time" class="text-[10px] uppercase tracking-widest">{{ activity.end_time?.substring(0, 5) }}</span>
+                            </div>
+                            
+                            <div class="w-1 h-1 rounded-full bg-primary-500/30"></div>
+                            <span class="text-[10px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.2em]">預計停留 {{ activity.duration }} 分鐘</span>
+                          </div>
+   
+                          <div v-if="activity.location" class="flex items-start gap-2 text-xs text-gray-500 dark:text-white/40 mb-3 group-hover:text-gray-900 dark:group-hover:text-white transition-colors font-bold">
+                            <MapPinIcon class="w-4 h-4 text-gray-300 dark:text-white/10 flex-shrink-0 mt-0.5" />
+                            <span class="line-clamp-1 uppercase tracking-widest">{{ activity.location }}</span>
                           </div>
                           
-                          <div v-if="activity.duration" class="flex items-center gap-1.5 text-gray-500 text-xs">
-                            <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                            停留 {{ activity.duration }} 分鐘
+                          <div v-if="activity.notes" class="text-[11px] text-gray-500 dark:text-white/30 line-clamp-2 bg-gray-50 dark:bg-black/20 rounded-2xl px-4 py-3 font-medium border border-gray-100 dark:border-white/5 italic">
+                            {{ activity.notes }}
                           </div>
                         </div>
+                      </div>
 
-                        <div v-if="activity.location" class="flex items-start gap-1.5 text-sm text-gray-600 mb-2 group-hover:text-gray-900 transition-colors">
-                          <MapPinIcon class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                          <span class="line-clamp-1">{{ activity.location }}</span>
+                      <!-- Travel Time (Between Cards) -->
+                      <ActivityTravelTime 
+                        v-if="index < localActivities.length - 1 && hasCoordinates(activity) && hasCoordinates(localActivities[index+1])"
+                        :start="[activity.longitude || activity.start_location_lng, activity.latitude || activity.start_location_lat]"
+                        :end="[localActivities[index+1].longitude || localActivities[index+1].start_location_lng, localActivities[index+1].latitude || localActivities[index+1].start_location_lat]"
+                      />
+
+                      <!-- Smart AI Suggested Block -->
+                      <div v-if="smartBlocks.find(b => b.insertAfterId === activity.id)" class="py-4 px-6 my-2 bg-primary-500/5 dark:bg-primary-500/10 border border-dashed border-primary-500/30 rounded-[1.5rem] animate-in slide-in-from-top-4 duration-500">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-primary-500/20 rounded-xl">
+                                <SparklesIcon class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest mb-0.5">AI 建議行程</p>
+                                <p class="text-xs font-bold text-gray-700 dark:text-white/80 italic">
+                                    {{ smartBlocks.find(b => b.insertAfterId === activity.id).suggestion }}
+                                </p>
+                            </div>
+                            <button @click="smartBlocks = smartBlocks.filter(b => b.insertAfterId !== activity.id)" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                                <XMarkIcon class="w-4 h-4" />
+                            </button>
                         </div>
-                        
-                        <p v-if="activity.notes" class="text-sm text-gray-500 line-clamp-2 bg-gray-50 rounded-lg px-3 py-2 italic border border-gray-100">
-                          {{ activity.notes }}
-                        </p>
                       </div>
                     </div>
-                  </div>
                 </template>
               </draggable>
               
               <!-- Empty State -->
-              <div v-if="localActivities.length === 0" class="text-center py-16">
-                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-slow">
-                  <MapIcon class="w-10 h-10 text-blue-300" />
+              <div v-if="localActivities.length === 0" class="flex flex-col items-center justify-center py-20 px-6 text-center animate-fade-in-up">
+                <div class="relative mb-10">
+                  <div class="absolute inset-0 bg-primary-500/10 rounded-full blur-3xl animate-pulse"></div>
+                  <div class="relative w-24 h-24 bg-white dark:bg-secondary-900 rounded-[2rem] border border-gray-100 dark:border-white/5 flex items-center justify-center shadow-2xl transition-all">
+                    <MapPinIcon class="w-12 h-12 text-primary-500" />
+                  </div>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">還沒有安排行程</h3>
-                <p class="text-gray-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
-                  點擊右上角「新增景點」按鈕，或使用右側 AI 助手為您智能推薦景點
+                <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">尚無行程數據</h3>
+                <p class="text-sm font-bold text-gray-400 dark:text-white/20 mb-10 max-w-xs mx-auto leading-relaxed">
+                  開始規劃您的旅程，手動新增景點或讓 AI 助手為您推薦完美去處。
                 </p>
-                <div class="flex justify-center gap-3">
+                <div class="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-xs mx-auto">
                   <button 
                     @click="isAddModalOpen = true"
-                    class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow"
+                    class="flex-1 px-8 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-500 transition-all shadow-xl shadow-primary-500/20 active:scale-95"
                   >
-                    手動新增
+                    新增景點
                   </button>
                   <button 
                     @click="{ isAISidebarOpen = true; activeMobileTab = 'ai'; }"
-                    class="px-6 py-2.5 border-2 border-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                    class="flex-1 px-8 py-4 bg-white dark:bg-white/5 text-primary-600 dark:text-primary-400 border border-primary-100 dark:border-primary-500/20 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-50 transition-all active:scale-95"
                   >
-                    AI 推薦
+                    AI 推薦行程
                   </button>
                 </div>
               </div>
@@ -548,7 +637,7 @@ function setActivityRef(id: string, el: any) {
 
       <!-- Right Area: AI Assistant (Collapsible) -->
       <aside 
-        class="bg-white border-l border-gray-200 shadow-2xl z-30 flex flex-col transition-all duration-300 ease-in-out relative overflow-visible"
+        class="bg-white dark:bg-secondary-950 border-l border-gray-100 dark:border-white/5 shadow-2xl z-30 flex flex-col transition-all duration-300 ease-in-out relative overflow-visible"
         :class="[
           isAISidebarOpen ? 'w-full lg:w-[400px] xl:w-[450px]' : 'w-0',
           activeMobileTab === 'itinerary' ? 'hidden lg:flex' : 'flex'
@@ -557,17 +646,18 @@ function setActivityRef(id: string, el: any) {
         <!-- Toggle Button (Desktop Only) -->
         <button 
           @click="toggleAISidebar"
-          class="hidden lg:flex absolute -left-4 top-1/2 -translate-y-1/2 bg-white border border-gray-200 text-gray-500 hover:text-blue-600 shadow-md w-8 h-12 rounded-l-xl items-center justify-center z-40 transition-transform hover:-translate-x-0.5"
+          class="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 bg-white dark:bg-secondary-900 border border-gray-100 dark:border-white/5 text-gray-400 dark:text-white/20 hover:text-primary-500 shadow-2xl w-10 h-16 rounded-l-[1.5rem] items-center justify-center z-40 transition-all hover:scale-105 active:scale-95"
           :title="isAISidebarOpen ? '收起 AI 助手' : '展開 AI 助手'"
         >
-          <ChevronRightIcon v-if="!isAISidebarOpen" class="w-5 h-5" />
-          <ChevronLeftIcon v-else class="w-5 h-5" />
+          <ChevronRightIcon v-if="!isAISidebarOpen" class="w-6 h-6" />
+          <ChevronLeftIcon v-else class="w-6 h-6 rotate-180" />
         </button>
 
         <div v-if="isAISidebarOpen" class="h-full flex flex-col overflow-hidden">
           <AIAssistant 
             v-if="currentTrip"
             :is-open="isAISidebarOpen"
+            :trip-id="tripId"
             :destination="currentTrip.destination"
             :day-number="dayNumber"
             @add-activity="handleAddAI"

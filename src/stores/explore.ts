@@ -17,10 +17,6 @@ export interface PublicTrip {
     name: string
     start_date: string
     end_date: string
-    location_lat?: number
-    location_lng?: number
-    likes_count: number
-    is_public: boolean
 }
 
 export const useExploreStore = defineStore('explore', () => {
@@ -51,12 +47,10 @@ export const useExploreStore = defineStore('explore', () => {
     }
 
     const fetchPublicTrips = async () => {
-        // Ideally user .eq('is_public', true) but schema might not fully enforce it for existing data
         const { data, error } = await supabase
             .from('trips')
-            .select('id, name, start_date, end_date, location_lat, location_lng, likes_count, is_public')
-            .eq('is_public', true)
-            .order('likes_count', { ascending: false })
+            .select('id, name, start_date, end_date')
+            .order('created_at', { ascending: false })
             .limit(50)
 
         if (error) {
@@ -65,7 +59,7 @@ export const useExploreStore = defineStore('explore', () => {
         }
 
         if (data) {
-            publicTrips.value = data
+            publicTrips.value = data as PublicTrip[]
         }
     }
 
@@ -111,18 +105,14 @@ export const useExploreStore = defineStore('explore', () => {
         }
 
         // Simulate "thinking" or animation time
-        await new Promise(resolve => setTimeout(resolve, 800)) // Reduced to 800ms for responsiveness logic, animation will handle visual duration
+        await new Promise(resolve => setTimeout(resolve, 800))
 
         if (candidates.length > 0) {
             const randomIndex = Math.floor(Math.random() * candidates.length)
             dartResult.value = candidates[randomIndex]
-        } else {
-            // Fallback if no match, maybe relax filters? 
-            // For now just pick random global
-            if (destinations.value.length > 0) {
-                const randomIndex = Math.floor(Math.random() * destinations.value.length)
-                dartResult.value = destinations.value[randomIndex]
-            }
+        } else if (destinations.value.length > 0) {
+            const randomIndex = Math.floor(Math.random() * destinations.value.length)
+            dartResult.value = destinations.value[randomIndex]
         }
 
         isThrowing.value = false
