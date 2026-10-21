@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch, type WatchStopHandle } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   buildDailyTimeline,
@@ -53,6 +53,7 @@ const localConflictKept = ref(false)
 const busy = ref(false)
 const statusMessage = ref('')
 const errorMessage = ref('')
+const journeyMissing = ref(false)
 const selectedDate = ref('')
 const activeSection = ref<'itinerary' | 'flights' | 'more'>('itinerary')
 watch(() => route.query.section, section => {
@@ -105,6 +106,8 @@ type JourneyOperationContext = {
 }
 
 let journeyEpoch = 0
+let stopAuthWatch: WatchStopHandle | undefined
+let disposed = false
 
 function invalidateJourneyOperations(): void {
   journeyEpoch += 1
@@ -185,6 +188,7 @@ watch(routeTripId, async nextTripId => {
   selectedDate.value = ''
   statusMessage.value = ''
   errorMessage.value = ''
+  journeyMissing.value = false
   loadScopedLocalDraft(accountId.value, nextTripId)
 
   if (cloudAuthReady.value) {
@@ -235,6 +239,7 @@ function switchAccount(nextAccountId: string): void {
   previewMemberId.value = 'all'
   statusMessage.value = ''
   errorMessage.value = ''
+  journeyMissing.value = false
   loadScopedLocalDraft(nextAccountId, routeTripId.value)
 }
 
@@ -281,6 +286,7 @@ function applyEnvelope(envelope: CloudEnvelope, preservedJourney?: TripJourney):
   revision.value = envelope.revision
   cloudCanEdit.value = envelope.canEdit
   cloudLoaded.value = true
+  journeyMissing.value = false
   localConflictKept.value = false
   pendingEnvelope.value = null
   cloudBaseJson.value = JSON.stringify(serverJourney)
@@ -320,6 +326,7 @@ async function loadCloud(): Promise<void> {
   const requestedTripId = activeTripId.value
   busy.value = true
   errorMessage.value = ''
+  journeyMissing.value = false
   try {
     const service = await import('@/services/journeyService')
     if (!isCurrentJourneyOperation(operation)) return
@@ -337,7 +344,11 @@ async function loadCloud(): Promise<void> {
     }
   } catch (error) {
     if (!isCurrentJourneyOperation(operation)) return
-    errorMessage.value = error instanceof Error ? error.message : '雲端草稿載入失敗；本機變更仍保留。'
+    if (error instanceof Error && 'code' in error && error.code === 'JOURNEY_NOT_FOUND') {
+      journeyMissing.value = true
+    } else {
+      errorMessage.value = error instanceof Error ? error.message : '雲端草稿載入失敗；本機變更仍保留。'
+    }
   } finally {
     if (isCurrentJourneyOperation(operation)) busy.value = false
   }
@@ -360,10 +371,6 @@ async function createCloud(): Promise<void> {
       ? { ...envelope.journey, memos: pendingMemos }
       : undefined
     applyEnvelope(envelope, createdJourney)
-    if (!isCurrentJourneyOperation(operation)) return
-    if (routeTripId.value !== operation.tripId) {
-      await router.replace({ name: 'iceland-planner', params: { tripId: operation.tripId } })
-    }
     if (!isCurrentJourneyOperation(operation)) return
     statusMessage.value = '雲端草稿已建立。'
   } catch (error) {
@@ -405,12 +412,14 @@ onMounted(async () => {
   if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
     try {
       const { useAuthStore } = await import('@/stores/auth')
+      if (disposed) return
       const authStore = useAuthStore()
-      watch(() => authStore.user?.id ?? null, userId => {
+      stopAuthWatch = watch(() => authStore.user?.id ?? null, userId => {
         switchAccount(userId ?? 'local-preview')
         if (cloudAuthReady.value && userId) void loadCloud()
       }, { immediate: true })
       if (!authStore.user) await authStore.initializeAuth()
+      if (disposed) return
       cloudAuthReady.value = true
       if (authStore.user) {
         await loadCloud()
@@ -421,6 +430,11 @@ onMounted(async () => {
     }
   }
 })
+onBeforeUnmount(() => {
+  disposed = true
+  stopAuthWatch?.()
+  invalidateJourneyOperations()
+})
 </script>
 
 <template>
@@ -429,9 +443,14 @@ onMounted(async () => {
     @select-date="selectedDate = $event">
     <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
     <template #global-information><AuroraConditions v-if="showAurora" compact><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
-    <template #header-notice><p v-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
-    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
+    <template #header-notice><p v-if="journeyMissing" role="status">此帳號尚無可存取的冰島雲端旅程；已有旅程時請建立者邀請你。</p><p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
+    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
     <template #flights>
+      <section v-if="journeyMissing" class="flight-setup" aria-label="設定雲端旅程">
+        <h2>先建立或加入旅程</h2>
+        <p>航班選擇需要雲端旅程。若旅伴已建立，請建立者邀請你的登入帳號；若尚未建立，可在這裡建立新旅程。</p>
+        <button type="button" :disabled="busy || !!pendingEnvelope" @click="createCloud">建立新旅程</button>
+      </section>
       <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
     </template>
     <template #preparation>
@@ -461,7 +480,7 @@ onMounted(async () => {
         <summary class="cursor-pointer px-4 py-4 text-sm font-semibold text-stone-600">儲存與同步設定<span v-if="hasCloudChanges" class="ml-2 text-[var(--iceland-glacier)]">有變更待儲存</span></summary>
       <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_rgba(22,54,54,.06)] sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
         <div>
-          <p class="text-sm font-bold text-slate-900">{{ cloudLoaded ? '儲存到 TravelMate Supabase' : '連接旅程中' }}</p>
+          <p class="text-sm font-bold text-slate-900">{{ cloudLoaded ? '儲存到 TravelMate Supabase' : journeyMissing ? '尚無可存取的雲端旅程' : busy ? '連接旅程中' : '雲端旅程尚未連接' }}</p>
           <p class="mt-1 text-xs leading-5 text-slate-500">這是同一趟冰島旅程；儲存後，有編輯權限的人會看到更新。裝置也會保留備份。</p>
           <p v-if="statusMessage" class="mt-3 text-xs font-semibold text-[var(--iceland-glacier)]" role="status">{{ statusMessage }}</p>
           <p v-if="errorMessage" class="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold leading-5 text-rose-800" role="alert">{{ errorMessage }}</p>
@@ -493,4 +512,4 @@ onMounted(async () => {
   </TripReader>
 </template>
 
-<style scoped>.route-line,.practical{font-size:12px;line-height:1.7;color:#7a8783}.route-line{margin:0 0 4px}.practical{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:white;border:1px solid #dde3de;border-radius:9px;padding:6px 10px;margin:6px 0 0;line-height:1.55}.practical>b{color:#397d86;margin-right:4px}.practical a{color:#397d86;font-weight:600}.plan-b{font-size:12px;line-height:1.55;margin:8px 0 0;color:#7a8783}.plan-b b{color:#263331;margin-right:5px}.plan-b label{display:grid;gap:4px}.plan-b input{padding:8px;border:1px solid #ccd5cf;border-radius:8px;min-height:44px;background:white}.notice-line{font-size:12.5px;line-height:1.5;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;padding:6px 9px;border-radius:9px;margin-top:7px}.compact-stay{background:white;border:1px solid #dde3de;border-radius:14px;padding:11px 13px;margin:14px 0 0}.compact-stay h3{font-size:13px;font-weight:600}.compact-stay .stay-name{font-size:13px;color:#263331}.compact-stay p{font-size:12px;line-height:1.7;color:#64726c;margin-top:3px}.edit-footer{display:flex;justify-content:center;margin:16px 0 4px}.edit-footer button{font-size:13px;color:#7a8783;border:1px solid #dde3de;background:white;border-radius:999px;padding:8px 20px;min-height:40px}.alternatives{margin-top:14px;border-top:1px solid #dde3de}.alternatives>summary{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:12px 0 2px;cursor:pointer;list-style:none}.disclosure-label{font-size:12px;font-weight:400;color:#7a8783}.disclosure-label::after{content:"展開 ▾"}.alternatives[open] .disclosure-label::after{content:"收合 ▴"}.journey-status{padding:3px 9px;font-size:10px}</style>
+<style scoped>.flight-setup{margin:0 0 16px;padding:16px;border:1px solid #dde3de;border-radius:14px;background:#fff}.flight-setup h2{font-size:15px;font-weight:650;color:#263331}.flight-setup p{margin-top:6px;font-size:13px;line-height:1.7;color:#7a8783}.flight-setup button{margin-top:12px;min-height:44px;padding:0 18px;border-radius:10px;background:#397d86;color:#fff;font-size:13px;font-weight:600}.flight-setup button:disabled{opacity:.5}.route-line,.practical{font-size:12px;line-height:1.7;color:#7a8783}.route-line{margin:0 0 4px}.practical{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:white;border:1px solid #dde3de;border-radius:9px;padding:6px 10px;margin:6px 0 0;line-height:1.55}.practical>b{color:#397d86;margin-right:4px}.practical a{color:#397d86;font-weight:600}.plan-b{font-size:12px;line-height:1.55;margin:8px 0 0;color:#7a8783}.plan-b b{color:#263331;margin-right:5px}.plan-b label{display:grid;gap:4px}.plan-b input{padding:8px;border:1px solid #ccd5cf;border-radius:8px;min-height:44px;background:white}.notice-line{font-size:12.5px;line-height:1.5;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;padding:6px 9px;border-radius:9px;margin-top:7px}.compact-stay{background:white;border:1px solid #dde3de;border-radius:14px;padding:11px 13px;margin:14px 0 0}.compact-stay h3{font-size:13px;font-weight:600}.compact-stay .stay-name{font-size:13px;color:#263331}.compact-stay p{font-size:12px;line-height:1.7;color:#64726c;margin-top:3px}.edit-footer{display:flex;justify-content:center;margin:16px 0 4px}.edit-footer button{font-size:13px;color:#7a8783;border:1px solid #dde3de;background:white;border-radius:999px;padding:8px 20px;min-height:40px}.alternatives{margin-top:14px;border-top:1px solid #dde3de}.alternatives>summary{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:12px 0 2px;cursor:pointer;list-style:none}.disclosure-label{font-size:12px;font-weight:400;color:#7a8783}.disclosure-label::after{content:"展開 ▾"}.alternatives[open] .disclosure-label::after{content:"收合 ▴"}.journey-status{padding:3px 9px;font-size:10px}</style>
