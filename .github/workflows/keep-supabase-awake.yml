@@ -19,7 +19,7 @@ jobs:
         run: |
           status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
             -H "apikey: $SUPABASE_ANON_KEY" \
-            "https://yoyvpgbahhnqbuhcarnh.supabase.co/rest/v1/")
+            "https://yoyvpgbahhnqbuhcarnh.supabase.co/rest/v1/trips?select=id&limit=0")
           echo "Supabase HTTP status: $status"
           test "$status" = "200"
           echo "Supabase ping OK at $(date -u)"
