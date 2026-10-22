@@ -10,7 +10,7 @@ function mountJourney() {
 }
 
 const membership = vi.hoisted(() => vi.fn())
-vi.mock('@/services/journeyService', () => ({ loadJourney: membership }))
+vi.mock('@/services/journeyService', () => ({ canReadJourney: membership, loadJourney: vi.fn().mockRejectedValue(new Error('document unavailable')) }))
 const state = vi.hoisted(() => ({ store: null as null | { user: { id: string } | null; initializeAuth: ReturnType<typeof vi.fn>; openAuthModal: ReturnType<typeof vi.fn>; signOut: ReturnType<typeof vi.fn> } }))
 vi.mock('@/stores/auth', async () => {
   const { reactive } = await import('vue')
@@ -23,7 +23,7 @@ beforeEach(async () => {
   vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-test-key')
   await import('@/stores/auth')
-  membership.mockReset().mockRejectedValue(new Error('journey_forbidden'))
+  membership.mockReset().mockResolvedValue(false)
   if (state.store) { state.store.user = null; state.store.openAuthModal.mockReset(); state.store.initializeAuth.mockReset() }
 })
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
@@ -45,10 +45,44 @@ describe('Unified Iceland itinerary', () => {
   it('keeps an ordinary signed-in nonmember on the public itinerary', async () => {
     state.store!.user = {id:'outsider'}
     const wrapper = mountJourney(); await flushPromises()
-    expect(wrapper.text()).toContain('尚未加入，請透過邀請連結加入')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('尚未加入，請透過邀請連結加入'))
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
     expect(wrapper.find('.journey-navigation').exists()).toBe(false)
     expect(wrapper.text()).toContain('切換帳號')
+    wrapper.unmount()
+  })
+
+  it('shows membership connection failures as retryable errors rather than an invitation prompt', async () => {
+    state.store!.user = { id: 'owner' }
+    membership.mockRejectedValue(new Error('Failed to fetch'))
+    const wrapper = mountJourney(); await flushPromises()
+    await vi.waitFor(() => expect(wrapper.text()).toContain('無法確認旅程資格'))
+    expect(wrapper.text()).not.toContain('尚未加入')
+    membership.mockResolvedValue(true)
+    await wrapper.get('[data-test="retry-membership"]').trigger('click'); await flushPromises()
+    await vi.waitFor(() => expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))
+    wrapper.unmount()
+  })
+
+  it('does not label a pending membership check as not joined', async () => {
+    state.store!.user = { id: 'owner' }
+    membership.mockReturnValue(new Promise(() => {}))
+    const wrapper = mountJourney(); await flushPromises()
+    expect(wrapper.text()).toContain('正在確認旅程資格')
+    expect(wrapper.text()).not.toContain('尚未加入')
+    wrapper.unmount()
+  })
+
+  it('ignores a previous account membership response after switching accounts', async () => {
+    let resolveOwner!: (value: boolean) => void
+    state.store!.user = { id: 'owner' }
+    membership.mockImplementation(() => new Promise<boolean>(resolve => { resolveOwner = resolve }))
+    const wrapper = mountJourney(); await flushPromises()
+    membership.mockResolvedValue(false)
+    state.store!.user = { id: 'outsider' }; await flushPromises()
+    resolveOwner(true); await flushPromises()
+    expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('尚未加入'))
     wrapper.unmount()
   })
 
@@ -83,7 +117,7 @@ describe('Unified Iceland itinerary', () => {
   it('reveals companion tools after authorized membership and removes them on sign-out in the same entry', async () => {
     const wrapper = mountJourney()
     await flushPromises()
-    membership.mockResolvedValue({})
+    membership.mockResolvedValue(true)
     if (state.store) state.store.user = { id: 'companion' }
     await flushPromises()
     await vi.waitFor(() => expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))

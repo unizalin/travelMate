@@ -35,6 +35,22 @@ describe('journeyService RPC adapter', () => {
     })
   })
 
+  it.each([true, false])('uses the existing fixed membership rule: canRead=%s', async canRead => {
+    const rpc = vi.fn().mockResolvedValue({ data: canRead, error: null })
+    const service = createJourneyService({ rpc })
+    await expect(service.canReadJourney(envelope.tripId)).resolves.toBe(canRead)
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(rpc).toHaveBeenCalledWith('tripbook_can_read', { p_trip_id: envelope.tripId })
+  })
+
+  it('does not turn a failed or malformed membership response into nonmembership', async () => {
+    const rpc = vi.fn().mockResolvedValueOnce({ data: null, error: { message: 'Failed to fetch' } })
+      .mockResolvedValueOnce({ data: null, error: null })
+    const service = createJourneyService({ rpc })
+    await expect(service.canReadJourney(envelope.tripId)).rejects.toMatchObject({ code: 'JOURNEY_REQUEST_FAILED' })
+    await expect(service.canReadJourney(envelope.tripId)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
+  })
+
   it('creates a journey with the exact RPC envelope and keeps the server trip ID', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: envelope, error: null })
     const service = createJourneyService({ rpc })
@@ -139,23 +155,6 @@ describe('journeyService RPC adapter', () => {
     }
   })
 
-  it('grants private journey access through the owner RPC', async () => {
-    const grant = {
-      tripId: envelope.tripId,
-      userId: 'c7d2c4c6-03e4-4b8f-bab2-b4a1b5e3e4d8',
-      role: 'member' as const,
-    }
-    const rpc = vi.fn().mockResolvedValue({ data: grant, error: null })
-    const service = createJourneyService({ rpc })
-
-    await expect(service.grantJourneyAccess(grant.tripId, grant.userId, grant.role)).resolves.toEqual(grant)
-    expect(rpc).toHaveBeenCalledWith('tripbook_grant_journey_access', {
-      p_trip_id: grant.tripId,
-      p_user_id: grant.userId,
-      p_role: grant.role,
-    })
-  })
-
   it('saves one shared memo through the revision guarded RPC without trusting actor metadata', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: envelope, error: null })
     const service = createJourneyService({ rpc })
@@ -184,15 +183,4 @@ describe('journeyService RPC adapter', () => {
     })
   })
 
-  it('maps an owner-only access failure without exposing the access table', async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: null,
-      error: { code: '42501', message: 'journey_forbidden', details: 'owner grant required' },
-    })
-    const service = createJourneyService({ rpc })
-
-    await expect(
-      service.grantJourneyAccess(envelope.tripId, 'c7d2c4c6-03e4-4b8f-bab2-b4a1b5e3e4d8', 'editor'),
-    ).rejects.toMatchObject({ code: 'JOURNEY_FORBIDDEN', status: 403 })
-  })
 })

@@ -9,14 +9,6 @@ export interface JourneyEnvelope {
   updatedAt: string
 }
 
-export type JourneyAccessRole = 'editor' | 'member'
-
-export interface JourneyAccessGrant {
-  tripId: string
-  userId: string
-  role: JourneyAccessRole
-}
-
 export const JOURNEY_CONFLICT = 'JOURNEY_CONFLICT'
 
 export interface JourneyRpcError {
@@ -136,28 +128,6 @@ export function parseEnvelope(data: unknown): JourneyEnvelope {
   }
 }
 
-function parseAccessGrant(data: unknown): JourneyAccessGrant {
-  const value = unwrapRpcData(data)
-  if (!value || typeof value !== 'object') {
-    throw new JourneyServiceError('INVALID_RESPONSE', 'journey access RPC returned no grant', 502, value)
-  }
-
-  const record = value as Record<string, unknown>
-  if (
-    typeof record.tripId !== 'string' ||
-    typeof record.userId !== 'string' ||
-    (record.role !== 'editor' && record.role !== 'member')
-  ) {
-    throw new JourneyServiceError('INVALID_RESPONSE', 'journey access RPC returned an invalid grant', 502, value)
-  }
-
-  return {
-    tripId: record.tripId,
-    userId: record.userId,
-    role: record.role,
-  }
-}
-
 export function createJourneyService(client: JourneyRpcClient = supabase as unknown as JourneyRpcClient) {
   async function resolveTripId(tripId: string): Promise<string> {
     if (UUID_PATTERN.test(tripId)) return tripId
@@ -217,6 +187,19 @@ export function createJourneyService(client: JourneyRpcClient = supabase as unkn
   }
 
   return {
+    async canReadJourney(tripId: string): Promise<boolean> {
+      const resolvedTripId = await resolveTripId(tripId)
+      if (client === (supabase as unknown as JourneyRpcClient) && !supabaseConfigured) {
+        throw new JourneyServiceError('SUPABASE_NOT_CONFIGURED', 'Supabase is not configured', 503)
+      }
+      const { data, error } = await client.rpc('tripbook_can_read', { p_trip_id: resolvedTripId })
+      if (error) throw rpcError(error)
+      if (typeof data !== 'boolean') {
+        throw new JourneyServiceError('INVALID_RESPONSE', 'membership RPC returned an invalid result', 502)
+      }
+      return data
+    },
+
     createJourney(journey: TripJourney) {
       return invoke('tripbook_create_journey', { p_journey: journey })
     },
@@ -250,34 +233,15 @@ export function createJourneyService(client: JourneyRpcClient = supabase as unkn
         tripId,
       )
     },
-
-    async grantJourneyAccess(tripId: string, userId: string, role: JourneyAccessRole): Promise<JourneyAccessGrant> {
-      if (client === (supabase as unknown as JourneyRpcClient) && !supabaseConfigured) {
-        throw new JourneyServiceError(
-          'SUPABASE_NOT_CONFIGURED',
-          'Supabase is not configured for cloud journey storage',
-          503,
-        )
-      }
-
-      const { data, error } = await client.rpc('tripbook_grant_journey_access', {
-        p_trip_id: tripId,
-        p_user_id: userId,
-        p_role: role,
-      })
-      if (error) throw rpcError(error)
-      return parseAccessGrant(data)
-    },
   }
 }
 
 export const journeyService = createJourneyService()
 
 export const createJourney = (journey: TripJourney) => journeyService.createJourney(journey)
+export const canReadJourney = (tripId: string) => journeyService.canReadJourney(tripId)
 export const loadJourney = (tripId: string) => journeyService.loadJourney(tripId)
 export const saveJourney = (tripId: string, expectedRevision: number, journey: TripJourney) =>
   journeyService.saveJourney(tripId, expectedRevision, journey)
 export const saveJourneyMemo = (tripId: string, expectedRevision: number, activityId: string, content: string) =>
   journeyService.saveMemo(tripId, expectedRevision, activityId, content)
-export const grantJourneyAccess = (tripId: string, userId: string, role: JourneyAccessRole) =>
-  journeyService.grantJourneyAccess(tripId, userId, role)

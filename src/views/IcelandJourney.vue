@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { canReadJourney } from '@/services/journeyService'
 import { loadLocalJourney } from '@/domain/tripJourney'
 import JourneyAdmin from '@/components/trip/JourneyAdmin.vue'
 import TripReader from '@/components/trip/TripReader.vue'
@@ -14,10 +15,13 @@ const member = shallowRef(false)
 const membershipReady = shallowRef(false)
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 const loginError = shallowRef('')
+const membershipError = shallowRef('')
 let epoch = 0
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 async function refreshMembership() {
   const current = ++epoch
+  membershipReady.value = false
+  membershipError.value = ''
   if (!auth.value?.user) { member.value = false; membershipReady.value = true; return }
   if (!navigator.onLine) {
     try { member.value = loadLocalJourney(auth.value.user.id, ICELAND_TRIP_ID) !== null } catch { member.value = false }
@@ -25,19 +29,23 @@ async function refreshMembership() {
     return
   }
   try {
-    const { loadJourney } = await import('@/services/journeyService')
-    await loadJourney(ICELAND_TRIP_ID)
-    if (current === epoch) member.value = true
-  } catch { if (current === epoch) member.value = false }
+    const canRead = await canReadJourney(ICELAND_TRIP_ID)
+    if (current === epoch) member.value = canRead
+  } catch {
+    if (current === epoch) {
+      member.value = false
+      membershipError.value = '無法確認旅程資格，請重試；目前仍可查看公開行程。'
+    }
+  }
   if (current === epoch) membershipReady.value = true
-  if (current === epoch && !member.value && route.query.section && route.query.section !== 'itinerary') {
+  if (current === epoch && !member.value && !membershipError.value && route.query.section && route.query.section !== 'itinerary') {
     await router.replace({ path: '/iceland', query: { ...route.query, section: 'itinerary' } })
   }
 }
 watch(() => auth.value?.user?.id, () => { member.value = false; void refreshMembership() })
-watch(() => [route.query.section, membershipReady.value, member.value], async () => {
+watch(() => [route.query.section, membershipReady.value, member.value, membershipError.value], async () => {
   const section=route.query.section
-  if (membershipReady.value && !member.value && section && section !== 'itinerary') await router.replace({ query: { ...route.query, section: 'itinerary' } })
+  if (membershipReady.value && !member.value && !membershipError.value && section && section !== 'itinerary') await router.replace({ query: { ...route.query, section: 'itinerary' } })
 }, { immediate: true })
 onMounted(async () => {
   if (!configured) return
@@ -76,7 +84,12 @@ async function switchAccount() {
       <details v-if="signedIn" class="account-menu"><summary>帳號</summary><div><p class="break-all">目前帳號：{{ auth?.user?.email }}</p><button class="min-h-11" @click="switchAccount">切換帳號</button><button class="min-h-11" @click="signOut">登出本機</button></div></details>
       <button v-else-if="configured" type="button" class="min-h-11 rounded-full border px-4 text-sm font-semibold disabled:opacity-50" :disabled="!auth" @click="signIn">登入</button>
     </template>
-    <template #header-notice><p v-if="signedIn" role="status">尚未加入，請透過邀請連結加入</p><p v-if="loginError" role="status">{{ loginError }}</p></template>
+    <template #header-notice>
+      <p v-if="signedIn && !membershipReady" role="status">正在確認旅程資格…</p>
+      <p v-else-if="signedIn && membershipError" role="alert">{{ membershipError }} <button type="button" data-test="retry-membership" class="min-h-11 underline" @click="refreshMembership">重新確認</button></p>
+      <p v-else-if="signedIn" role="status">尚未加入，請透過邀請連結加入</p>
+      <p v-if="loginError" role="status">{{ loginError }}</p>
+    </template>
   </TripReader>
 </template>
 <style scoped>.account-menu{position:relative;font-size:13px}.account-menu summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.account-menu>div{position:absolute;right:0;z-index:30;width:280px;padding:16px;border:1px solid #ccd5cf;border-radius:12px;background:#f7f8f6}.account-menu button{display:block}</style>
