@@ -12,6 +12,8 @@
 
 Vercel CLI whoami 實回 Logged out。依使用者要求停止金鑰與憑證操作；未產生正式 VAPID、未寫入任何正式 secret、未啟用排程。GitHub CLI 的既存 token 也無效；Git fetch 可正常完成，但不代表 CLI API 授權有效。Work 瀏覽器停用，因此尚未以建立者實際操作 subscribe→status→unsubscribe，亦未收到手機通知。本項不能標成正式推播已完成。
 
+程式已隨 main 5938a55 部署，Vercel success；外部 config 確認 503 application/json，check 無 secret 與 subscribe 無登入均為 401。訂閱表與租約 RPC 匿名實測 401／42501。這證明 API／拒權已上線，未證明推播已啟用。
+
 請登入 Vercel 或於 travel-mate 專案 Production 環境設定：
 
 - SUPABASE_SERVICE_ROLE_KEY
