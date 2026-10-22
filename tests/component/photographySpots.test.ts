@@ -21,14 +21,18 @@ describe('PhotographySpots', () => {
     expect(wrapper.text()).toContain('構圖')
   })
 
-  it('shows sourced camera settings for the confirmed south coast stops', () => {
+  it('shows sourced slow-shutter settings when that shooting scene is selected', async () => {
     const wrapper = mount(PhotographySpots, { props: { item: {
       ...item,
       photoSpots: [{ id: 'photo-skogafoss-scale', title: '瀑布與人物尺度', device: 'both' as const, composition: '人物入鏡', sourceLabel: '2026 Iceland Winter Photo Travel Book' }],
     } } })
 
+    await wrapper.get('select[id$="-scene"]').setValue('water')
     expect(wrapper.text()).toContain('ND64 濾鏡；快門 1/4–2 秒，使用腳架。')
-    expect(wrapper.text()).toContain('光圈與 ISO 未提供')
+    expect(wrapper.text()).toContain('光圈 f/8')
+    expect(wrapper.text()).toContain('ISO 100 起')
+    expect(wrapper.text()).not.toContain('光圈與 ISO 未提供')
+    wrapper.unmount()
   })
 })
 

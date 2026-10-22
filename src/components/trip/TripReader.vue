@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ICELAND_TRAVEL_MAP_URL } from '@/data/icelandTravelMap'
-import { computed, onMounted, onUnmounted, ref, useSlots, watch } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, useSlots, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { buildDailyTimeline, type DailyTimeline, type TripJourney } from '@/domain/tripJourney'
 import { tripOpeningDate } from '@/domain/tripOpeningDate'
@@ -11,6 +11,8 @@ import { icelandTrip } from '@/data/icelandTrip'
 import { icelandDailyPace } from '@/data/icelandDailyPace'
 import { CalendarDaysIcon, PaperAirplaneIcon, ClipboardDocumentCheckIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
 import PhotographySpots from './PhotographySpots.vue'
+import { photographyWeatherKey } from './photographyContext'
+import type { PhotographyWeather } from '@/domain/photographyAdvice'
 import JourneyClocks from './JourneyClocks.vue'
 import ItineraryDates from './ItineraryDates.vue'
 import LondonItinerary from './LondonItinerary.vue'
@@ -105,6 +107,9 @@ function selectLeg(leg: 'london' | 'iceland') {
 }
 const selectedDay = computed(() => days.value.find(day => day.date === selectedDate.value) ?? days.value[0] ?? null)
 const selectedIsLondon = computed(() => Boolean(selectedDay.value && selectedDay.value.date < '2026-10-30'))
+const photographyWeather = ref<PhotographyWeather | null>(null)
+provide(photographyWeatherKey, computed(() => photographyWeather.value?.day.date === selectedDay.value?.date ? photographyWeather.value : null))
+watch(selectedDate, () => { photographyWeather.value = null }, { flush: 'sync' })
 watch(selectedDay, day => { if (day) emit('select-date', day.date) }, { immediate: true })
 const selectedPlanB = computed(() => props.publicOnly && selectedDay.value ? icelandDailyPace[selectedDay.value.date] : undefined)
 const selectedEvents = computed(() => selectedDay.value?.events.filter(event => !props.publicOnly || (event.type !== 'accommodation' && event.type !== 'transport')) ?? [])
@@ -196,7 +201,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <slot v-else-if="selectedIsLondon" name="prelude" :date="selectedDate" />
         <template v-else>
         <slot name="route-summary"><p v-if="selectedDay" class="route-line">{{ publicActivities.filter(item => item.status !== 'fallback').map(item => item.name).join(' → ') }}</p></slot>
-        <DayConditions v-if="selectedDay" :date="selectedDay.date" :activity-names="selectedDay.events.filter(event => event.type === 'item').map(event => event.name)">
+        <DayConditions v-if="selectedDay" @photography-weather="photographyWeather=$event" :date="selectedDay.date" :activity-names="selectedDay.events.filter(event => event.type === 'item').map(event => event.name)">
           <template #after-weather><p v-if="publicOnly && selectedDay && handbookDays[selectedDay.date]" class="practical-line"><b>沿途實用</b> {{ handbookDays[selectedDay.date].fuel }} · 廁所請於遊客中心或停車場確認開放 · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">查看即時路況 ↗</a> · <a :href="ICELAND_TRAVEL_MAP_URL" target="_blank" rel="noreferrer">冰島旅行資料庫（Google 地圖） ↗</a></p><p v-if="selectedDay && publicDayServices[selectedDay.date]" class="services-line"><b>沿途服務</b><a v-for="service in publicDayServices[selectedDay.date]" :key="`${service.kind}-${service.label}`" :href="publicServiceMapsUrl(service.query)" target="_blank" rel="noreferrer">{{ service.kind === 'fuel' ? '加油' : '廁所' }}：{{ service.label }} ↗</a></p><slot name="day-practical" /></template>
           <template #checks><slot name="daily-start" /></template>
         </DayConditions>

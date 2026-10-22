@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { PhotographyWeather } from '@/domain/photographyAdvice'
 import { solarTimes } from '@/domain/solarTimes'
 import { clothingAdvice, equipmentForActivities, weatherRegionsForDate } from '@/domain/tripWeather'
 import { dayOutfitByDate } from '@/data/dayOutfits'
@@ -7,6 +8,7 @@ import { locateIcelandRegion } from '@/services/locationService'
 import type { WeatherRegion } from '@/domain/tripWeather'
 import { loadDayForecast, type DayForecastResult } from '@/services/tripWeatherService'
 
+const emit = defineEmits<{ 'photography-weather': [weather: PhotographyWeather | null] }>()
 const props = defineProps<{ date: string; activityNames: string[] }>()
 const located = ref<WeatherRegion | null>(null)
 const locationBusy = ref(false)
@@ -70,6 +72,10 @@ async function refresh(force = false) {
   }
 }
 watch([() => props.date, region], () => { void refresh() }, { immediate: true })
+watch([forecast, region, solar], () => {
+  const result = state.value
+  emit('photography-weather', forecast.value && region.value && result.kind === 'forecast' ? { day: forecast.value, regionLabel: region.value.label, fetchedAt: result.fetchedAt, sunrise: solar.value?.sunrise ?? null, sunset: solar.value?.sunset ?? null } : null)
+}, { immediate: true })
 onMounted(() => { timer = setInterval(updateClock, 60_000); window.addEventListener('focus', updateClock) })
 onBeforeUnmount(() => { request++; controller?.abort(); if (timer) clearInterval(timer); window.removeEventListener('focus', updateClock) })
 function value(number: number | null, unit: string) { return number == null ? '暫無資料' : `${Math.round(number * 10) / 10}${unit}` }

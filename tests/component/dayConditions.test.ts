@@ -26,6 +26,7 @@ describe('Daily weather and outfit card', () => {
     expect(wrapper.text()).toContain('泳衣')
     expect(wrapper.text()).toContain('以業者通知為準')
     expect(wrapper.text()).toContain('Open-Meteo')
+    expect(wrapper.emitted('photography-weather')?.at(-1)?.[0]).toMatchObject({ day, regionLabel: 'Reykjavík 市區' })
     wrapper.unmount()
   })
   it('clears the old forecast while changing date and ignores its late response', async () => {
@@ -41,6 +42,7 @@ describe('Daily weather and outfit card', () => {
     expect(wrapper.text()).not.toContain('1–6°C')
     expect(wrapper.text()).toContain('離開日：Blue Lagoon 泳衣隨身，保暖外層')
     expect(mocks.load.mock.lastCall?.[0].region.id).toBe('keflavik')
+    expect(wrapper.emitted('photography-weather')?.at(-1)).toEqual([null])
     wrapper.unmount()
   })
   it('withdraws outfit advice when the forecast is stale', async () => {
@@ -52,7 +54,18 @@ describe('Daily weather and outfit card', () => {
     expect(wrapper.text()).toContain('保暖底層')
     await vi.advanceTimersByTimeAsync(31 * 60_000)
     expect(wrapper.text()).toContain('資料超過 30 分鐘')
+    expect(wrapper.emitted('photography-weather')?.at(-1)).toEqual([null])
     expect(wrapper.text()).toContain('抵達日以取車、採買、休息為主')
+    wrapper.unmount()
+  })
+  it('clears the photography forecast while another region is loading', async () => {
+    mocks.load.mockResolvedValueOnce({ ...result(), day: { ...day, date: '2026-10-31' } })
+    const wrapper = mount(DayConditions, { props: { date: '2026-10-31', activityNames: [] } })
+    await flushPromises()
+    expect(wrapper.emitted('photography-weather')?.at(-1)?.[0]).toMatchObject({ day: { date: '2026-10-31' } })
+    mocks.load.mockImplementationOnce(() => new Promise(() => {}))
+    await wrapper.get('select').setValue('reykjavik'); await flushPromises()
+    expect(wrapper.emitted('photography-weather')?.at(-1)).toEqual([null])
     wrapper.unmount()
   })
   it('falls back to non-forecast clothing guidance after a failed request', async () => {
