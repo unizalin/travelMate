@@ -13,7 +13,7 @@
 
 指定實作 worktree 單一代理，未啟動額外模型。npm run test（228）、test:public-build（42）、test:db-contract（5）、test:ledger-db（2 組 PostgreSQL）、test:notifications（11）、type-check、build、build:share、check:share（62 source modules）全部通過。雲端 migration 當天套用與 lint 通過。推播上線啟用仍受 Vercel 登入／環境／排程卡住，詳見 aurora-push-production。
 
-部署狀態：準備以獨立提交進乾淨整合 worktree 合併 main，再 push。尚未寫成 Vercel success；完成後追加實際結果。Work 瀏覽器回報停用，因此未宣稱登入版視覺與手機驗收完成。
+部署：實作提交 2643308，乾淨整合 main 5938a55 已 push，Vercel 明確 success。整合 worktree 再跑全套亦通過。外部新 bundle 確認帳號與裝置、安裝／今晚待辦、身分卡與分攤 chip；攝影偏好／收藏入口消失，拍攝建議保留，前端無 server secret 識別字。config 為 503 JSON（尚未設定）、無 secret check 401、未登入 subscribe 401；匿名訂閱表及租約 RPC 實回 401／42501。SW push、點通知與離線處理保留。Work 瀏覽器回報停用，因此未宣稱登入版視覺與手機驗收完成。收合區標題另與其他區塊統一為 18px，全套再次通過後隨此部署紀錄提交。
 
 ## 真人驗收待辦
 
