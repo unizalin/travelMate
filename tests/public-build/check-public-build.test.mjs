@@ -146,3 +146,17 @@ for (const privateModule of ['src/data/icelandMemberNames.ts',
  try { assert.equal((await checkPublicBuild(root)).modules,4) }
  finally { await rm(root,{recursive:true,force:true}) }
  })
+
+for (const moduleId of ['src/components/trip/JourneyLedger.vue', 'src/services/journeyLedgerService.ts', 'src/domain/journeyLedger.ts']) {
+ test(`rejects private ledger module ${moduleId}`, async () => {
+  const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', moduleId])
+  try { await assert.rejects(() => checkPublicBuild(root), /private module/i) }
+  finally { await rm(root, { recursive: true, force: true }) }
+ })
+}
+test('rejects ledger RPC content in an otherwise public bundle', async () => {
+ const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts'])
+ await writeFile(path.join(root, 'assets/index.js'), 'export const leaked = "tripbook_save_ledger_entry"\n')
+ try { await assert.rejects(() => checkPublicBuild(root), /private identity or comment content/i) }
+ finally { await rm(root, { recursive: true, force: true }) }
+})

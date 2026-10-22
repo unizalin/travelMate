@@ -3,6 +3,9 @@ import path from 'node:path'
 import process from 'node:process'
 
 const PRIVATE_MODULE_PATTERNS = [
+  /(?:^|\/)src\/components\/trip\/JourneyLedger\.vue$/i,
+  /(?:^|\/)src\/services\/journeyLedgerService\.(?:ts|js)$/i,
+  /(?:^|\/)src\/domain\/journeyLedger\.(?:ts|js)$/i,
   /(?:^|\/)src\/components\/trip\/PhotoPreferenceSettings\.vue$/i,
   /(?:^|\/)src\/domain\/londonJourney\.(?:ts|js)$/i,
   /(?:^|\/)src\/services\/londonJourneyService\.(?:ts|js)$/i,
@@ -28,6 +31,7 @@ const PRIVATE_MODULE_PATTERNS = [
 ]
 
 const PRIVATE_CONTENT_PATTERNS = [
+  /tripbook_(?:ledger|save_ledger_entry|void_ledger_entry)/,
   /jinyo/i,
   /Kevin\s+Ho/i,
   /Rosanne/i,

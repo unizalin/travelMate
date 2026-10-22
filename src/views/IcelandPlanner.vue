@@ -36,10 +36,12 @@ import ActivityComments from '@/components/trip/ActivityComments.vue'
 import AuroraReminderSettings from '@/components/trip/AuroraReminderSettings.vue'
 import AuroraConditions from '@/components/trip/AuroraConditions.vue'
 import JourneyRoster from '@/components/trip/JourneyRoster.vue'
+import JourneyLedger from '@/components/trip/JourneyLedger.vue'
 import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 const offline = ref(!navigator.onLine)
+const ledgerOpen = ref(false)
 function updateConnection() { offline.value = !navigator.onLine }
 const showPublicReader = computed(() => configured && !cloudLoaded.value && !pendingEnvelope.value && !(offline.value && localDraftAvailable.value && accountId.value !== 'local-preview'))
 const route = useRoute()
@@ -429,6 +431,7 @@ onBeforeUnmount(() => {
       <section class="my-section identity-card"><h2>{{identityName}}</h2><p>已認領成員</p></section>
       <section v-if="!myFlightNames.length || packingRemaining" class="my-section"><h2>我的待辦</h2><p v-if="!myFlightNames.length">尚未選擇航班。</p><p v-if="packingRemaining">行李尚有 {{packingRemaining}} 項未完成。</p><button @click="router.replace({query:{section:'flights'}})">選擇我的航班 →</button></section>
       <section class="my-section"><h2>我的航班</h2><button @click="router.replace({query:{section:'flights'}})">{{myFlightNames.join('、') || '尚未選擇'}} · 查看航班 →</button></section>
+      <details class="my-section" @toggle="ledgerOpen=($event.target as HTMLDetailsElement).open"><summary>旅費記帳</summary><JourneyLedger v-if="ledgerOpen" :trip-id="activeTripId" :account-id="accountId" :members="draft.members" :self-member-id="selfMember?.memberId" :disabled="offline || cloudCanEdit!==true" /></details>
       <slot name="management" :trip-id="activeTripId" />
       <section class="my-section"><h2>帳號</h2><slot name="account-settings" />
         <PhotoPreferenceSettings />
