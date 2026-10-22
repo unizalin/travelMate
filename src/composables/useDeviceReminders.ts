@@ -28,8 +28,13 @@ function createDeviceReminders(accountId: Ref<string>, member: Ref<boolean>) {
   finally {if(!disposed && current===epoch)ready.value=true}
  }
  function updated(event:Event) {
-  if(event instanceof CustomEvent && event.detail && typeof event.detail.enabled==='boolean') {state.value=event.detail;now.value=new Date();ready.value=true;unavailable.value=false}
-  else void refresh()
+  const detail:unknown=event instanceof CustomEvent?event.detail:null
+  if(!member.value)return
+  if(detail && typeof detail==='object' && 'accountId' in detail && detail.accountId===accountId.value && 'state' in detail && detail.state && typeof detail.state==='object' && 'enabled' in detail.state && typeof detail.state.enabled==='boolean') {
+   const next=detail.state
+   state.value={enabled:next.enabled===true,scope:'scope' in next && next.scope==='trip'?'trip':'tonight',expiresAt:'expiresAt' in next && typeof next.expiresAt==='string'?next.expiresAt:undefined}
+   now.value=new Date();ready.value=true;unavailable.value=false
+  }
  }
  function capture(event:Event) {
   if(ios)return

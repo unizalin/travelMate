@@ -22,7 +22,9 @@ async function request(action: string, body: object): Promise<PushState> {
  const value: unknown = await response.json()
  if (!response.ok) throw new Error(value && typeof value === 'object' && 'error' in value && typeof value.error === 'string' ? value.error : '提醒設定未儲存，請重試。')
  if (!value || typeof value !== 'object' || !('enabled' in value) || typeof value.enabled !== 'boolean') throw new Error('提醒服務回應無效，設定尚未確認。')
- return { enabled: value.enabled, scope: 'scope' in value && value.scope === 'trip' ? 'trip' : 'tonight', cityId: 'cityId' in value && typeof value.cityId === 'string' ? value.cityId : undefined, expiresAt: 'expiresAt' in value && typeof value.expiresAt === 'string' ? value.expiresAt : undefined }
+ const state: PushState = { enabled: value.enabled, scope: 'scope' in value && value.scope === 'trip' ? 'trip' : 'tonight', cityId: 'cityId' in value && typeof value.cityId === 'string' ? value.cityId : undefined, expiresAt: 'expiresAt' in value && typeof value.expiresAt === 'string' ? value.expiresAt : undefined }
+ if(action!=='status')window.dispatchEvent(new CustomEvent('tripbook-push-state', { detail: {accountId:data.session.user.id,state} }))
+ return state
 }
 export async function preparePushRegistration(): Promise<ServiceWorkerRegistration> {
  await navigator.serviceWorker.register('/sw.js', { scope: '/' })
@@ -46,13 +48,11 @@ export async function enableAuroraPush(registration: ServiceWorkerRegistration, 
  if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
  const state = await request('subscribe', { endpoint: subscription.endpoint, subscription: subscription.toJSON() })
  if (!state.enabled || state.scope!=='trip') throw new Error('服務尚未確認整趟提醒訂閱，請重試。')
- window.dispatchEvent(new CustomEvent('tripbook-push-state', { detail: state }))
  return state
 }
 export async function disableAuroraPush(registration: ServiceWorkerRegistration): Promise<PushState> {
  const subscription = await registration.pushManager.getSubscription()
  if (!subscription) return { enabled: false }
  const state = await request('unsubscribe', { endpoint: subscription.endpoint })
- window.dispatchEvent(new CustomEvent('tripbook-push-state', { detail: state }))
  return state
 }

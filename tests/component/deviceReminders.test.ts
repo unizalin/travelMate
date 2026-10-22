@@ -1,10 +1,13 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, ref } from 'vue'
-import { expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { useDeviceReminders } from '@/composables/useDeviceReminders'
 const api=vi.hoisted(()=>({current:vi.fn(),config:vi.fn()}))
 vi.mock('@/services/auroraPushService',()=>({deviceStandalone:()=>true,getPushConfig:api.config,currentPushState:api.current,preparePushRegistration:async()=>({})}))
+afterEach(()=>vi.useRealTimers())
 it('one member device state powers children, waits for membership, and reacts immediately to subscription changes',async()=>{
+ vi.useFakeTimers({toFake:['Date']})
+ vi.setSystemTime(new Date('2026-10-23T20:00:00Z'))
  vi.stubGlobal('PushManager',class {})
  Object.defineProperty(navigator,'serviceWorker',{configurable:true,value:{}})
  api.config.mockResolvedValue({publicKey:'fixture'})
@@ -18,10 +21,12 @@ it('one member device state powers children, waits for membership, and reacts im
  expect(seen[0].ready.value).toBe(false);expect(seen[0].todo.value).toEqual({install:false,aurora:false})
  member.value=true;await flushPromises()
  expect(seen[0].enabled.value).toBe(false);expect(seen[0].ready.value).toBe(true);expect(seen[0].todo.value.aurora).toBe(true)
- window.dispatchEvent(new CustomEvent('tripbook-push-state',{detail:{enabled:true,scope:'trip',expiresAt:'2026-11-07T12:00:00.000Z'}}))
+ window.dispatchEvent(new CustomEvent('tripbook-push-state',{detail:{accountId:'fixture',state:{enabled:true,scope:'trip',expiresAt:'2026-11-07T12:00:00.000Z'}}}))
  expect(seen[0].enabled.value).toBe(true);expect(seen[0].todo.value.aurora).toBe(false)
  expect(seen[0].status.value).toContain('11/7 12:00')
- window.dispatchEvent(new CustomEvent('tripbook-push-state',{detail:{enabled:false}}))
+ window.dispatchEvent(new CustomEvent('tripbook-push-state',{detail:{accountId:'fixture',state:{enabled:false}}}))
+ expect(seen[0].enabled.value).toBe(false)
+ window.dispatchEvent(new CustomEvent('tripbook-push-state',{detail:{accountId:'old-account',state:{enabled:true,scope:'trip',expiresAt:'2026-11-07T12:00:00.000Z'}}}))
  expect(seen[0].enabled.value).toBe(false)
  member.value=false;await flushPromises();expect(seen[0].ready.value).toBe(false)
  wrapper.unmount();vi.unstubAllGlobals()
