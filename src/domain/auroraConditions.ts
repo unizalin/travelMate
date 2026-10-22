@@ -15,7 +15,7 @@ export type AuroraHour = {
 }
 
 export type AuroraAssessment = {
-  label: '雲量條件較佳' | '雲量偏多' | '資料不足'
+  label: '雲量條件較佳' | '部分時段晴朗' | '雲量中等' | '雲量偏多' | '資料不足'
   reason: string
 }
 
@@ -82,14 +82,28 @@ export function matchNoaaForecast(
 
 export function deriveAuroraAssessment(hours: AuroraHour[]): AuroraAssessment {
   if (hours.length === 0) return { label: '資料不足', reason: '目前沒有同時段的夜間預報資料。' }
-  if (hours.some(hour => hour.cloudCover == null || hour.kp == null || !Number.isFinite(hour.cloudCover) || !Number.isFinite(hour.kp) || hour.cloudCover < 0 || hour.cloudCover > 100 || hour.kp < 0 || hour.kp > 9)) {
+  const validHours = hours.flatMap(({ cloudCover, kp }) => {
+    if (cloudCover == null || kp == null || !Number.isFinite(cloudCover) || !Number.isFinite(kp)
+      || cloudCover < 0 || cloudCover > 100 || kp < 0 || kp > 9) return []
+    return [{ cloudCover, kp }]
+  })
+  if (validHours.length === 0) {
     return { label: '資料不足', reason: '部分時段缺少雲量或 Kp 資料。' }
   }
-  if (hours.every(hour => (hour.cloudCover as number) <= 30)) {
-    return { label: '雲量條件較佳', reason: '目前配對到的夜間時段雲量較少；Kp 僅供活動強弱參考。' }
+
+  let assessment: AuroraAssessment
+  if (validHours.every(hour => hour.cloudCover <= 30)) {
+    assessment = { label: '雲量條件較佳', reason: '目前配對到的夜間時段雲量較少；Kp 僅供活動強弱參考。' }
+  } else if (validHours.some(hour => hour.cloudCover <= 30)) {
+    assessment = { label: '部分時段晴朗', reason: '今晚部分時段雲量較少，其餘時段雲量較多；請以最佳觀測時段為準。' }
+  } else if (validHours.every(hour => hour.cloudCover >= 70)) {
+    assessment = { label: '雲量偏多', reason: '目前配對到的夜間時段雲量偏多；Kp 僅供活動強弱參考。' }
+  } else {
+    assessment = { label: '雲量中等', reason: '今晚各時段雲量中等，沒有特別晴朗的時段。' }
   }
-  if (hours.every(hour => (hour.cloudCover as number) >= 70)) {
-    return { label: '雲量偏多', reason: '目前配對到的夜間時段雲量偏多；Kp 僅供活動強弱參考。' }
+
+  return {
+    ...assessment,
+    reason: assessment.reason + (validHours.length < hours.length ? '（部分時段缺資料，依其餘時段判定）' : ''),
   }
-  return { label: '資料不足', reason: '夜間各時段條件不一致，暫不合併成單一判定。' }
 }

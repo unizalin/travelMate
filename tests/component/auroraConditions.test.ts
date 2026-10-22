@@ -61,4 +61,28 @@ describe('AuroraConditions summary', () => {
     expect(wrapper.find('.aurora-conditions__outlook').text()).toContain('後晚 Kp 5')
     wrapper.unmount()
   })
+
+  it.each([
+    { label: '雲量條件較佳', tone: 'positive' },
+    { label: '部分時段晴朗', tone: 'positive' },
+    { label: '雲量中等', tone: 'neutral' },
+    { label: '雲量偏多', tone: 'neutral' },
+    { label: '資料不足', tone: 'neutral' },
+  ])('shows $label with a defined $tone style', async ({ label, tone }) => {
+    auroraMock.load.mockResolvedValue({
+      city: AURORA_CITIES[0], localDate: '2026-10-22',
+      sunset: '2026-10-22T17:00:00Z', sunrise: '2026-10-23T09:00:00Z',
+      hours: [{ time: '2026-10-22T22:00:00Z', cloudCover: 25, kp: 4 }],
+      assessment: { label, reason: '依有效時段判定。' },
+      outlook: [], fetchedAt: new Date().toISOString(), errors: [],
+      sources: { noaa: 'https://services.swpc.noaa.gov/', openMeteo: 'https://open-meteo.com/' },
+    })
+    const wrapper = mount(AuroraConditions)
+    await flushPromises()
+
+    const assessment = wrapper.get('.aurora-assessment')
+    expect(assessment.text()).toBe(label)
+    expect(assessment.classes()).toContain(`aurora-assessment--${tone}`)
+    wrapper.unmount()
+  })
 })

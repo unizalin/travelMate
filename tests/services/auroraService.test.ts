@@ -38,10 +38,13 @@ describe('aurora service', () => {
       { time: '2026-10-14T21:00', cloudCover: 20, kp: 4 },
       { time: '2026-10-15T00:00', cloudCover: 25, kp: null },
     ])
-    expect(result.assessment.label).toBe('資料不足')
+    expect(result.assessment).toEqual({
+      label: '雲量條件較佳',
+      reason: '目前配對到的夜間時段雲量較少；Kp 僅供活動強弱參考。（部分時段缺資料，依其餘時段判定）',
+    })
     expect(result.outlook).toEqual([
-      expect.objectContaining({ localDate: '2026-10-15', kp: 3, cloudCover: 35 }),
-      expect.objectContaining({ localDate: '2026-10-16', kp: 5, cloudCover: 15 }),
+      expect.objectContaining({ localDate: '2026-10-15', kp: 3, cloudCover: 35, assessment: expect.objectContaining({ label: '雲量中等' }) }),
+      expect.objectContaining({ localDate: '2026-10-16', kp: 5, cloudCover: 15, assessment: expect.objectContaining({ label: '雲量條件較佳' }) }),
     ])
     expect(result.errors).toEqual([])
   })
