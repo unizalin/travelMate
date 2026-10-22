@@ -40,3 +40,5 @@ node_modules/.bin/vite-node scripts/prepare-uiux-prototype.ts
 
 
 2026-10-22 修改清單已實作；詳見 docs/handoffs/2026-10-22-uiux-prototype-revisions.md。角色預覽移到「我的」，新增已登入未加入。產品主題只跟隨系統；node artifacts/uiux-airbnb-20261022/prepare-qa.mjs 可重建僅供QA的強制淺深色頁面。最新16組截圖在screenshots/revision。
+
+追加三項已修改，尚待瀏覽器驗收。正式TripReader沒有深色覆寫，原型依正式固定淺色票處理。舊revision截圖與數值不代表本次結果。詳2026-10-22-prototype-three-adjustments交接。
