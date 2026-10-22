@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import JourneyFlightCard from './JourneyFlightCard.vue'
 import { icelandMemberName } from '@/data/icelandMemberNames'
 import { icelandFlights } from '@/data/icelandFlights'
-import { claimMember, chooseFlight, loadRoster, type JourneyRoster } from '@/services/journeyRosterService'
+import { chooseFlight, loadRoster, type JourneyRoster } from '@/services/journeyRosterService'
 const emit = defineEmits<{ update: [value: JourneyRoster] }>()
 const props = defineProps<{ tripId: string; accountId: string; canEdit: boolean; members: Array<{ id: string; displayName: string | null }> }>()
 const roster = ref<JourneyRoster>({ claims: [], choices: [] })
@@ -45,21 +45,16 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
 <template>
   <section aria-label="身分與航班" class="journey-roster">
     <div class="flight-heading"><h2>我的航班</h2><button v-if="self" type="button" @click="selecting=!selecting">{{ selecting?'完成選擇':'更改航班' }}</button></div>
-    <p v-if="!ready" class="mt-3 text-sm text-stone-600">登入並建立或載入雲端旅程後，即可認領身分與選班。</p>
+    <p v-if="!ready" class="mt-3 text-sm text-stone-600">受邀加入旅程並認領身分後，即可選擇航班。</p>
     <p v-if="error" role="alert" class="mt-3 text-sm text-red-700">{{ error }}</p>
     <p v-if="busy" role="status" class="mt-3 text-sm">正在同步…</p>
     <template v-if="loaded">
-      <p v-if="!self" class="mt-3 text-sm text-stone-600">從這六位選擇自己，再選搭乘的航班；已被選擇的身分不能重複使用。時間皆為當地時間。</p>
+      <p v-if="!self" class="mt-3 text-sm text-stone-600">請使用有效邀請連結認領自己的身分。</p>
       <p v-if="self" class="self-name">{{ label(self.memberId) }}</p>
-      <div v-if="!self" class="identity-choices mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <button v-for="member in members" :key="member.id" type="button" class="rounded-xl border px-3 py-2 text-sm disabled:opacity-50" :disabled="busy || !canEdit || roster.claims.some(c => c.memberId === member.id)" @click="run(() => claimMember(tripId, member.id))">
-          {{ label(member.id) }} · {{ roster.claims.find(c => c.memberId === member.id)?.isSelf ? '這是我' : roster.claims.some(c => c.memberId === member.id) ? `${label(member.id)} 已認領` : '我是這位' }}
-        </button>
-      </div>
-      <button v-if="self && selecting" type="button" class="mt-3 text-sm underline" :disabled="busy || !canEdit" @click="run(() => claimMember(tripId, null))">解除我的認領與選班</button>
       <p v-if="self && !myFlights.length" class="muted">尚未選擇航班，請先選擇自己搭的班次。</p>
       <div class="flight-cards"><JourneyFlightCard v-for="flight in selecting || (self && !myFlights.length) ? icelandFlights : myFlights" :key="flight.id" :flight="flight">
         <template #reminder><span v-if="flight.id==='ba801'">11/7 Blue Lagoon 與這班航班的銜接待核對；退房、加油、還車及機場抵達時間依實際預約安排。</span><span v-else-if="flight.group==='from-iceland'">加油、還車與機場抵達時間依這班機另行確認。</span></template>
+        <p class="muted">搭乘旅伴：{{ roster.choices.filter(choice => choice.flightId === flight.id).map(choice => label(choice.memberId)).join('、') || '尚未選擇' }}</p>
         <button v-if="selecting || (self && !myFlights.length)" type="button" :aria-pressed="selected(flight.id)" :disabled="busy || !canEdit || !self" @click="run(() => chooseFlight(tripId,flight.id,!selected(flight.id)))">{{ selected(flight.id)?'取消搭乘':'我搭這班' }}</button>
       </JourneyFlightCard></div>
     </template>

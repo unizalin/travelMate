@@ -13,7 +13,12 @@ import {
 } from '@/domain/tripJourney'
 import { ICELAND_TRIP_ID } from '@/router/iceland'
 import { tripOpeningDate } from '@/domain/tripOpeningDate'
-import { icelandJourney } from '@/data/icelandJourney'
+import { publicIcelandJourney } from '@/data/icelandPublic'
+const publicJourneyDraft: TripJourney = {
+  ...publicIcelandJourney,
+  members: Array.from({ length: 6 }, (_, index) => ({ id: `member-${index + 1}`, tripId: publicIcelandJourney.tripId, displayName: null, accountId: null })),
+  items: publicIcelandJourney.items.map(item => ({ ...item, id: item.id.replace('public-', '') })),
+}
 import type { JourneyRoster as RosterState } from '@/services/journeyRosterService'
 import { isOnlyLondonAddition } from '@/domain/londonJourney'
 import ItineraryActivities from '@/components/trip/ItineraryActivities.vue'
@@ -22,6 +27,8 @@ import MorningChecks from '@/components/trip/MorningChecks.vue'
 import TripPreparation from '@/components/trip/TripPreparation.vue'
 import { handbookDays } from '@/data/icelandHandbook'
 import LondonPrelude from '@/components/trip/LondonPrelude.vue'
+import { provideJourneyPhotos } from '@/services/journeyPhotoContext'
+import SharedActivityMemo from '@/components/trip/SharedActivityMemo.vue'
 import TripReader from '@/components/trip/TripReader.vue'
 import ActivityComments from '@/components/trip/ActivityComments.vue'
 import AuroraReminderSettings from '@/components/trip/AuroraReminderSettings.vue'
@@ -29,6 +36,8 @@ import AuroraConditions from '@/components/trip/AuroraConditions.vue'
 import JourneyRoster from '@/components/trip/JourneyRoster.vue'
 import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 
+const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
+const showPublicReader = computed(() => configured && !cloudLoaded.value && !pendingEnvelope.value)
 const route = useRoute()
 const router = useRouter()
 const defaultTripId = ICELAND_TRIP_ID
@@ -40,7 +49,7 @@ const activeTripId = ref(routeTripId.value)
 
 const accountId = ref('local-preview')
 const packingOwnerId = computed(() => accountId.value === 'local-preview' ? null : accountId.value)
-const draft = ref<TripJourney>(withTripId(icelandJourney, routeTripId.value))
+const draft = ref<TripJourney>(withTripId(publicJourneyDraft, routeTripId.value))
 const localSavedJson = ref(JSON.stringify(draft.value))
 const cloudBaseJson = ref<string | null>(null)
 const localDraftAvailable = ref(false)
@@ -49,6 +58,7 @@ const revision = ref<number | null>(null)
 const cloudCanEdit = ref<boolean | null>(null)
 const cloudLoaded = ref(false)
 const cloudAuthReady = ref(false)
+const photoContext = provideJourneyPhotos(activeTripId, accountId, cloudLoaded)
 const localConflictKept = ref(false)
 const busy = ref(false)
 const statusMessage = ref('')
@@ -173,7 +183,7 @@ watch(routeTripId, async nextTripId => {
 
   invalidateJourneyOperations()
   activeTripId.value = nextTripId
-  draft.value = withTripId(icelandJourney, nextTripId)
+  draft.value = withTripId(publicJourneyDraft, nextTripId)
   resetMemoDrafts(draft.value)
   localSavedJson.value = JSON.stringify(draft.value)
   cloudBaseJson.value = null
@@ -225,7 +235,7 @@ function switchAccount(nextAccountId: string): void {
 
 
   activeTripId.value = routeTripId.value
-  draft.value = withTripId(icelandJourney, routeTripId.value)
+  draft.value = withTripId(publicJourneyDraft, routeTripId.value)
   resetMemoDrafts(draft.value)
   localSavedJson.value = JSON.stringify(draft.value)
   cloudBaseJson.value = null
@@ -354,31 +364,17 @@ async function loadCloud(): Promise<void> {
   }
 }
 
-async function createCloud(): Promise<void> {
-  const operation = beginJourneyOperation()
-  const journeySnapshot = cloneJourney(draft.value)
-  const pendingMemos = journeySnapshot.memos
-  journeySnapshot.memos = undefined
-  busy.value = true
-  errorMessage.value = ''
+async function saveActivityMemo(activityId: string, content: string): Promise<void> {
+  if (!canSaveCloud.value || revision.value === null || hasCloudChanges.value) {
+    errorMessage.value = '請先儲存行程變更，再儲存 Memo。'; return
+  }
+  const operation = beginJourneyOperation(); busy.value = true; errorMessage.value = ''
   try {
     const service = await import('@/services/journeyService')
-    if (!isCurrentJourneyOperation(operation)) return
-    const envelope = await service.createJourney(journeySnapshot)
-    if (!isCurrentJourneyOperation(operation)) return
-    operation.tripId = envelope.tripId ?? envelope.journey.tripId
-    const createdJourney = pendingMemos && Object.keys(pendingMemos).length > 0
-      ? { ...envelope.journey, memos: pendingMemos }
-      : undefined
-    applyEnvelope(envelope, createdJourney)
-    if (!isCurrentJourneyOperation(operation)) return
-    statusMessage.value = '雲端草稿已建立。'
-  } catch (error) {
-    if (!isCurrentJourneyOperation(operation)) return
-    errorMessage.value = error instanceof Error ? error.message : '雲端草稿建立失敗；本機變更仍保留。'
-  } finally {
-    if (isCurrentJourneyOperation(operation)) busy.value = false
-  }
+    const envelope = await service.saveJourneyMemo(activeTripId.value, revision.value, activityId, content)
+    if (isCurrentJourneyOperation(operation)) applyEnvelope(envelope)
+  } catch (cause) { if (isCurrentJourneyOperation(operation)) errorMessage.value = cause instanceof Error ? cause.message : 'Memo 儲存失敗，請重試。' }
+  finally { if (isCurrentJourneyOperation(operation)) busy.value = false }
 }
 
 async function saveCloud(): Promise<void> {
@@ -438,22 +434,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <TripReader :journey="draft" :public-only="false" companion-mode :section="activeSection"
+  <TripReader v-if="showPublicReader" :section="activeSection" @select-section="router.replace({ query: { ...route.query, section: $event } })">
+    <template #header-actions><slot name="account-actions" /></template>
+  </TripReader>
+  <TripReader v-else :journey="draft" :public-only="false" companion-mode :section="activeSection"
     @select-section="router.replace({ query: { ...route.query, section: $event } })"
     @select-date="selectedDate = $event">
-    <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
+    <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><SharedActivityMemo :activity-id="item.id" :memo="draft.memos?.[item.id]" :can-edit="cloudLoaded && cloudCanEdit === true" :busy="busy" @save="saveActivityMemo(item.id, $event)" /><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
     <template #global-information><AuroraConditions v-if="showAurora" compact><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
     <template #header-notice><p v-if="journeyMissing" role="status">此帳號尚無可存取的冰島雲端旅程；已有旅程時請建立者邀請你。</p><p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
-    <template #header-actions><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
+    <template #header-actions><slot name="account-actions" /><span class="journey-status rounded-full px-3 py-2 text-xs">{{ cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
     <template #flights>
-      <section v-if="journeyMissing" class="flight-setup" aria-label="設定雲端旅程">
-        <h2>先建立或加入旅程</h2>
-        <p>航班選擇需要雲端旅程。若旅伴已建立，請建立者邀請你的登入帳號；若尚未建立，可在這裡建立新旅程。</p>
-        <button type="button" :disabled="busy || !!pendingEnvelope" @click="createCloud">建立新旅程</button>
-      </section>
       <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
     </template>
     <template #preparation>
+      <slot name="management" />
+      <section v-if="photoContext.preferences.value" class="my-4 rounded-xl border p-4 text-sm" aria-label="個人攝影偏好"><label><input type="checkbox" :checked="photoContext.preferences.value.showPhotography" :disabled="photoContext.busy.value" @change="photoContext.update({...photoContext.preferences.value,showPhotography:($event.target as HTMLInputElement).checked})" /> 顯示我的攝影建議</label><p v-if="photoContext.error.value" role="alert">{{photoContext.error.value}}</p></section>
       <TripPreparation :account-id="accountId" :trip-id="activeTripId" :journey="draft">
         <template #packing-list><PreparationChecklist :trip-id="activeTripId" :owner-id="packingOwnerId" :can-edit-shared="cloudCanEdit === true" embedded /></template>
       </TripPreparation>
@@ -468,10 +464,10 @@ onBeforeUnmount(() => {
     <template #day-content>
       <div v-if="selectedDay" class="compact-day">
         <div v-if="dayPlan" class="plan-b"><template v-if="editMode"><label>保住<input :value="dayPlan.keep" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('keep',($event.target as HTMLInputElement).value)" /></label><label>先刪<input :value="dayPlan.skip" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('skip',($event.target as HTMLInputElement).value)" /></label></template><template v-else><b>應變</b>　保住：{{ dayPlan.keep }} ｜ 先刪：{{ dayPlan.skip }}</template></div>
-        <ItineraryActivities :items="visibleItems" :editing="editMode" :disabled="!canEditDraft" :today="selectedDate===tripToday" @edit="editItem" @reorder="reorderItems"><template #reminder="{ item }"><p v-if="/Ice Cave|Zodiac/.test(item.name)" class="notice-line">{{ /Zodiac/.test(item.name) ? '行程時段 11:20–13:20' : '行程時段 09:00–15:00' }}；集合／報到時間依票券核對。</p><p v-if="/Reynisfjara/.test(item.name)" class="notice-line">面向海、遵守警示燈與封閉線，保留退路。</p><p v-if="/Blue Lagoon/.test(item.name) && selectedDate==='2026-11-07'" class="notice-line">泡湯與當日航班時間衝突待確認，先保留機場緩衝。</p></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" :legacy-memo="draft.memos?.[item.id]" :legacy-pending="memoDirty(item.id)" /></template></ItineraryActivities>
+        <ItineraryActivities :items="visibleItems" :editing="editMode" :disabled="!canEditDraft" :today="selectedDate===tripToday" @edit="editItem" @reorder="reorderItems"><template #reminder="{ item }"><p v-if="/Ice Cave|Zodiac/.test(item.name)" class="notice-line">{{ /Zodiac/.test(item.name) ? '行程時段 11:20–13:20' : '行程時段 09:00–15:00' }}；集合／報到時間依票券核對。</p><p v-if="/Reynisfjara/.test(item.name)" class="notice-line">面向海、遵守警示燈與封閉線，保留退路。</p><p v-if="/Blue Lagoon/.test(item.name) && selectedDate==='2026-11-07'" class="notice-line">泡湯與當日航班時間衝突待確認，先保留機場緩衝。</p></template><template #comments="{ item }"><SharedActivityMemo :activity-id="item.id" :memo="draft.memos?.[item.id]" :can-edit="cloudLoaded && cloudCanEdit === true" :busy="busy" @save="saveActivityMemo(item.id, $event)" /><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities>
         <section v-for="stay in draft.accommodations.filter(stay => stay.checkIn <= selectedDate && selectedDate < stay.checkOut)" :key="stay.id" class="compact-stay"><h3>今晚住宿</h3><p class="stay-name">{{ stay.name }}</p><p>入住時間待確認 · {{ stay.benefits.join(' · ') || '早餐、停車依訂單確認' }}</p></section>
         <AddItineraryActivity v-if="canEditDraft" :editing="editMode" :disabled="!canEditDraft" @start="editMode=true" @add="(name,location)=>addItem(selectedDate,name,location)" />
-        <details v-if="fallbackItems.length" class="alternatives"><summary>備選景點與餐廳 <span class="disclosure-label" aria-hidden="true" /></summary><ItineraryActivities :items="fallbackItems" :editing="editMode" :disabled="!canEditDraft" @edit="editItem" @reorder="reorderItems"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities></details>
+        <details v-if="fallbackItems.length" class="alternatives"><summary>備選景點與餐廳 <span class="disclosure-label" aria-hidden="true" /></summary><ItineraryActivities :items="fallbackItems" :editing="editMode" :disabled="!canEditDraft" @edit="editItem" @reorder="reorderItems"><template #comments="{ item }"><SharedActivityMemo :activity-id="item.id" :memo="draft.memos?.[item.id]" :can-edit="cloudLoaded && cloudCanEdit === true" :busy="busy" @save="saveActivityMemo(item.id, $event)" /><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities></details>
       </div>
     </template>
     <template #daily-footer><footer v-if="canEditDraft" class="edit-footer"><button type="button" :disabled="!canEditDraft" @click="editMode=!editMode">{{ editMode ? '完成編輯' : '編輯行程' }}</button></footer></template>
@@ -502,7 +498,6 @@ onBeforeUnmount(() => {
             <div class="absolute right-0 z-10 mt-2 flex min-w-40 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
               <button type="button" class="text-left" @click="localSave">儲存裝置備份</button>
               <button type="button" class="text-left" :disabled="busy" @click="loadCloud">重新載入 Supabase</button>
-              <button v-if="!cloudLoaded" type="button" class="text-left" :disabled="busy || !!pendingEnvelope" @click="createCloud">建立新旅程</button>
             </div>
           </details>
         </div>
@@ -512,4 +507,4 @@ onBeforeUnmount(() => {
   </TripReader>
 </template>
 
-<style scoped>.flight-setup{margin:0 0 16px;padding:16px;border:1px solid #dde3de;border-radius:14px;background:#fff}.flight-setup h2{font-size:15px;font-weight:650;color:#263331}.flight-setup p{margin-top:6px;font-size:13px;line-height:1.7;color:#7a8783}.flight-setup button{margin-top:12px;min-height:44px;padding:0 18px;border-radius:10px;background:#397d86;color:#fff;font-size:13px;font-weight:600}.flight-setup button:disabled{opacity:.5}.route-line,.practical{font-size:12px;line-height:1.7;color:#7a8783}.route-line{margin:0 0 4px}.practical{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:white;border:1px solid #dde3de;border-radius:9px;padding:6px 10px;margin:6px 0 0;line-height:1.55}.practical>b{color:#397d86;margin-right:4px}.practical a{color:#397d86;font-weight:600}.plan-b{font-size:12px;line-height:1.55;margin:8px 0 0;color:#7a8783}.plan-b b{color:#263331;margin-right:5px}.plan-b label{display:grid;gap:4px}.plan-b input{padding:8px;border:1px solid #ccd5cf;border-radius:8px;min-height:44px;background:white}.notice-line{font-size:12.5px;line-height:1.5;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;padding:6px 9px;border-radius:9px;margin-top:7px}.compact-stay{background:white;border:1px solid #dde3de;border-radius:14px;padding:11px 13px;margin:14px 0 0}.compact-stay h3{font-size:13px;font-weight:600}.compact-stay .stay-name{font-size:13px;color:#263331}.compact-stay p{font-size:12px;line-height:1.7;color:#64726c;margin-top:3px}.edit-footer{display:flex;justify-content:center;margin:16px 0 4px}.edit-footer button{font-size:13px;color:#7a8783;border:1px solid #dde3de;background:white;border-radius:999px;padding:8px 20px;min-height:40px}.alternatives{margin-top:14px;border-top:1px solid #dde3de}.alternatives>summary{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:12px 0 2px;cursor:pointer;list-style:none}.disclosure-label{font-size:12px;font-weight:400;color:#7a8783}.disclosure-label::after{content:"展開 ▾"}.alternatives[open] .disclosure-label::after{content:"收合 ▴"}.journey-status{padding:3px 9px;font-size:10px}</style>
+<style scoped>.route-line,.practical{font-size:12px;line-height:1.7;color:#7a8783}.route-line{margin:0 0 4px}.practical{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:white;border:1px solid #dde3de;border-radius:9px;padding:6px 10px;margin:6px 0 0;line-height:1.55}.practical>b{color:#397d86;margin-right:4px}.practical a{color:#397d86;font-weight:600}.plan-b{font-size:12px;line-height:1.55;margin:8px 0 0;color:#7a8783}.plan-b b{color:#263331;margin-right:5px}.plan-b label{display:grid;gap:4px}.plan-b input{padding:8px;border:1px solid #ccd5cf;border-radius:8px;min-height:44px;background:white}.notice-line{font-size:12.5px;line-height:1.5;color:#8a4b28;background:#fdf3ec;border:1px solid #f0d9c8;padding:6px 9px;border-radius:9px;margin-top:7px}.compact-stay{background:white;border:1px solid #dde3de;border-radius:14px;padding:11px 13px;margin:14px 0 0}.compact-stay h3{font-size:13px;font-weight:600}.compact-stay .stay-name{font-size:13px;color:#263331}.compact-stay p{font-size:12px;line-height:1.7;color:#64726c;margin-top:3px}.edit-footer{display:flex;justify-content:center;margin:16px 0 4px}.edit-footer button{font-size:13px;color:#7a8783;border:1px solid #dde3de;background:white;border-radius:999px;padding:8px 20px;min-height:40px}.alternatives{margin-top:14px;border-top:1px solid #dde3de}.alternatives>summary{display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:12px 0 2px;cursor:pointer;list-style:none}.disclosure-label{font-size:12px;font-weight:400;color:#7a8783}.disclosure-label::after{content:"展開 ▾"}.alternatives[open] .disclosure-label::after{content:"收合 ▴"}.journey-status{padding:3px 9px;font-size:10px}</style>

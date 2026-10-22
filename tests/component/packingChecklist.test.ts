@@ -72,8 +72,8 @@ describe('PreparationChecklist recovery and scope', () => {
     toggleItem.mockResolvedValue(undefined)
     const wrapper = mount(PreparationChecklist, { props: { tripId: '00000000-0000-0000-0000-000000000001', ownerId: 'member-a', embedded: true } })
     await flushPromises()
-    expect(wrapper.findAll('details')).toHaveLength(5)
-    expect(wrapper.find('.embedded-category summary').text()).toContain('出發前')
+    expect(wrapper.findAll('details')).toHaveLength(4)
+    expect(wrapper.find('.embedded-category summary').text()).toContain('必帶')
     expect(wrapper.get('#packing-heading').text()).toContain('0/1')
     expect(wrapper.text()).not.toContain('共用')
     expect(wrapper.find('.embedded-item .embedded-kind').exists()).toBe(false)
@@ -99,24 +99,24 @@ describe('PreparationChecklist recovery and scope', () => {
     wrapper.unmount()
   })
 
-  it('shows one 49-item total for a local trip', async () => {
+  it('shows one 45-item total for a local trip', async () => {
     const wrapper = mount(PreparationChecklist, { props: { tripId: 'local-trip', ownerId: 'member-a', embedded: true } })
     await flushPromises()
-    expect(wrapper.get('#packing-heading').text()).toContain('0/49')
-    expect(wrapper.findAll('details')).toHaveLength(5)
+    expect(wrapper.get('#packing-heading').text()).toContain('0/45')
+    expect(wrapper.findAll('details')).toHaveLength(4)
     wrapper.unmount()
   })
 
-  it('adds missing departure checks without resetting a cached completion', async () => {
+  it('adds missing packing items without resetting a cached completion', async () => {
     localStorage.setItem('travelmate:packing:local-trip:member-a', JSON.stringify([{
       id: 'local-0-0', tripId: 'local-trip', category: '必帶', title: '家裡鑰匙', isShared: true,
       ownerId: null, orderIndex: 0, completed: true,
     }]))
     const wrapper = mount(PreparationChecklist, { props: { tripId: 'local-trip', ownerId: 'member-a', embedded: true } })
     await flushPromises()
-    expect(wrapper.get('#packing-heading').text()).toContain('1/49')
+    expect(wrapper.get('#packing-heading').text()).toContain('1/45')
     expect((wrapper.get('input[aria-label="家裡鑰匙"]').element as HTMLInputElement).checked).toBe(true)
-    expect(wrapper.findAll('.embedded-category').map(category => category.find('summary').text()).at(0)).toContain('出發前')
+    expect(wrapper.findAll('.embedded-category').map(category => category.find('summary').text()).at(0)).toContain('必帶')
     wrapper.unmount()
   })
 })

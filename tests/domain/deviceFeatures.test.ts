@@ -18,7 +18,8 @@ describe('Opt-in device features', () => {
     expect(notificationSupport({ ...supported, push: false })).toBe('unsupported')
   })
   it('uses the supplied six labels without binding anyone to an account', () => {
-    expect([1,2,3,4,5,6].map(n => icelandMemberName(`member-${n}`))).toEqual(['U', 'jinyo', 'Kevin Ho か', 'Rosanne 🌹', 'YU', '思辰'])
+    expect(icelandMemberName('member-1')).toBe('姓名待設定')
+    expect(icelandMemberName('member-1', 'U')).toBe('U')
     expect(icelandMemberName('other', '自訂姓名')).toBe('自訂姓名')
   })
 })

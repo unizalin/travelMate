@@ -31,3 +31,18 @@ describe('PhotographySpots', () => {
     expect(wrapper.text()).toContain('光圈與 ISO 未提供')
   })
 })
+
+it('keeps phone and camera favorites in the signed-in member preference scope', async () => {
+  const { ref } = await import('vue')
+  const { vi } = await import('vitest')
+  const { journeyPhotoKey } = await import('@/services/journeyPhotoContext')
+  const update=vi.fn()
+  const preferences=ref({tripId:'trip',memberId:'member-2',showPhotography:true,phoneSpotIds:[],cameraSpotIds:[],updatedAt:null})
+  const wrapper=mount(PhotographySpots,{props:{item},global:{provide:{[journeyPhotoKey]:{preferences,busy:ref(false),error:ref(''),update}}}})
+  await wrapper.findAll('button').find(button=>button.text().includes('收藏手機'))!.trigger('click')
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({memberId:'member-2',phoneSpotIds:['photo-1'],cameraSpotIds:[]}))
+  preferences.value.showPhotography=false
+  await wrapper.vm.$nextTick()
+  expect(wrapper.find('details').exists()).toBe(false)
+  wrapper.unmount()
+})
