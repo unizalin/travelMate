@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light" />
+  <meta name="color-scheme" content="light dark" />
   <meta name="robots" content="noindex,nofollow" />
   <title>TravelMate · 倫敦與冰島｜設計預覽</title>
   <link rel="stylesheet" href="styles.css" />
@@ -12,9 +12,9 @@
 </head>
 <body>
   <a class="skip" href="#main">跳至內容</a>
-  <div class="review-bar"><div class="review-inner"><span><span class="review-dot"></span> 互動原型 · 不會儲存旅程資料</span><label>預覽身分 <select id="role-select" aria-label="預覽身分"><option value="public">公開訪客</option><option value="member">受邀旅伴</option><option value="admin">建立者</option></select></label></div></div>
+  <div class="review-bar"><div class="review-inner"><span><span class="review-dot"></span> 互動原型 · 不會儲存旅程資料</span></div></div>
   <header class="site-header"><div class="header-inner"><button class="brand" data-view="itinerary" aria-label="TravelMate 行程首頁"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28s10-8.1 10-16a10 10 0 0 0-20 0c0 7.9 10 16 10 16Z"/><path d="m11 14 5-6 5 6M16 8v13"/></svg><span>travelmate<span class="brand-dot">.</span></span></button><nav id="desktop-nav" class="desktop-nav" aria-label="主要導覽"></nav><button id="account-button" class="account-button" aria-label="開啟我的帳號"></button></div></header>
-  <main id="main" class="page" tabindex="-1"></main>
+  <div id="role-status"></div><main id="main" class="page" tabindex="-1"></main>
   <nav id="mobile-nav" class="mobile-nav" aria-label="主要導覽"></nav>
   <div id="announcement" class="sr-only" aria-live="polite"></div>
   <dialog id="sheet" aria-labelledby="sheet-title"><div id="sheet-content"></div></dialog>

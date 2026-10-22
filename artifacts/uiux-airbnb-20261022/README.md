@@ -37,3 +37,6 @@ node_modules/.bin/vite-node scripts/prepare-uiux-prototype.ts
 - screenshots/desktop-itinerary.png：1280×900 桌面行程與側欄。
 
 正式 src、資料庫、邀請與已上線網站均未修改。未重跑主／分享建置，因本輪沒有改正式應用程式。原型審閱後再接入 Vue 與既有 RPC，屆時重新做完整功能、公開隔離與部署驗證。
+
+
+2026-10-22 修改清單已實作；詳見 docs/handoffs/2026-10-22-uiux-prototype-revisions.md。角色預覽移到「我的」，新增已登入未加入。產品主題只跟隨系統；node artifacts/uiux-airbnb-20261022/prepare-qa.mjs 可重建僅供QA的強制淺深色頁面。最新16組截圖在screenshots/revision。
