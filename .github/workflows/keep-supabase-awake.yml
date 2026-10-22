@@ -14,8 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST endpoint
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl -sf --max-time 30 \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            "https://yoyvpgbahhnqbuhcarnh.supabase.co/rest/v1/" > /dev/null
+          status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "https://yoyvpgbahhnqbuhcarnh.supabase.co/rest/v1/")
+          echo "Supabase HTTP status: $status"
+          test "$status" = "200"
           echo "Supabase ping OK at $(date -u)"
