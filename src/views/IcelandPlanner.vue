@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ICELAND_TRAVEL_MAP_URL } from '@/data/icelandTravelMap'
 import { computed, onBeforeUnmount, onMounted, ref, watch, type WatchStopHandle } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -34,6 +35,8 @@ import ActivityComments from '@/components/trip/ActivityComments.vue'
 import AuroraReminderSettings from '@/components/trip/AuroraReminderSettings.vue'
 import AuroraConditions from '@/components/trip/AuroraConditions.vue'
 import JourneyRoster from '@/components/trip/JourneyRoster.vue'
+import MemberReminderPrompt from '@/components/trip/MemberReminderPrompt.vue'
+import { useDeviceReminders } from '@/composables/useDeviceReminders'
 import JourneyMyPage from '@/components/trip/JourneyMyPage.vue'
 import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 
@@ -61,6 +64,7 @@ const revision = ref<number | null>(null)
 const cloudCanEdit = ref<boolean | null>(null)
 const cloudLoaded = ref(false)
 const cloudAuthReady = ref(false)
+useDeviceReminders({accountId,member:computed(()=>cloudAuthReady.value && cloudLoaded.value && accountId.value!=='local-preview')})
 const localConflictKept = ref(false)
 const busy = ref(false)
 const statusMessage = ref('')
@@ -410,6 +414,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <MemberReminderPrompt :itinerary="activeSection==='itinerary'" @aurora="router.replace({query:{section:'itinerary',aurora:String(Date.now())}})" />
   <TripReader v-if="showPublicReader" :section="activeSection" @select-section="router.replace({ query: { ...route.query, section: $event } })">
     <template #header-actions><slot name="account-actions" /></template>
   </TripReader>
@@ -417,7 +422,7 @@ onBeforeUnmount(() => {
     @select-section="router.replace({ query: { ...route.query, section: $event } })"
     @select-date="selectedDate = $event">
     <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
-    <template #global-information><AuroraConditions compact :open-reminders="String(route.query.aurora || '')"><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
+    <template #global-information><AuroraConditions compact :open-reminders="String(route.query.aurora || '')"><template #reminders><AuroraReminderSettings :account-id="accountId" /></template></AuroraConditions></template>
     <template #header-notice><p class="private-status">以 {{identityName}} 瀏覽</p><p v-if="journeyMissing" role="status">此帳號尚無可存取的冰島雲端旅程；已有旅程時請建立者邀請你。</p><p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
     <template #header-actions><slot name="account-actions" /></template>
     <template #flights>
@@ -439,7 +444,7 @@ onBeforeUnmount(() => {
       <p v-if="selectedDay" class="route-line">{{ handbookDays[selectedDate]?.route ?? visibleItems.map(item => item.name).join(' → ') }}</p>
     </template>
     <template #day-practical>
-      <div v-if="selectedDay" class="practical"><b>沿途實用</b> <span>{{ handbookDays[selectedDate]?.fuel }}</span> · <span>廁所：沿途休息站／遊客中心（開放待確認）</span> · <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((selectedDate==='2026-10-31'?'Grundarfjörður':selectedDate==='2026-11-05'?'Vík':visibleItems[0]?.location||'Reykjavík')+' petrol station')}`" target="_blank" rel="noreferrer">附近加油站 ↗</a> · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">今日路況・攝影機 ↗</a> · <a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is ↗</a></div>
+      <div v-if="selectedDay" class="practical"><b>沿途實用</b> <span>{{ handbookDays[selectedDate]?.fuel }}</span> · <span>廁所：沿途休息站／遊客中心（開放待確認）</span> · <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((selectedDate==='2026-10-31'?'Grundarfjörður':selectedDate==='2026-11-05'?'Vík':visibleItems[0]?.location||'Reykjavík')+' petrol station')}`" target="_blank" rel="noreferrer">附近加油站 ↗</a> · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">今日路況・攝影機 ↗</a> · <a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is ↗</a> · <a :href="ICELAND_TRAVEL_MAP_URL" target="_blank" rel="noreferrer">冰島旅行資料庫（Google 地圖） ↗</a></div>
     </template>
     <template #daily-start><MorningChecks :date="selectedDate" :account-id="accountId" :trip-id="activeTripId" /></template>
     <template #day-content>

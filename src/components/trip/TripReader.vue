@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ICELAND_TRAVEL_MAP_URL } from '@/data/icelandTravelMap'
 import { computed, onMounted, onUnmounted, ref, useSlots, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { buildDailyTimeline, type DailyTimeline, type TripJourney } from '@/domain/tripJourney'
@@ -196,7 +197,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <template v-else>
         <slot name="route-summary"><p v-if="selectedDay" class="route-line">{{ publicActivities.filter(item => item.status !== 'fallback').map(item => item.name).join(' → ') }}</p></slot>
         <DayConditions v-if="selectedDay" :date="selectedDay.date" :activity-names="selectedDay.events.filter(event => event.type === 'item').map(event => event.name)">
-          <template #after-weather><p v-if="publicOnly && selectedDay && handbookDays[selectedDay.date]" class="practical-line"><b>沿途實用</b> {{ handbookDays[selectedDay.date].fuel }} · 廁所請於遊客中心或停車場確認開放 · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">查看即時路況 ↗</a></p><p v-if="selectedDay && publicDayServices[selectedDay.date]" class="services-line"><b>沿途服務</b><a v-for="service in publicDayServices[selectedDay.date]" :key="`${service.kind}-${service.label}`" :href="publicServiceMapsUrl(service.query)" target="_blank" rel="noreferrer">{{ service.kind === 'fuel' ? '加油' : '廁所' }}：{{ service.label }} ↗</a></p><slot name="day-practical" /></template>
+          <template #after-weather><p v-if="publicOnly && selectedDay && handbookDays[selectedDay.date]" class="practical-line"><b>沿途實用</b> {{ handbookDays[selectedDay.date].fuel }} · 廁所請於遊客中心或停車場確認開放 · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">查看即時路況 ↗</a> · <a :href="ICELAND_TRAVEL_MAP_URL" target="_blank" rel="noreferrer">冰島旅行資料庫（Google 地圖） ↗</a></p><p v-if="selectedDay && publicDayServices[selectedDay.date]" class="services-line"><b>沿途服務</b><a v-for="service in publicDayServices[selectedDay.date]" :key="`${service.kind}-${service.label}`" :href="publicServiceMapsUrl(service.query)" target="_blank" rel="noreferrer">{{ service.kind === 'fuel' ? '加油' : '廁所' }}：{{ service.label }} ↗</a></p><slot name="day-practical" /></template>
           <template #checks><slot name="daily-start" /></template>
         </DayConditions>
         <slot name="day-content">

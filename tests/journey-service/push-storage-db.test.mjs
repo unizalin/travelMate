@@ -7,6 +7,7 @@ test('production push tables are backend-only and lease serializes all workers',
  try{
   await db.exec('CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE TABLE auth.users(id uuid PRIMARY KEY);')
   await db.exec(await readFile(new URL('../../supabase/migrations/20261022070000_tripbook_push_storage.sql',import.meta.url),'utf8'))
+  await db.exec(await readFile(new URL('../../supabase/migrations/20261023010000_tripbook_push_trip_scope.sql',import.meta.url),'utf8'))
   for(const role of ['anon','authenticated']){
    await db.exec(`SET ROLE ${role}`)
    await assert.rejects(db.query('SELECT * FROM public.tripbook_push_subscriptions'),error=>error.code==='42501')

@@ -1,3 +1,4 @@
+import { tripNightCity, TRIP_PUSH_EXPIRY } from '../shared/aurora-trip.mjs'
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs'
@@ -6,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { config } from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
-import { CITIES, validSubscription, checkSubscribers, notificationNight, nightExpiry } from './lib/aurora-push.mjs'
+import { CITIES, validSubscription, checkSubscribers, notificationNight } from './lib/aurora-push.mjs'
 
 export function makePushHandler({origin,publicKey,records,authorize,save,now=()=>new Date()}) {
  return async (req,res)=>{
@@ -27,24 +28,25 @@ export function makePushHandler({origin,publicKey,records,authorize,save,now=()=
    const id=createHash('sha256').update(body.endpoint).digest('hex')
    const existing=records.find(record=>record.id===id)
    if (existing&&existing.userId!==user.id) return reply(403,{error:'這部裝置的訂閱屬於另一個帳號，請先從原帳號關閉。'})
-   if (path.endsWith('/status')) return reply(200,{enabled:Boolean(existing?.enabled&&Date.parse(existing.expiresAt)>now().getTime()),cityId:existing?.cityId,expiresAt:existing?.expiresAt})
+   if (path.endsWith('/status')) return reply(200,{enabled:Boolean(existing?.enabled&&Date.parse(existing.expiresAt)>now().getTime()),scope:existing?.scope || 'tonight',cityId:existing?.scope==='trip'?tripNightCity(notificationNight(now())):existing?.cityId,expiresAt:existing?.expiresAt})
    if (path.endsWith('/unsubscribe')) {if(existing){const previous=structuredClone(existing);existing.enabled=false;existing.subscription=null;try{await save()}catch(error){Object.assign(existing,previous);throw error}}return reply(200,{enabled:false})}
-   if (!Object.hasOwn(CITIES,body.cityId)||!validSubscription(body.subscription)||body.subscription.endpoint!==body.endpoint) return reply(400,{error:'通知地區或訂閱資料無效。'})
+   if (!validSubscription(body.subscription)||body.subscription.endpoint!==body.endpoint) return reply(400,{error:'通知地區或訂閱資料無效。'})
    const active=records.filter(record=>record.userId===user.id&&record.enabled&&Date.parse(record.expiresAt)>now().getTime())
    if (!existing&&active.length>=5) return reply(429,{error:'已達裝置上限，請先關閉不使用的裝置。'})
+   if (now().getTime()>=Date.parse(TRIP_PUSH_EXPIRY)) return reply(400,{error:'冰島段極光提醒期間已結束。'})
    const nightDate=notificationNight(now())
-   const entry={id,userId:user.id,cityId:body.cityId,nightDate,expiresAt:nightExpiry(nightDate),subscription:{endpoint:body.endpoint,keys:{p256dh:body.subscription.keys.p256dh,auth:body.subscription.keys.auth}},enabled:true,lastSentNight:existing?.lastSentNight??null,attempts:existing?.nightDate===nightDate?(existing.attempts??0):0}
+   const entry={id,userId:user.id,scope:'trip',cityId:tripNightCity(nightDate)||'reykjavik',nightDate,expiresAt:TRIP_PUSH_EXPIRY,subscription:{endpoint:body.endpoint,keys:{p256dh:body.subscription.keys.p256dh,auth:body.subscription.keys.auth}},enabled:true,lastSentNight:existing?.lastSentNight??null,attempts:existing?.nightDate===nightDate?(existing.attempts??0):0}
    const previous=existing?structuredClone(existing):null
    if(existing)Object.assign(existing,entry);else records.push(entry)
    try { await save() } catch(error) { if(existing)Object.assign(existing,previous);else records.splice(records.indexOf(entry),1);throw error }
-   return reply(200,{enabled:true,cityId:entry.cityId,expiresAt:entry.expiresAt})
+   return reply(200,{enabled:true,scope:'trip',cityId:tripNightCity(nightDate),expiresAt:entry.expiresAt})
   } catch { return reply(500,{error:'通知設定暫時無法儲存，請重試。'}) }
  }
 }
 export async function startPushServer() {
  config({path:'.env',quiet:true});config({path:'.env.local',override:true,quiet:true})
  const origin=process.env.AURORA_APP_ORIGIN||'http://127.0.0.1:5174'
- const supabaseUrl=process.env.VITE_SUPABASE_URL, anonKey=process.env.VITE_SUPABASE_ANON_KEY, tripId=process.env.VITE_ICELAND_TRIP_ID
+ const supabaseUrl=process.env.VITE_SUPABASE_URL, anonKey=process.env.VITE_SUPABASE_ANON_KEY, tripId=process.env.VITE_ICELAND_TRIP_ID?.trim()
  if(!supabaseUrl||!anonKey||!tripId)throw new Error('Missing local authentication configuration; notification service not started.')
  const folder=resolve(process.env.AURORA_PUSH_DATA_DIR||'.local/aurora-push')
  mkdirSync(folder,{recursive:true,mode:0o700})
@@ -62,7 +64,7 @@ export async function startPushServer() {
   const client=createClient(supabaseUrl,anonKey,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${token}`},fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(8000)})}})
   const {data,error}=await client.auth.getUser(token)
   if(error||!data.user)return null
-  if(requireTrip){const result=await client.rpc('tripbook_load_journey',{p_trip_id:tripId});if(result.error)return null}
+  if(requireTrip){const result=await client.rpc('tripbook_can_read',{p_trip_id:tripId});if(result.error||result.data!==true)return null}
   return {id:data.user.id}
  }
  const handler=makePushHandler({origin,publicKey:keys.publicKey,records,authorize,save})

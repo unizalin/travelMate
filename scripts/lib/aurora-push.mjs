@@ -1,3 +1,4 @@
+import { tripNightCity } from '../../shared/aurora-trip.mjs'
 export const CITIES = {
  reykjavik:{label:'Reykjavík',lat:64.1466,lon:-21.9426}, vik:{label:'Vík',lat:63.4186,lon:-19.006}, jokulsarlon:{label:'Jökulsárlón',lat:64.0485,lon:-16.1794},
  snaefellsnes:{label:'Snæfellsnes／教堂山',lat:64.924,lon:-23.263}, golden:{label:'黃金圈',lat:64.327,lon:-20.119}, hofn:{label:'Höfn',lat:64.2539,lon:-15.2082}, keflavik:{label:'Reykjanes／Keflavík',lat:64.0049,lon:-22.5624},
@@ -46,6 +47,12 @@ export async function checkSubscribers({records,now=new Date(),load=loadSources,
  for (const entry of records) {
   if (!entry.enabled) continue
   if (Date.parse(entry.expiresAt)<=now.getTime()) {entry.enabled=false;entry.subscription=null;await save();continue}
+  if (entry.scope==='trip') {
+   const night=notificationNight(now),city=tripNightCity(night)
+   if (!city) continue
+   if (entry.nightDate!==night) {entry.nightDate=night;entry.attempts=0}
+   entry.cityId=city
+  }
   if (!entry.subscription||entry.lastSentNight===entry.nightDate||(entry.attempts??0)>=3) continue
   const key=`${entry.cityId}/${entry.nightDate}`
   try {
@@ -59,7 +66,7 @@ export async function checkSubscribers({records,now=new Date(),load=loadSources,
    } catch(error) {
     entry.attempts=(entry.attempts??0)+1
     if (error?.statusCode===404||error?.statusCode===410) {entry.enabled=false;entry.subscription=null}
-    else { entry.lastSentNight=null; if(entry.attempts>=3){entry.enabled=false;entry.subscription=null} }
+    else { entry.lastSentNight=null; if(entry.attempts>=3 && entry.scope!=='trip'){entry.enabled=false;entry.subscription=null} }
     await save()
    }
   } catch { /* A source/storage failure never becomes an aurora alert. */ }

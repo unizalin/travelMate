@@ -22,7 +22,7 @@ export default async function handler(req,res) {
   const client=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${token}`},fetch:timedFetch}})
   const {data,error}=await client.auth.getUser(token)
   if(error||!data.user)return null
-  if(member){const access=await client.rpc('tripbook_can_read',{p_trip_id:env.VITE_ICELAND_TRIP_ID});if(access.error||access.data!==true)return null}
+  if(member){const access=await client.rpc('tripbook_can_read',{p_trip_id:env.VITE_ICELAND_TRIP_ID.trim()});if(access.error||access.data!==true)return null}
   return {id:data.user.id}
  }
  webpush.setVapidDetails(env.AURORA_PUSH_CONTACT,env.AURORA_VAPID_PUBLIC_KEY,env.AURORA_VAPID_PRIVATE_KEY)

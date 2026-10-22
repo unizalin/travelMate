@@ -20,14 +20,14 @@ const offlineStatus=computed(()=>{void offlineRevision.value;try{const value=loc
    <button v-if="packingRemaining" class="task-row" @click="emit('preparation')"><span>行李尚有 {{packingRemaining}} 項未完成</span><span aria-hidden="true">→</span></button>
    <button v-if="device.todo.value.install" class="task-row" @click="device.help.value=true"><span>把 travelMate 加入主畫面<small>離線行程與通知需要</small></span><span aria-hidden="true">→</span></button>
    <div v-if="device.help.value && device.todo.value.install" class="install-help"><p>iPhone：用 Safari 開啟 → 分享按鈕 → 加入主畫面 → 改從主畫面圖示開啟。LINE 內建瀏覽器無法安裝，請改用 Safari。</p><p>Android／Chrome：使用瀏覽器選單的「安裝應用程式」或「加入主畫面」。</p><button v-if="device.canInstall.value" @click="device.install">安裝 travelMate</button><button @click="device.help.value=false">收合說明</button></div>
-   <button v-if="device.todo.value.aurora" class="task-row" @click="emit('aurora')"><span>開啟今晚極光提醒<small>只對今晚有效，每晚重新開啟</small></span><span aria-hidden="true">→</span></button>
+   <button v-if="device.todo.value.aurora" class="task-row" @click="emit('aurora')"><span>開啟整趟極光提醒<small>冰島段每晚自動對應城市，11/7 中午到期</small></span><span aria-hidden="true">→</span></button>
   </section>
   <section class="my-section"><h2>我的航班</h2><button class="task-row" @click="emit('flights')"><span>{{flightNames.join('、') || '尚未選擇航班'}}<small>查看航段與同行名單</small></span><span aria-hidden="true">→</span></button></section>
   <details class="my-section" @toggle="ledgerOpen=($event.target as HTMLDetailsElement).open"><summary><span>旅費記帳<small>共同支出、分帳與已還款紀錄</small></span></summary><JourneyLedger v-if="ledgerOpen" :trip-id="tripId" :account-id="accountId" :members="journey.members" :self-member-id="selfMemberId" :disabled="offline || !canEdit" /></details>
   <slot name="management" />
   <section class="my-section"><h2>帳號與裝置</h2><slot name="account" />
    <details class="device-row"><summary><span>離線行程<small>{{offlineStatus}}</small></span></summary><TripPreparation :account-id="accountId" :trip-id="tripId" :journey="journey" account-tools @offline-updated="offlineRevision++" /></details>
-   <details class="device-row"><summary><span>通知提醒<small>{{device.status.value}}</small></span></summary><AuroraReminderSettings city-id="reykjavik" :account-id="accountId" /></details>
+   <details class="device-row"><summary><span>通知提醒<small>{{device.status.value}}</small></span></summary><AuroraReminderSettings :account-id="accountId" /></details>
   </section>
  </div>
 </template>

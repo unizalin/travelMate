@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ICELAND_TRAVEL_MAP_URL } from '@/data/icelandTravelMap'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { photoChecklist } from '@/data/icelandHandbook'
 import type { TripJourney } from '@/domain/tripJourney'
@@ -25,6 +26,7 @@ async function download(){offlineBusy.value=true;offlineState.value='正在下�
   <div class="preparation">
     <template v-if="!accountTools">
     <section class="emergency"><h2>緊急資訊</h2><p class="emergency-number">冰島緊急電話 <a href="tel:112">112</a></p><p><a href="https://www.112.is/en/112-appid" target="_blank" rel="noreferrer">112 Iceland App ↗</a>（可送定位，出發前先安裝）</p><p>租車公司 24h 救援：待補</p><p>最近醫院：待補 · <a href="https://www.google.com/maps/search/?api=1&query=hospital+near+me" target="_blank" rel="noreferrer">查最近醫院 ↗</a> · 同行者電話：待補</p></section>
+    <section><h2>出發前先存地圖</h2><p>出發前把這張地圖存到自己的 Google 帳號，並在 Google Maps 下載冰島離線地圖。</p><p><a :href="ICELAND_TRAVEL_MAP_URL" target="_blank" rel="noreferrer">冰島旅行資料庫（Google 地圖） ↗</a></p></section>
     <section><h2>已確認預約 <small>票面細節仍須核對</small></h2><article class="reservation"><b>11/4 冰洞</b><span>Blue Ice Cave · 行程 09:00–15:00<br /><strong class="warning">集合／報到時間依票券核對</strong></span></article><article class="reservation"><b>11/5 Zodiac</b><span>Jökulsárlón · 行程 11:20–13:20<br /><strong class="warning">集合／報到時間依票券核對</strong></span></article><article class="reservation"><b>航班與其他行程</b><span>依「我的航班」選擇<br />Sky Lagoon／11/7 Blue Lagoon 訂位與票券待核對</span></article></section>
     <section><h2>ISK 即時匯率</h2><nav class="official"><a href="https://safetravel.is/" target="_blank" rel="noreferrer">SafeTravel 警示 ↗</a><a href="https://umferdin.is/en" target="_blank" rel="noreferrer">Umferðin 路況 ↗</a><a href="https://en.vedur.is/" target="_blank" rel="noreferrer">Veður 天氣 ↗</a><a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is 攝影機 ↗</a></nav><div class="currency"><label>ISK<input v-model.number="isk" type="number" min="0" step="1" /></label><span>⇄</span><label>TWD<input :value="twd" type="number" min="0" step="0.01" :disabled="rate===null" @input="isk=rate?Number(($event.target as HTMLInputElement).value)/rate:0" /></label></div><button type="button" :disabled="loadingRate" @click="loadRate">{{ loadingRate?'讀取中…':'更新匯率' }}</button><p v-if="rateError" role="status" class="muted">{{ rateError }}</p><p v-if="rate" class="muted">1 ISK ≈ {{ rate }} TWD · {{ rateDate }} · 僅供估算</p><a class="muted" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by ExchangeRate-API ↗</a></section>
     <section v-if="$slots['packing-list']" class="packing-section"><slot name="packing-list" /></section>

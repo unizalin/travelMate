@@ -4,9 +4,9 @@ import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { makePushHandler } from '../../scripts/aurora-push-server.mjs'
 const subscription={endpoint:'https://fcm.googleapis.com/fcm/send/test',keys:{p256dh:Buffer.concat([Buffer.from([4]),Buffer.alloc(64)]).toString('base64url'),auth:Buffer.alloc(16).toString('base64url')}}
-async function fixture(t,{failSave=false}={}) {
+async function fixture(t,{failSave=false,now='2026-10-30T20:00:00Z'}={}) {
  const records=[]
- const server=createServer(makePushHandler({origin:'http://app.test',publicKey:'public-test-key',records,authorize:async(token,trip)=>token==='member'?{id:'a'}:token==='other'&&!trip?{id:'b'}:null,save:async()=>{if(failSave)throw new Error('disk full')},now:()=>new Date('2026-10-30T20:00:00Z')}))
+ const server=createServer(makePushHandler({origin:'http://app.test',publicKey:'public-test-key',records,authorize:async(token,trip)=>token==='member'?{id:'a'}:token==='other'&&!trip?{id:'b'}:null,save:async()=>{if(failSave)throw new Error('disk full')},now:()=>new Date(now)}))
  server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>{server.closeAllConnections();server.close()})
  const url=`http://127.0.0.1:${server.address().port}/api/aurora-notifications`
  const post=(action,token='member',data={endpoint:subscription.endpoint,subscription,cityId:'vik'},origin='http://app.test')=>fetch(`${url}/${action}`,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{ }),origin},body:JSON.stringify(data)})
@@ -32,4 +32,17 @@ test('does not leave an active in-memory registration when storage fails',async 
  const {post,records}=await fixture(t,{failSave:true})
  assert.equal((await post('subscribe')).status,500)
  assert.equal(records.some(record=>record.enabled),false)
+})
+
+test('registration is trip-wide before departure, status changes city by date, and expiry rejects renewal',async t=>{
+ const {post,records}=await fixture(t,{now:'2026-10-23T20:00:00Z'})
+ const enabled=await (await post('subscribe','member',{endpoint:subscription.endpoint,subscription})).json()
+ assert.equal(enabled.scope,'trip');assert.equal(enabled.expiresAt,'2026-11-07T12:00:00.000Z')
+ assert.equal(enabled.cityId,null);assert.equal(records[0].scope,'trip')
+ assert.equal((await (await post('status')).json()).scope,'trip')
+ const ended=await fixture(t,{now:'2026-11-07T12:00:00Z'})
+ assert.equal((await ended.post('subscribe')).status,400);assert.equal(ended.records.length,0)
+ const active=await fixture(t,{now:'2026-11-02T20:00:00Z'})
+ await active.post('subscribe')
+ assert.equal((await (await active.post('status')).json()).cityId,'vik')
 })
