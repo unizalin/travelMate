@@ -170,7 +170,7 @@ watch(() => [props.ownerId, props.canEditShared, props.tripId], () => { void loa
     <template v-if="embedded">
       <div class="embedded-heading">
         <h2 id="packing-heading">行前清單 <small>{{ completedCount }}/{{ items.length }}</small></h2>
-        <p>五類項目分開勾選；個人新增項目只會在自己的帳號出現。</p>
+        <p>四類項目分開勾選；個人新增項目只會在自己的帳號出現。</p>
       </div>
       <p v-if="error" class="embedded-error" role="status">{{ error }}</p>
       <p v-if="loading" class="embedded-empty">載入行李清單…</p>
@@ -206,7 +206,7 @@ watch(() => [props.ownerId, props.canEditShared, props.tripId], () => { void loa
     </template>
     <template v-else>
     <div class="flex flex-wrap items-start justify-between gap-4">
-      <div><h2 id="packing-heading" class="text-sm font-semibold text-[#263331]">行前清單</h2><p class="mt-1 text-xs leading-5 text-[#7A8783]">五類項目分開勾選；個人新增項目只會在自己的帳號出現。</p></div>
+      <div><h2 id="packing-heading" class="text-sm font-semibold text-[#263331]">行前清單</h2><p class="mt-1 text-xs leading-5 text-[#7A8783]">四類項目分開勾選；個人新增項目只會在自己的帳號出現。</p></div>
       <div class="packing-progress rounded-2xl bg-teal-50 px-4 py-3 text-right"><span class="block text-2xl font-black text-teal-800">{{ progress }}%</span><span class="text-[10px] font-bold text-teal-700">{{ completedCount }}/{{ items.length }} 已完成</span></div>
     </div>
     <p v-if="error" class="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900" role="status">{{ error }}</p>

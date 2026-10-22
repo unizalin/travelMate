@@ -22,6 +22,7 @@ SELECT set_config('request.jwt.claims',json_build_object('sub',(SELECT owner_id 
 UPDATE fixture SET token=public.tripbook_rotate_invite();
 DO $$ BEGIN
  IF NOT (public.tripbook_admin_state()->>'isAdmin')::boolean THEN RAISE EXCEPTION 'owner_no_admin'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(public.tripbook_admin_state()->'members') m WHERE jsonb_typeof(m->'isOwner') <> 'boolean') THEN RAISE EXCEPTION 'admin_unclaimed_status_not_boolean'; END IF;
 END $$;
 SELECT set_config('request.jwt.claims','{"sub":"10000000-0000-0000-0000-000000000002","role":"authenticated"}',true);
 DO $$ BEGIN
