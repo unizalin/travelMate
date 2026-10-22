@@ -17,9 +17,10 @@
     "test:watch": "vitest",
     "test:db-contract": "node --test tests/journey-service/migration-contract.test.mjs",
     "test:public-build": "node --test tests/public-build/check-public-build.test.mjs",
-    "test:all": "npm run test && npm run test:public-build && npm run test:db-contract && npm run test:notifications",
+    "test:all": "npm run test && npm run test:public-build && npm run test:db-contract && npm run test:ledger-db && npm run test:notifications",
     "dev:notifications": "node scripts/aurora-push-server.mjs",
-    "test:notifications": "node --test tests/notifications/*.test.mjs"
+    "test:notifications": "node --test tests/notifications/*.test.mjs",
+    "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -44,6 +45,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@types/dompurify": "^3.0.5",
     "@types/leaflet": "^1.9.21",
     "@types/qrcode": "^1.5.6",
