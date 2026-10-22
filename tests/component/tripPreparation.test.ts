@@ -39,6 +39,7 @@ describe('preparation checklist presentation', () => {
       props: { accountId: 'account-a', tripId: 'fixture', journey: icelandJourney },
       slots: { 'packing-list': '<div data-testid="packing-list"><h2>行前清單 <small>0/45</small></h2></div>' },
     })
+    expect(wrapper.text()).toContain('最近醫院：待補')
     const sections = wrapper.findAll('section')
     expect(sections[3].classes()).toContain('packing-section')
     expect(sections[3].text()).toContain('行前清單 0/45')

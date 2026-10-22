@@ -9,7 +9,7 @@
 - 正式站： https://travel-mate-nine-rho.vercel.app
 - 模型完整名稱／推理等級：環境未提供，無法核實。全程單一代理，未啟動額外審查模型。
 - 主專案既有未提交變更與原有未追蹤 keepalive 交接檔案均保留，未搬動或納入本輪提交。
-- 部署狀態：程式已完成本機驗證，待乾淨整合 worktree 合併、push 與 Vercel 外部驗收；後續結果追加於本文末尾。
+- 部署狀態：已合併 main 並部署成功，外部 bundle／公開隔離／Veður JSON 已驗證；登入版互動驗收因 Work 瀏覽器存取停用而待補。
 
 ## 定案對照：第六節
 
@@ -72,3 +72,16 @@
 - [ ] 真機離線後重開已下載行程、恢復連線重新確認權限。
 - [ ] 390px 真機四個分頁、展開留言與拍攝建議、選班、個人勾選。
 - [ ] 依實際票券補冰洞、Zodiac、Sky Lagoon、11/7 Blue Lagoon 集合／報到資訊；醫院與租車救援資料待補，未編造。
+
+## 正式部署與外部驗證結果
+
+- 實作提交：`f92aa8a490c59144e87251874fc4225384dde1b4`。
+- 乾淨整合 worktree：`/Users/unizalin/.codex/worktrees/travelmate-design-integration-20261022/travelMate`；分支 `codex/tripbook-design-integration-20261022`。
+- main 初次整合提交：`bbddd0300cc222b556a09ffd629a005f008974b2`，已由正常 push 更新 main；GitHub 的 Vercel 狀態為 success，既有部署鏈與 Protection 設定沒有變動。
+- 整合工作區重新執行全部指定關卡通過。依賴使用獨立副本；曾被公開模組圖拒絕的跨工作區依賴連結已移出，沒有放寬隔離檢查。
+- 外部無登入請求確認正式站為新版本：HTML 為 light；實際引用的 `IcelandJourney`、`TripReader`、`IcelandPlanner` 與 `journeyInviteService` 模組具備本輪功能。公開 reader 模組沒有私人姓名、留言 RPC 或偏好 RPC；planner 沒有共用 Memo 編輯器。
+- 外部 `/api/vedur-alerts`：HTTP 200、有效 JSON。上游回應 MIME 為 `application/x-javascript;charset=UTF-8`，不是 HTML 或登入頁；前端 JSON 解析可用。
+- 本次沒有產生正式有效邀請連結，沒有把任何有效 token 寫入檔案或提交。
+- 正式站既有建立者登入狀態曾確認可用，但部署後操作工具回報 `Local browser use is disabled in Work settings`，因此尚未完成新版登入四分頁、管理產生／複製連結、實際 Google 回程與新帳號認領。已向使用者請求重新啟用瀏覽器，沒有改用其他帳號、讀取私有登入儲存或繞過限制。
+- 下一步：重新啟用 Work 瀏覽器存取後，驗收建立者「我的→邀請管理」並產生連結，只在聊天回覆提供；再由真人完成 LINE／PWA 推播／離線／390px 實機驗收。
+- 本次交接補提交同時把最近醫院欄位明示為「待補」，保留原有地圖搜尋，沒有編造醫院資料。
