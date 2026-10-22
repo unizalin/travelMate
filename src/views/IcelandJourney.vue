@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import JourneyAdmin from '@/components/trip/JourneyAdmin.vue'
 import TripReader from '@/components/trip/TripReader.vue'
 import { ICELAND_FLIGHTS_PATH } from '@/router/iceland'
 import type { useAuthStore } from '@/stores/auth'
@@ -22,16 +23,29 @@ onMounted(async () => {
     loginError.value = '登入服務暫時無法連線，仍可查看行程。'
   }
 })
+async function signOut() {
+  try {
+    await auth.value?.signOut()
+  } catch {
+    loginError.value = '登出失敗，請稍後再試。'
+  }
+}
 function signIn() {
   auth.value?.openAuthModal('login', ICELAND_FLIGHTS_PATH)
 }
 </script>
 
 <template>
-  <CompanionJourney v-if="signedIn" />
+  <CompanionJourney v-if="signedIn" :key="auth?.user?.id">
+    <template #account-actions>
+      <span class="text-xs text-stone-500">{{ auth?.user?.email }}</span>
+      <button type="button" class="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700" @click="signOut">登出</button>
+    </template>
+    <template #management><JourneyAdmin /></template>
+  </CompanionJourney>
   <TripReader v-else :section="typeof route.query.section === 'string' ? route.query.section : undefined" @select-section="router.replace({ query: { ...route.query, section: $event } })">
     <template #header-actions>
-      <button v-if="configured" type="button" class="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 disabled:opacity-50" :disabled="!auth" @click="signIn">登入</button>
+      <button v-if="configured" type="button" class="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 disabled:opacity-50" :disabled="!auth" @click="signIn">旅伴登入</button>
     </template>
     <template #header-notice><p v-if="loginError" role="status" class="text-xs text-stone-500">{{ loginError }}</p></template>
   </TripReader>

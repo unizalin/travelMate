@@ -181,7 +181,7 @@ export function createJourneyService(client: JourneyRpcClient = supabase as unkn
       && UUID_PATTERN.test((row as Record<string, unknown>).trip_id as string)
       && isIcelandJourney2026((row as Record<string, unknown>).journey)) as Array<{ trip_id: string }>
     if (matches.length === 0) {
-      throw new JourneyServiceError('JOURNEY_NOT_FOUND', '此帳號尚無可存取的冰島雲端旅程；請確認受邀帳號，或在同步選項建立旅程。', 404)
+      throw new JourneyServiceError('JOURNEY_NOT_FOUND', '此帳號尚未加入冰島旅程；請使用建立者提供的邀請連結。', 404)
     }
     if (matches.length > 1) {
       throw new JourneyServiceError('AMBIGUOUS_JOURNEY', '此帳號可存取多筆冰島旅程，請設定正確的旅程 UUID。', 409)

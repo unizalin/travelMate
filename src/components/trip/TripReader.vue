@@ -205,7 +205,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 
         <div v-if="publicOnly && dailyFlights.length" class="daily-flight-options" aria-label="當日航班方案">
           <p v-for="flight in dailyFlights" :key="flight.id"><b>{{ flight.name }} · {{ flight.from }} → {{ flight.to }}</b> · {{ flight.departure }}–{{ flight.arrival }}</p>
-          <small>起降當地時間 · 登入後選擇自己的航班。</small>
+          <small>起降當地時間 · 受邀旅伴登入後可選擇自己的航班。</small>
         </div>
         <ol v-if="publicOnly && selectedDay" class="public-activities"><ItineraryActivity v-for="(item,index) in publicActivities" :key="item.id" :item="item" :index="index" :next="item.status === 'next'" :navigation-term="publicNavTerm(item.name)" :facility-label="publicStopService(item.name)?.label" :facility-query="publicStopService(item.name)?.query" /></ol>
         <div v-else-if="selectedDay" class="mt-4 space-y-3">
@@ -261,7 +261,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
       <div v-if="activeView === 'flights'" class="flight-section" id="view-flights">
       <slot name="flights">
       <section v-if="publicOnly" role="tabpanel" aria-labelledby="view-tab-flights">
-        <p class="public-access-note">登入後選擇自己的航班；以下為行程航班方案，時間以當地為主。</p>
+        <p class="public-access-note">受邀旅伴登入後可選擇自己的航班；以下為行程航班方案，時間以當地為主。</p>
         <div class="public-flights"><JourneyFlightCard v-for="flight in publicFlightOptions" :key="flight.id" :flight="flight" /></div>
       </section>
 
@@ -297,7 +297,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <RouterLink :to="{ name: 'iceland-planner', params: { tripId: props.journey.tripId } }" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-teal-900 px-5 text-sm font-bold text-white transition hover:bg-[var(--iceland-action)] sm:mt-0">開啟規劃</RouterLink>
       </div>
 
-      <p v-if="!companionMode" class="mt-12 text-center text-xs leading-5 text-slate-400">此頁提供行程、日期、地點與航班摘要；登入後可選擇航班、查看住宿與攝影提示。</p>
+      <p v-if="!companionMode" class="mt-12 text-center text-xs leading-5 text-slate-400">此頁提供行程、日期、地點與航班摘要；受邀旅伴登入後可選擇航班、查看住宿與攝影提示。</p>
     </div>
   </main>
 </template>

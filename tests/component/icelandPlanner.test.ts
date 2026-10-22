@@ -99,10 +99,15 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
-  it('shows the selected night accommodation only in the private planner', async () => {
+  it('shows the selected night accommodation only after an authorized load', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+    setAuthUser('qa-owner')
+    loadJourney.mockResolvedValue({ tripId: icelandJourney.tripId, revision: 1, journey: icelandJourney, canEdit: true, updatedAt: '2026-10-22T00:00:00Z' })
     const router = makeRouter()
     await router.push('/trips/tripbook-iceland-2026/journey')
     const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
+    await flushPromises()
     await wrapper.get('#day-tab-2026-11-02').trigger('click')
     expect(wrapper.get('.compact-stay').text()).toContain('The Barn')
     expect(wrapper.get('.compact-stay').text()).not.toContain('U16 by Stay in Iceland')
@@ -314,20 +319,24 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
-  it('guides a signed-in user from flights when no cloud journey is accessible', async () => {
+  it.each(['flights', 'more', 'itinerary'])('shows only public content in %s without journey access', async section => {
     vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
     setAuthUser('qa-owner')
     loadJourney.mockRejectedValue(Object.assign(new Error('此帳號尚無可存取的冰島雲端旅程。'), { code: 'JOURNEY_NOT_FOUND' }))
     const router = makeRouter()
-    await router.push('/trips/tripbook-iceland-2026/journey?section=flights')
+    await router.push(`/trips/tripbook-iceland-2026/journey?section=${section}`)
     const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
     await flushPromises()
 
-    expect(wrapper.get('.header-notice').text()).toContain('此帳號尚無可存取的冰島雲端旅程')
-    expect(wrapper.get('.journey-status').text()).toBe('尚無可存取旅程')
-    expect(wrapper.get('.flight-setup').text()).toContain('先建立或加入旅程')
-    expect(wrapper.get('.flight-setup button').text()).toBe('建立新旅程')
+    expect(wrapper.text()).toContain('一起去倫敦・冰島')
+    expect(wrapper.text()).not.toContain('建立新旅程')
+    expect(wrapper.text()).not.toContain('先建立或加入旅程')
+    expect(wrapper.find('[aria-label="身分與航班"]').exists()).toBe(false)
+    expect(wrapper.find('.compact-stay').exists()).toBe(false)
+    expect(wrapper.find('textarea[aria-label="共用 Memo"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('儲存與同步設定')
+    for (const stay of icelandJourney.accommodations) expect(wrapper.text()).not.toContain(stay.name)
     expect(createJourney).not.toHaveBeenCalled()
     wrapper.unmount()
   })
@@ -444,52 +453,6 @@ describe('IcelandPlanner cloud controls', () => {
     await wrapper.findAll('button').find(button => button.text() === '編輯行程')!.trigger('click')
     expect((wrapper.find('.activity-editor input').element as HTMLInputElement).value).toBe('新帳號名稱')
     wrapper.unmount()
-  })
-
-  it('uses the server journey id after explicit creation without changing the /iceland route', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
-    setAuthUser('qa-owner')
-
-    const serverJourney = withTripId(icelandJourney, 'server-real-uuid')
-    const serverEnvelope = {
-      tripId: 'server-real-uuid',
-      revision: 1,
-      journey: serverJourney,
-      canEdit: true,
-      updatedAt: '2026-10-13T00:00:00Z',
-    }
-    loadJourney.mockRejectedValue(Object.assign(new Error('not created yet'), { code: 'JOURNEY_NOT_FOUND' }))
-    createJourney.mockResolvedValue(serverEnvelope)
-
-    const makeProductionRouter = () => createRouter({ history: createMemoryHistory(), routes: [{ name: 'iceland-planner', path: '/iceland', component: IcelandPlanner }] })
-    const router = makeProductionRouter()
-    await router.push('/iceland?section=flights')
-    await router.isReady()
-    const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
-    await flushPromises()
-
-    const createButton = wrapper.get('.flight-setup button')
-    expect(createButton?.attributes('disabled')).toBeUndefined()
-    await createButton!.trigger('click')
-    await flushPromises()
-
-    expect(createJourney).toHaveBeenCalledTimes(1)
-    expect(router.currentRoute.value.fullPath).toBe('/iceland?section=flights')
-    expect(wrapper.find('.flight-setup').exists()).toBe(false)
-    expect(wrapper.get('.journey-status').text()).toBe('已同步')
-
-    wrapper.unmount()
-    loadJourney.mockResolvedValue(serverEnvelope)
-    const freshRouter = makeProductionRouter()
-    await freshRouter.push('/iceland?section=flights')
-    await freshRouter.isReady()
-    const freshWrapper = mount(IcelandPlanner, { global: { plugins: [freshRouter] } })
-    await flushPromises()
-
-    expect(loadJourney).toHaveBeenLastCalledWith(ICELAND_TRIP_ID)
-    expect(freshWrapper.find('.journey-header').text()).toContain('已同步')
-    freshWrapper.unmount()
   })
 
   it.each(['apply', 'save'] as const)('persists adopted cloud content across a fresh mount after %s', async action => {

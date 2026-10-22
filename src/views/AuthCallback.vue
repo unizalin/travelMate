@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { pendingInvite, clearInvite, safeInvitePath } from '@/services/inviteReturn'
 import { ICELAND_FLIGHTS_PATH } from '@/router/iceland'
 import { supabase } from '@/services/supabase'
 import { onMounted, ref } from 'vue'
@@ -51,7 +52,7 @@ onMounted(async () => {
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // Session is now stored; proceed with redirect
-    const nextRoute = typeof route.query.next === 'string' ? route.query.next : authStore.redirectAfterLogin
+    const nextRoute = safeInvitePath(route.query.next) ?? pendingInvite() ?? (typeof route.query.next === 'string' ? route.query.next : authStore.redirectAfterLogin)
     const destination = nextRoute?.startsWith('/') && !nextRoute.startsWith('//') ? nextRoute : ICELAND_FLIGHTS_PATH
     const entryPaths = ['/', '/trips', '/iceland', '/iceland/plan', '/iceland/planning']
     const resolved = router.resolve(destination)
@@ -63,8 +64,9 @@ onMounted(async () => {
     authStore.closeAuthModal()
     
     // Clean up URL hash and redirect
+    if (!safeInvitePath(destination)) clearInvite()
     router.replace(redirectPath)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Unexpected error in auth callback:', err)
     errorMessage.value = '發生未預期的錯誤'
     setTimeout(() => {

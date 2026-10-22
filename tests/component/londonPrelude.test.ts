@@ -7,13 +7,13 @@ import { icelandJourney } from '@/data/icelandJourney'
 import { londonSeedItems } from '@/domain/londonJourney'
 import { londonPrelude } from '@/data/londonPrelude'
 import ItineraryDates from '@/components/trip/ItineraryDates.vue'
-const sharedJourney = () => ({ ...icelandJourney,items:[...icelandJourney.items,...londonSeedItems(icelandJourney.tripId)] })
+const sharedJourney = () => ({ ...icelandJourney,members:icelandJourney.members.map((member,index)=>({...member,displayName:['U','jinyo','Kevin Ho か','Rosanne 🌹','YU','思辰'][index]})),items:[...icelandJourney.items,...londonSeedItems(icelandJourney.tripId)] })
 describe('London early group', () => {
  it('keeps the six dates and only the four confirmed people', () => {
   expect(londonPrelude.days.map(day => day.date)).toEqual(['2026-10-24','2026-10-25','2026-10-26','2026-10-27','2026-10-28','2026-10-29'])
   expect(londonPrelude.memberIds).toEqual(['member-2','member-3','member-4','member-5'])
   const wrapper = mount(LondonPrelude,{props:{journey:sharedJourney()}})
-  expect(wrapper.get('.prelude-people').text()).toBe('參加：jinyo、Kevin Ho、Rosanne、YU')
+  expect(wrapper.get('.prelude-people').text()).toBe('參加：jinyo、Kevin Ho か、Rosanne 🌹、YU')
   expect(wrapper.text()).not.toContain('思辰')
   expect(wrapper.text()).toContain('Cockfosters')
   expect(wrapper.findAll('[role="tab"]')[0].text()).toContain('10/24（六）')

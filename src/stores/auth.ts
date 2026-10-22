@@ -50,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Redirect to login if session expires
       if (_event === 'SIGNED_OUT') {
-        router.push('/login')
+        router.push('/iceland')
       }
     })
     

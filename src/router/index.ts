@@ -11,6 +11,7 @@ const router = createRouter({
       path: '/',
       redirect: ICELAND_FLIGHTS_PATH,
     },
+    { path: '/iceland/join', name: 'iceland-join', component: () => import('../views/InviteJoin.vue'), meta: { hideMobileTab: true, title: '加入旅程' } },
     {
       path: '/iceland',
       name: 'iceland-planner',

@@ -9,13 +9,13 @@ function mountJourney() {
   return mount(IcelandJourney, { global: { plugins: [router] } })
 }
 
-const state = vi.hoisted(() => ({ store: null as null | { user: { id: string } | null; initializeAuth: ReturnType<typeof vi.fn>; openAuthModal: ReturnType<typeof vi.fn> } }))
+const state = vi.hoisted(() => ({ store: null as null | { user: { id: string } | null; initializeAuth: ReturnType<typeof vi.fn>; openAuthModal: ReturnType<typeof vi.fn>; signOut: ReturnType<typeof vi.fn> } }))
 vi.mock('@/stores/auth', async () => {
   const { reactive } = await import('vue')
-  state.store = reactive({ user: null, initializeAuth: vi.fn(), openAuthModal: vi.fn() })
+  state.store = reactive({ user: null, initializeAuth: vi.fn(), openAuthModal: vi.fn(), signOut: vi.fn() })
   return { useAuthStore: () => state.store }
 })
-vi.mock('@/views/IcelandPlanner.vue', () => ({ default: { template: '<div data-test="companion">同行旅伴的行程</div>' } }))
+vi.mock('@/views/IcelandPlanner.vue', () => ({ default: { template: '<div data-test="companion">同行旅伴的行程<slot name="account-actions" /></div>' } }))
 
 beforeEach(async () => {
   vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
@@ -34,7 +34,7 @@ describe('Unified Iceland itinerary', () => {
     expect(wrapper.text()).not.toMatch(/jinyo|Kevin Ho|Rosanne|YU/)
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
     expect(wrapper.find('textarea[aria-label="共用 Memo"]').exists()).toBe(false)
-    await wrapper.findAll('button').find(button => button.text() === '登入')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === '旅伴登入')?.trigger('click')
     expect(state.store?.openAuthModal).toHaveBeenCalledWith('login', '/iceland?section=flights')
     wrapper.unmount()
   })
@@ -56,6 +56,8 @@ describe('Unified Iceland itinerary', () => {
     if (state.store) state.store.user = { id: 'companion' }
     await flushPromises()
     await vi.waitFor(() => expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))
+    await wrapper.get('button').trigger('click')
+    expect(state.store?.signOut).toHaveBeenCalledTimes(1)
     if (state.store) state.store.user = null
     await flushPromises()
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)

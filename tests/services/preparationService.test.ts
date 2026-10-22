@@ -12,8 +12,8 @@ describe('preparation template seeding', () => {
     expect(rpc).toHaveBeenCalledOnce()
     const [name, args] = rpc.mock.calls[0] as [string, { p_items: Array<{ category: string; title: string }> }]
     expect(name).toBe('tripbook_ensure_packing_template')
-    expect(args.p_items).toHaveLength(49)
-    expect(args.p_items[0].category).toBe('出發前')
-    expect(args.p_items.filter(item => item.category === '出發前')).toHaveLength(4)
+    expect(args.p_items).toHaveLength(45)
+    expect(args.p_items[0].category).toBe('必帶')
+    expect(args.p_items.filter(item => item.category === '出發前')).toHaveLength(0)
   })
 })

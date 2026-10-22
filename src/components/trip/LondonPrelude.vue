@@ -6,11 +6,12 @@ import ItineraryActivities from './ItineraryActivities.vue'
 import AddItineraryActivity from './AddItineraryActivity.vue'
 const props = withDefaults(defineProps<{ journey: TripJourney; canEdit?: boolean; sharedReady?: boolean; busy?: boolean; editing?: boolean; date?: string; embedded?: boolean }>(), { canEdit: false, sharedReady: false, busy: false, editing: false })
 const emit = defineEmits<{ 'edit-item': [id: string, patch: Partial<JourneyItem>]; 'edit-plan': [date: string, field: 'keep' | 'skip', value: string]; toggle: []; reorder: [items: JourneyItem[]]; add: [date: string, name: string, location: string] }>()
+const participants = computed(() => props.journey.members.filter(member => props.journey.items.some(item => item.id.startsWith('london-') && Array.isArray(item.participation) && item.participation.includes(member.id))).map(member => member.displayName || '姓名待設定').join('、'))
 const editingLocked = computed(() => !props.canEdit || !props.sharedReady || props.busy)
 </script>
 <template>
   <LondonItinerary :journey="journey" :editing="editing" :date="date" :embedded="embedded">
-    <template #participants><p class="prelude-people">參加：jinyo、Kevin Ho、Rosanne、YU</p></template>
+    <template #participants><p class="prelude-people">參加：{{ participants }}</p></template>
     <template #plan="{ date, plan }"><div class="plan-b"><template v-if="editing"><label v-for="field in (['keep','skip'] as const)" :key="field">{{ field==='keep'?'保住':'先刪' }}<input :value="plan[field]" :disabled="editingLocked" maxlength="2000" @input="emit('edit-plan',date,field,($event.target as HTMLInputElement).value)" /></label></template><template v-else><b>保住</b> {{ plan.keep }} ｜ <b>先刪</b> {{ plan.skip }}</template></div></template>
     <template #activities="{ items, today }"><ItineraryActivities :items="items" :editing="editing" :disabled="editingLocked" :today="today" @edit="(id,patch)=>emit('edit-item',id,patch)" @reorder="emit('reorder',$event)"><template #comments="{ item }"><slot name="comments" :item="item" /></template></ItineraryActivities></template>
     <template #add="{ date }"><AddItineraryActivity v-if="canEdit" :editing="editing" :disabled="editingLocked" @start="!editing && emit('toggle')" @add="(name,location)=>emit('add',date,name,location)" /></template>
