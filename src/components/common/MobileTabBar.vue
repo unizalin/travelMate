@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ICELAND_TRIP_ID } from '@/router/iceland'
 import { CalendarDaysIcon, UserIcon, UsersIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
-const fallbackTripId = import.meta.env.VITE_ICELAND_TRIP_ID || 'tripbook-iceland-2026'
-const tripId = computed(() => String(route.params.tripId || fallbackTripId))
+const tripId = computed(() => String(route.params.tripId || ICELAND_TRIP_ID))
 
 const tabs = computed(() => [
   { name: '行程', path: `/trips/${tripId.value}/journey`, icon: CalendarDaysIcon },
