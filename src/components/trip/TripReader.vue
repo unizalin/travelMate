@@ -172,7 +172,6 @@ function flightTime(flight: (typeof flights.value)[number]): string {
       <div class="global-information">
         <VedurAlertBanner :alerts="currentVedurAlerts" />
         <template v-if="activeView === 'daily'">
-          <slot v-if="!publicOnly" name="attention" />
           <slot v-if="!selectedIsLondon" name="global-information"><AuroraConditions v-if="!selectedIsLondon && !companionMode" compact /></slot>
           <JourneyClocks :region="selectedIsLondon ? 'london' : 'iceland'" />
         </template>
