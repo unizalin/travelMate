@@ -45,7 +45,7 @@ test('accepts London itinerary data, shared read-only presentation and accommoda
   finally { await rm(root, { recursive: true, force: true }) }
 })
 
-for (const privateContent of ['jinyo', 'Kevin Ho', 'Rosanne', 'YU', 'YU 的私人備註', 'member-2', 'tripbook_list_activity_comments']) {
+for (const privateContent of ['SUPABASE_SERVICE_ROLE_KEY', 'AURORA_VAPID_PRIVATE_KEY', 'CRON_SECRET', 'jinyo', 'Kevin Ho', 'Rosanne', 'YU', 'YU 的私人備註', 'member-2', 'tripbook_list_activity_comments']) {
   test(`rejects private content in an otherwise allowed London bundle: ${privateContent}`, async () => {
     const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', 'src/data/londonItinerary.ts'])
     await writeFile(path.join(root, 'assets/index.js'), `export const leaked = ${JSON.stringify(privateContent)}\n`)
@@ -147,7 +147,7 @@ for (const privateModule of ['src/data/icelandMemberNames.ts',
  finally { await rm(root,{recursive:true,force:true}) }
  })
 
-for (const moduleId of ['src/components/trip/JourneyLedger.vue', 'src/services/journeyLedgerService.ts', 'src/domain/journeyLedger.ts']) {
+for (const moduleId of ['src/components/trip/JourneyMyPage.vue', 'src/composables/useDeviceReminders.ts', 'scripts/lib/aurora-runtime.mjs', 'scripts/lib/aurora-cloud.mjs', 'src/components/trip/JourneyLedger.vue', 'src/services/journeyLedgerService.ts', 'src/domain/journeyLedger.ts']) {
  test(`rejects private ledger module ${moduleId}`, async () => {
   const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', moduleId])
   try { await assert.rejects(() => checkPublicBuild(root), /private module/i) }

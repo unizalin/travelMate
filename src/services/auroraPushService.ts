@@ -1,8 +1,11 @@
 import { notificationSupport } from '@/domain/notificationSupport'
 export type PushState = { enabled: boolean; cityId?: string; expiresAt?: string }
+export function deviceStandalone() {
+ return Boolean(window.matchMedia?.('(display-mode: standalone)').matches || ('standalone' in navigator && navigator.standalone === true))
+}
 export function deviceNotificationSupport() {
  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
- const standalone = window.matchMedia?.('(display-mode: standalone)').matches || ('standalone' in navigator && navigator.standalone === true)
+ const standalone = deviceStandalone()
  return notificationSupport({ secure: globalThis.isSecureContext, worker: 'serviceWorker' in navigator, notifications: 'Notification' in window, push: 'PushManager' in window, ios, standalone: Boolean(standalone) })
 }
 export async function getPushConfig(): Promise<{ publicKey: string; local: boolean }> {
@@ -43,10 +46,13 @@ export async function enableAuroraPush(registration: ServiceWorkerRegistration, 
  if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
  const state = await request('subscribe', { endpoint: subscription.endpoint, subscription: subscription.toJSON(), cityId })
  if (!state.enabled) throw new Error('服務尚未確認提醒訂閱，請重試。')
+ window.dispatchEvent(new Event('tripbook-push-state'))
  return state
 }
 export async function disableAuroraPush(registration: ServiceWorkerRegistration): Promise<PushState> {
  const subscription = await registration.pushManager.getSubscription()
  if (!subscription) return { enabled: false }
- return request('unsubscribe', { endpoint: subscription.endpoint })
+ const state = await request('unsubscribe', { endpoint: subscription.endpoint })
+ window.dispatchEvent(new Event('tripbook-push-state'))
+ return state
 }

@@ -1,7 +1,7 @@
 vi.mock('@/services/tripWeatherService', () => ({ loadDayForecast: async () => ({ kind: 'unavailable', fetchedAt: new Date().toISOString() }) }))
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import IcelandPlanner from '@/views/IcelandPlanner.vue'
 import { icelandJourney } from '@/data/icelandJourney'
 import { ICELAND_TRIP_ID } from '@/router/iceland'
@@ -43,6 +43,15 @@ function makeRouter() {
   })
 }
 
+async function expectIdentityStatus(wrapper: VueWrapper, router: ReturnType<typeof makeRouter>, status: string) {
+  const query = { ...router.currentRoute.value.query }
+  await router.replace({ query: { ...query, section: 'me' } })
+  await flushPromises()
+  expect(wrapper.get('.identity-card').text()).toContain(status)
+  await router.replace({ query })
+  await flushPromises()
+}
+
 function setAuthUser(id: string | null): void {
   authState.user = id ? { id } : null
   if (authState.store) authState.store.user = authState.user
@@ -59,6 +68,7 @@ function deferred<T>() {
 }
 
 describe('IcelandPlanner cloud controls', () => {
+  afterEach(()=>{vi.restoreAllMocks();vi.useRealTimers()})
   beforeEach(() => {
     vi.unstubAllEnvs()
     vi.stubEnv('VITE_SUPABASE_URL', '')
@@ -97,9 +107,10 @@ describe('IcelandPlanner cloud controls', () => {
     loadJourney.mockRejectedValue(new Error('offline'))
     const router=makeRouter(); await router.push(`/trips/${icelandJourney.tripId}/journey`)
     const wrapper=mount(IcelandPlanner,{global:{plugins:[router]}}); await flushPromises()
-    expect(wrapper.text()).toContain('離線副本 · 僅供閱讀')
     expect(wrapper.text()).toContain('Costco Wholesale Iceland')
     expect(wrapper.find('.activity-editor,.drag-handle,.edit-footer').exists()).toBe(false)
+    await router.replace({query:{section:'me'}});await flushPromises()
+    expect(wrapper.get('.identity-card').text()).toContain('離線副本 · 僅供閱讀')
     wrapper.unmount(); connection.mockRestore()
   })
 
@@ -221,7 +232,7 @@ describe('IcelandPlanner cloud controls', () => {
     expect(snapshot.items.find((item:{id:string}) => item.id==='london-2026-10-24-1').name).toBe('修改後的 Hammersmith 交通')
     expect(snapshot.items.filter((item:{id:string}) => !item.id.startsWith('london-'))).toEqual(icelandJourney.items)
     expect(snapshot.dayPlans['2026-10-24']).toEqual({keep:'保住 Hammersmith 入住',skip:'刪除夜間散步'})
-    expect(wrapper.find('.journey-header').text()).toContain('已同步')
+    await expectIdentityStatus(wrapper, router, '已同步')
     await wrapper.get('#leg-tab-iceland').trigger('click')
     await wrapper.get('#day-tab-2026-10-30').trigger('click')
     expect(wrapper.find('[aria-label="倫敦前段行程"]').exists()).toBe(false)
@@ -267,7 +278,7 @@ describe('IcelandPlanner cloud controls', () => {
     await wrapper.findAll('button').find(button => button.text() === '重新載入 Supabase')!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('.journey-header').text()).toContain('目前僅可閱讀')
+    await expectIdentityStatus(wrapper, router, '目前僅可閱讀')
     const updateButton = wrapper.findAll('button').find(button => button.text() === '儲存變更')
     expect(updateButton).toBeUndefined()
     expect(wrapper.findAll('button').some(button => button.text() === '編輯行程')).toBe(false)
@@ -323,7 +334,7 @@ describe('IcelandPlanner cloud controls', () => {
     const nameInput = wrapper.find('.activity-editor input')
     await nameInput.setValue('本機已保存名稱')
     await wrapper.findAll('button').find(button => button.text() === '儲存裝置備份')!.trigger('click')
-    expect(wrapper.text()).toContain('有尚未儲存的變更')
+    await expectIdentityStatus(wrapper, router, '有尚未儲存的變更')
 
     await wrapper.findAll('button').find(button => button.text() === '重新載入 Supabase')!.trigger('click')
     await flushPromises()
@@ -510,7 +521,7 @@ describe('IcelandPlanner cloud controls', () => {
     await freshWrapper.findAll('button').find(button => button.text() === '編輯行程')!.trigger('click')
     expect((freshWrapper.find('.activity-editor input').element as HTMLInputElement).value).toBe(expectedName ?? icelandJourney.items[0].name)
     expect(freshWrapper.text()).not.toContain('本機與雲端都有變更')
-    expect(freshWrapper.find('.journey-header').text()).toContain('已同步')
+    await expectIdentityStatus(freshWrapper, freshRouter, '已同步')
     freshWrapper.unmount()
   })
 
@@ -525,7 +536,7 @@ describe('IcelandPlanner cloud controls', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('已載入可編輯的雲端草稿')
     expect(wrapper.text()).toContain('本機副本儲存失敗')
-    expect(wrapper.find('.journey-header').text()).toContain('已同步')
+    await expectIdentityStatus(wrapper, router, '已同步')
     write.mockRestore()
     await wrapper.findAll('button').find(button => button.text() === '儲存裝置備份')!.trigger('click')
     expect(wrapper.text()).not.toContain('本機副本儲存失敗')

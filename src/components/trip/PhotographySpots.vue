@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
-import { journeyPhotoKey } from '@/domain/journeyPhotoContext'
+import { computed } from 'vue'
 import type { JourneyItem } from '@/domain/tripJourney'
 import { cameraSettingsByPhotoSpotId } from '@/data/icelandPhotography'
-const photo = inject(journeyPhotoKey, null)
-const showPhotography = computed(() => photo?.preferences.value?.showPhotography !== false)
 const props = defineProps<{ item: JourneyItem }>()
 const phone = computed(() => (props.item.photoSpots ?? []).filter(spot => spot.device === 'phone' || spot.device === 'both'))
 const camera = computed(() => (props.item.photoSpots ?? []).filter(spot => spot.device === 'camera' || spot.device === 'both'))
 const hasCameraSettings = computed(() => camera.value.some(spot => Boolean(cameraSettingsByPhotoSpotId[spot.id])))
 </script>
 <template>
-  <details v-if="showPhotography && (item.photoTip || phone.length || camera.length)" class="photo" data-testid="photography-spots">
+  <details v-if="item.photoTip || phone.length || camera.length" class="photo" data-testid="photography-spots">
     <summary>拍攝建議</summary>
-    <div class="photo-panel"><p v-if="photo?.error.value" role="alert">{{photo.error.value}}</p>
+    <div class="photo-panel">
       <div class="photo-row">
         <b>iPhone</b>
         <div>
@@ -31,7 +28,7 @@ const hasCameraSettings = computed(() => camera.value.some(spot => Boolean(camer
           <p v-if="!camera.length">{{ item.photoTip || '依現場光線調整曝光；風大或浪區先確保站位安全。' }}</p>
         </div>
       </div>
-      <p v-if="hasCameraSettings" class="settings-note">參考 UI 預覽的拍攝起點；光圈與 ISO 未提供，請依現場光線調整。</p>
+      <p v-if="hasCameraSettings" class="settings-note">建議參數僅供起點參考；光圈與 ISO 未提供，請依現場光線調整。</p>
     </div>
   </details>
 </template>

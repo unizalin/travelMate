@@ -28,20 +28,17 @@ import MorningChecks from '@/components/trip/MorningChecks.vue'
 import TripPreparation from '@/components/trip/TripPreparation.vue'
 import { handbookDays } from '@/data/icelandHandbook'
 import LondonPrelude from '@/components/trip/LondonPrelude.vue'
-import { provideJourneyPhotos } from '@/services/journeyPhotoContext'
-import PhotoPreferenceSettings from '@/components/trip/PhotoPreferenceSettings.vue'
 import { preparationService } from '@/services/preparationService'
 import TripReader from '@/components/trip/TripReader.vue'
 import ActivityComments from '@/components/trip/ActivityComments.vue'
 import AuroraReminderSettings from '@/components/trip/AuroraReminderSettings.vue'
 import AuroraConditions from '@/components/trip/AuroraConditions.vue'
 import JourneyRoster from '@/components/trip/JourneyRoster.vue'
-import JourneyLedger from '@/components/trip/JourneyLedger.vue'
+import JourneyMyPage from '@/components/trip/JourneyMyPage.vue'
 import PreparationChecklist from '@/components/preparation/PreparationChecklist.vue'
 
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 const offline = ref(!navigator.onLine)
-const ledgerOpen = ref(false)
 function updateConnection() { offline.value = !navigator.onLine }
 const showPublicReader = computed(() => configured && !cloudLoaded.value && !pendingEnvelope.value && !(offline.value && localDraftAvailable.value && accountId.value !== 'local-preview'))
 const route = useRoute()
@@ -64,7 +61,6 @@ const revision = ref<number | null>(null)
 const cloudCanEdit = ref<boolean | null>(null)
 const cloudLoaded = ref(false)
 const cloudAuthReady = ref(false)
-const photoContext = provideJourneyPhotos(activeTripId, accountId, cloudLoaded)
 const localConflictKept = ref(false)
 const busy = ref(false)
 const statusMessage = ref('')
@@ -108,7 +104,7 @@ function editLondonPlan(date: string, field: 'keep'|'skip', value: string) {
 
 const flightRoster = ref<RosterState>({ claims: [], choices: [] })
 const selfMember = computed(() => flightRoster.value.claims.find(c=>c.isSelf))
-const identityName = computed(() => selfMember.value?.name || draft.value.members.find(m=>m.id===photoContext.preferences.value?.memberId)?.displayName || '身分載入中')
+const identityName = computed(() => selfMember.value?.name || draft.value.members.find(m=>m.accountId===accountId.value)?.displayName || '身分載入中')
 const packingRemaining = ref<number | null>(null)
 async function refreshPackingProgress() {
   if(!cloudLoaded.value) return
@@ -116,7 +112,7 @@ async function refreshPackingProgress() {
   try { const items=await preparationService.getItems(trip,account); if(account===accountId.value && trip===activeTripId.value) packingRemaining.value=items.filter(i=>!i.completed).length } catch { packingRemaining.value=null }
 }
 watch(activeSection,()=>{ void refreshPackingProgress() })
-const myFlightNames = computed(() => flightRoster.value.choices.filter(c=>c.memberId===selfMember.value?.memberId).map(c=>icelandFlights.find(f=>f.id===c.flightId)?.name).filter(Boolean))
+const myFlightNames = computed(() => flightRoster.value.choices.filter(c=>c.memberId===selfMember.value?.memberId).map(c=>icelandFlights.find(f=>f.id===c.flightId)?.name).filter((name): name is string => typeof name==='string'))
 const previewMemberId = ref('all')
 type CloudEnvelope = { tripId?: string; revision: number; journey: TripJourney; canEdit: boolean; updatedAt?: string }
 const pendingEnvelope = ref<CloudEnvelope | null>(null)
@@ -417,27 +413,21 @@ onBeforeUnmount(() => {
   <TripReader v-if="showPublicReader" :section="activeSection" @select-section="router.replace({ query: { ...route.query, section: $event } })">
     <template #header-actions><slot name="account-actions" /></template>
   </TripReader>
-  <TripReader v-else :journey="draft" :public-only="false" companion-mode :section="activeSection"
+  <TripReader v-else :journey="draft" :public-only="false" companion-mode :section="activeSection" :aurora-request="String(route.query.aurora || '')"
     @select-section="router.replace({ query: { ...route.query, section: $event } })"
     @select-date="selectedDate = $event">
     <template #prelude="{ date }"><LondonPrelude :date="date" embedded :journey="pendingEnvelope?.journey ?? draft" :editing="editMode" :can-edit="canEditDraft" :shared-ready="cloudLoaded || !!pendingEnvelope" :busy="busy" @toggle="editMode=!editMode" @edit-item="editItem" @edit-plan="editLondonPlan" @reorder="reorderItems" @add="addItem"><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="(cloudLoaded && cloudCanEdit === true) || pendingEnvelope?.canEdit === true" /></template></LondonPrelude></template>
-    <template #global-information><AuroraConditions compact><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
-    <template #header-notice><p class="private-status">私人版 · 以 {{identityName}} 瀏覽</p><p v-if="journeyMissing" role="status">此帳號尚無可存取的冰島雲端旅程；已有旅程時請建立者邀請你。</p><p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
-    <template #header-actions><slot name="account-actions" /><span class="journey-status rounded-full px-3 py-2 text-xs">{{ offline ? '離線副本 · 僅供閱讀' : cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程' }}</span></template>
+    <template #global-information><AuroraConditions compact :open-reminders="String(route.query.aurora || '')"><template #reminders="{ cityId }"><AuroraReminderSettings :city-id="cityId" :account-id="accountId" /></template></AuroraConditions></template>
+    <template #header-notice><p class="private-status">以 {{identityName}} 瀏覽</p><p v-if="journeyMissing" role="status">此帳號尚無可存取的冰島雲端旅程；已有旅程時請建立者邀請你。</p><p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p></template>
+    <template #header-actions><slot name="account-actions" /></template>
     <template #flights>
       <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
     </template>
     <template #me>
-      <section class="my-section identity-card"><h2>{{identityName}}</h2><p>已認領成員</p></section>
-      <section v-if="!myFlightNames.length || packingRemaining" class="my-section"><h2>我的待辦</h2><p v-if="!myFlightNames.length">尚未選擇航班。</p><p v-if="packingRemaining">行李尚有 {{packingRemaining}} 項未完成。</p><button @click="router.replace({query:{section:'flights'}})">選擇我的航班 →</button></section>
-      <section class="my-section"><h2>我的航班</h2><button @click="router.replace({query:{section:'flights'}})">{{myFlightNames.join('、') || '尚未選擇'}} · 查看航班 →</button></section>
-      <details class="my-section" @toggle="ledgerOpen=($event.target as HTMLDetailsElement).open"><summary>旅費記帳</summary><JourneyLedger v-if="ledgerOpen" :trip-id="activeTripId" :account-id="accountId" :members="draft.members" :self-member-id="selfMember?.memberId" :disabled="offline || cloudCanEdit!==true" /></details>
-      <slot name="management" :trip-id="activeTripId" />
-      <section class="my-section"><h2>帳號</h2><slot name="account-settings" />
-        <PhotoPreferenceSettings />
-        <details><summary>離線行程</summary><TripPreparation :account-id="accountId" :trip-id="activeTripId" :journey="draft" account-tools /></details>
-        <details><summary>通知提醒</summary><AuroraReminderSettings city-id="reykjavik" :account-id="accountId" /></details>
-      </section>
+      <JourneyMyPage :identity-name="identityName" :sync-status="offline ? '離線副本 · 僅供閱讀' : cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程'" :trip-id="activeTripId" :account-id="accountId" :journey="draft" :flight-names="myFlightNames" :packing-remaining="packingRemaining" :self-member-id="selfMember?.memberId" :offline="offline" :can-edit="cloudCanEdit===true" @flights="router.replace({query:{section:'flights'}})" @preparation="router.replace({query:{section:'more'}})" @aurora="router.replace({query:{section:'itinerary',aurora:String(Date.now())}})">
+        <template #management><slot name="management" :trip-id="activeTripId" /></template>
+        <template #account><slot name="account-settings" /></template>
+      </JourneyMyPage>
     </template>
     <template #preparation>
 

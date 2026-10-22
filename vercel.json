@@ -5,7 +5,7 @@
       "destination": "https://en.vedur.is/xhrreq?req=alert"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
@@ -36,5 +36,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/aurora-notifications/*.mjs": {
+      "maxDuration": 60
+    }
+  }
 }

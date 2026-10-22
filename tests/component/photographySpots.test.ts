@@ -32,18 +32,12 @@ describe('PhotographySpots', () => {
   })
 })
 
-it('keeps phone and camera favorites in the signed-in member preference scope', async () => {
-  const { ref } = await import('vue')
-  const { vi } = await import('vitest')
-  const { journeyPhotoKey } = await import('@/services/journeyPhotoContext')
-  const update=vi.fn()
-  const preferences=ref({tripId:'trip',memberId:'member-2',showPhotography:true,phoneSpotIds:[],cameraSpotIds:[],updatedAt:null})
-  const { default: PhotoPreferenceSettings } = await import('@/components/trip/PhotoPreferenceSettings.vue')
-  const wrapper=mount(PhotoPreferenceSettings,{global:{provide:{[journeyPhotoKey]:{preferences,busy:ref(false),error:ref(''),update}}}})
-  await wrapper.findAll('button').find(button=>button.text().includes('收藏手機'))!.trigger('click')
-  expect(update).toHaveBeenCalledWith(expect.objectContaining({memberId:'member-2',phoneSpotIds:['photo-kirkjufellsfoss-classic'],cameraSpotIds:[]}))
-  preferences.value.showPhotography=false
-  await wrapper.vm.$nextTick()
-  expect(wrapper.get('input[type="checkbox"]').element).toHaveProperty('checked',false)
-  wrapper.unmount()
+it('keeps photography advice visible even when an old preference disabled it', async () => {
+ const { ref } = await import('vue')
+ const { journeyPhotoKey } = await import('@/domain/journeyPhotoContext')
+ const wrapper=mount(PhotographySpots,{props:{item},global:{provide:{[journeyPhotoKey]:{preferences:ref({showPhotography:false}),error:ref('私人偏好錯誤')}}}})
+ expect(wrapper.get('summary').text()).toBe('拍攝建議')
+ expect(wrapper.text()).not.toContain('私人偏好錯誤')
+ expect(wrapper.text()).not.toContain('收藏')
+ wrapper.unmount()
 })
