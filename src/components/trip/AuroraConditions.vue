@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { locateIcelandRegion } from '@/services/locationService'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { AURORA_CITIES, type AuroraCityId } from '@/domain/auroraConditions'
+import { AURORA_CITIES, type AuroraAssessment, type AuroraCityId } from '@/domain/auroraConditions'
 import { AuroraConditionsService, type AuroraConditions } from '@/services/auroraService'
 
 withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
@@ -28,9 +28,17 @@ let clockTimer: ReturnType<typeof setInterval> | undefined
 
 const city = () => AURORA_CITIES.find(candidate => candidate.id === cityId.value) ?? AURORA_CITIES[0]
 const dataStale = computed(() => conditions.value != null && clock.value - Date.parse(conditions.value.fetchedAt) >= 30 * 60 * 1000)
-const displayAssessment = computed(() => dataStale.value
+const displayAssessment = computed<AuroraAssessment | undefined>(() => dataStale.value
   ? { label: '資料不足', reason: '資料已過期，請重新整理後再查看今晚條件。' }
   : conditions.value?.assessment)
+const assessmentTones: Record<AuroraAssessment['label'], 'positive' | 'neutral'> = {
+  '雲量條件較佳': 'positive',
+  '部分時段晴朗': 'positive',
+  '雲量中等': 'neutral',
+  '雲量偏多': 'neutral',
+  '資料不足': 'neutral',
+}
+const assessmentTone = computed(() => displayAssessment.value ? assessmentTones[displayAssessment.value.label] : 'neutral')
 const bestHour = computed(() => [...(conditions.value?.hours ?? [])]
   .filter(hour => hour.kp != null && hour.cloudCover != null)
   .sort((left, right) => (left.cloudCover! - right.cloudCover!) || (right.kp! - left.kp!))[0] ?? null)
@@ -96,7 +104,7 @@ onBeforeUnmount(() => {
     <p v-if="loading" class="aurora-conditions__reading" role="status">正在讀取今晚雲量與 Kp…</p>
     <p v-else-if="errorMessage" class="aurora-conditions__reading" role="status">今晚資料暫時無法讀取，請展開詳情重試。</p>
     <template v-else-if="conditions">
-      <p class="aurora-conditions__reading">Kp <b>{{ dataStale ? '待更新' : bestHour?.kp ?? '待確認' }}</b> · 雲量 {{ dataStale || bestHour?.cloudCover == null ? '待確認' : `${bestHour.cloudCover}%` }} · <strong>{{ displayAssessment?.label }}</strong>，最佳觀測時段：{{ bestWindow || '資料不足，待確認' }}</p>
+      <p class="aurora-conditions__reading">Kp <b>{{ dataStale ? '待更新' : bestHour?.kp ?? '待確認' }}</b> · 雲量 {{ dataStale || bestHour?.cloudCover == null ? '待確認' : `${bestHour.cloudCover}%` }} · <strong class="aurora-assessment" :class="`aurora-assessment--${assessmentTone}`">{{ displayAssessment?.label }}</strong>，最佳觀測時段：{{ bestWindow || '資料不足，待確認' }}</p>
       <p class="aurora-conditions__reason">{{ displayAssessment?.reason }}</p>
       <p v-if="conditions.outlook.length" class="aurora-conditions__outlook">未來兩晚：<span v-for="(night,index) in conditions.outlook" :key="night.localDate">{{ index === 0 ? '明晚' : '後晚' }} Kp {{ dataStale ? '待更新' : night.kp ?? '待確認' }}・雲量 {{ dataStale || night.cloudCover == null ? '待確認' : `${night.cloudCover}%` }}<i v-if="index === 0">｜</i></span></p>
     </template>
@@ -124,7 +132,8 @@ onBeforeUnmount(() => {
 .aurora-conditions__heading{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:2px 8px}
 .aurora-conditions__heading h2{font-size:14px;font-weight:600;color:white;line-height:1.5;margin:0}
 .aurora-conditions__heading>span{font-size:11px;color:#9fc3cf}
-.aurora-conditions__reading{font-size:13px;line-height:1.6;margin:6px 0 2px}.aurora-conditions__reading :is(b,strong){color:#8fd8b2;font-weight:600}
+.aurora-conditions__reading{font-size:13px;line-height:1.6;margin:6px 0 2px}.aurora-conditions__reading b{color:#8fd8b2;font-weight:600}
+.aurora-assessment{font-weight:600}.aurora-assessment--positive{color:#8fd8b2}.aurora-assessment--neutral{color:#dcebf0}
 .aurora-conditions__reason,.aurora-conditions__outlook{font-size:11.5px;color:#9fc3cf;line-height:1.6;margin:0}.aurora-conditions__outlook{margin-top:4px}
 .aurora-conditions__outlook i{font-style:normal;margin:0 3px}
 .aurora-conditions__footer{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#9fc3cf;font-size:10px;margin-top:4px}
