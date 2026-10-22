@@ -28,6 +28,7 @@ const props = withDefaults(defineProps<{
   publicOnly?: boolean
   companionMode?: boolean
   section?: string
+  auroraRequest?: string
 }>(), {
   journey: () => publicIcelandJourney,
   publicOnly: true,
@@ -94,6 +95,8 @@ const dailyFlights = computed(() => icelandFlights.filter(f => f.date === select
 const timeline = computed<DailyTimeline[]>(() => props.publicOnly ? [...buildDailyTimeline(publicLondonJourney).filter(day => day.date < '2026-10-30'), ...buildDailyTimeline(publicIcelandJourney).filter(day => day.date >= '2026-10-30')] : buildDailyTimeline(props.journey))
 const days = computed(() => timeline.value.filter(day => day.events.some(event => event.type === 'item' || event.type === 'transport')))
 const activeLeg = ref<'london' | 'iceland'>('london')
+watch(() => props.auroraRequest, value => { if(value && !props.publicOnly) selectLeg('iceland') })
+onMounted(()=>{if(props.auroraRequest && !props.publicOnly)selectLeg('iceland')})
 const legDays = computed(() => days.value.filter(day => activeLeg.value === 'london' ? day.date < '2026-10-30' : day.date >= '2026-10-30'))
 function selectLeg(leg: 'london' | 'iceland') {
   activeLeg.value = leg

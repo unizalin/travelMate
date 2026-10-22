@@ -20,7 +20,7 @@
     "test:all": "npm run test && npm run test:public-build && npm run test:db-contract && npm run test:ledger-db && npm run test:notifications",
     "dev:notifications": "node scripts/aurora-push-server.mjs",
     "test:notifications": "node --test tests/notifications/*.test.mjs",
-    "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs"
+    "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs tests/journey-service/push-storage-db.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

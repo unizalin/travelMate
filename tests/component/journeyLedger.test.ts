@@ -52,3 +52,12 @@ describe('shared journey ledger',()=>{
   wrapper.unmount()
  })
 })
+it('selects a participant by clicking the whole chip',async()=>{
+ const wrapper=mount(JourneyLedger,{props,attachTo:document.body});await flushPromises()
+ await wrapper.findAll('button').find(button=>button.text().includes('新增支出'))?.trigger('click')
+ const chip=wrapper.get('.participant-chips label')
+ await chip.trigger('click');await flushPromises()
+ expect(chip.classes()).toContain('selected')
+ expect(chip.get('input').element).toHaveProperty('checked',true)
+ wrapper.unmount()
+})

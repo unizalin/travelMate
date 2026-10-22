@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { locateIcelandRegion } from '@/services/locationService'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AURORA_CITIES, type AuroraAssessment, type AuroraCityId } from '@/domain/auroraConditions'
 import { AuroraConditionsService, type AuroraConditions } from '@/services/auroraService'
 
-withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
+const props = withDefaults(defineProps<{ compact?: boolean; openReminders?: string }>(), { compact: false })
 const expanded = ref(false)
+watch(() => props.openReminders, value => { if(value) expanded.value=true }, {immediate:true})
 const cityId = ref<AuroraCityId>('reykjavik')
 const conditions = ref<AuroraConditions | null>(null)
 const locationBusy = ref(false)

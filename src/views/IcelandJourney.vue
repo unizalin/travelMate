@@ -68,7 +68,7 @@ async function switchAccount() {
     <template #account-actions><button class="min-h-11 rounded-full border px-4 text-sm" @click="router.replace({query:{section:'me'}})">我的旅程</button></template>
     <template #management="{ tripId }"><JourneyAdmin :trip-id="tripId" /></template>
     <template #account-settings>
-      <div><p class="my-3 break-all text-sm">Google 帳號：{{ auth?.user?.email }}</p><button class="mr-5 min-h-11 underline" @click="switchAccount">切換帳號</button><button class="min-h-11 underline" @click="signOut">登出本機</button></div>
+      <div class="account-row"><p>登入帳號<strong>{{ auth?.user?.email }}</strong></p><button class="mr-5 min-h-11 underline" @click="switchAccount">切換帳號</button><button class="min-h-11 underline" @click="signOut">登出本機</button></div>
     </template>
   </CompanionJourney>
   <TripReader v-else>

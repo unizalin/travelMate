@@ -3,6 +3,9 @@ import path from 'node:path'
 import process from 'node:process'
 
 const PRIVATE_MODULE_PATTERNS = [
+  /(?:^|\/)src\/components\/trip\/JourneyMyPage\.vue$/i,
+  /(?:^|\/)src\/composables\/useDeviceReminders\.ts$/i,
+  /(?:^|\/)scripts\/lib\/aurora-(?:cloud|runtime)\.mjs$/i,
   /(?:^|\/)src\/components\/trip\/JourneyLedger\.vue$/i,
   /(?:^|\/)src\/services\/journeyLedgerService\.(?:ts|js)$/i,
   /(?:^|\/)src\/domain\/journeyLedger\.(?:ts|js)$/i,
@@ -31,6 +34,7 @@ const PRIVATE_MODULE_PATTERNS = [
 ]
 
 const PRIVATE_CONTENT_PATTERNS = [
+  /SUPABASE_SERVICE_ROLE_KEY|AURORA_VAPID_PRIVATE_KEY|CRON_SECRET/,
   /tripbook_(?:ledger|save_ledger_entry|void_ledger_entry)/,
   /jinyo/i,
   /Kevin\s+Ho/i,
