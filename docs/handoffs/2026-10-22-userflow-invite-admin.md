@@ -12,6 +12,7 @@
 
 - Migration `20261022010000`：固定設定表、邀請、後端角色／認領／管理 RPC、冪等 privileged initializer；認領已有 trip/member PK 與 trip/user UNIQUE，新增 claimed_at。更新 Memo 以認領名記錄修改者；新固定旅程只允許四種打包分類。
 - Migration `20261022020000`：私人 roster 從授權後的旅程取得固定姓名。
+- Migration `20261022040000`：修正未認領成員 isOwner 必須為 false 而非 null；已以 SQL 回歸測試先重現再修正，正式後台重新載入已能顯示。
 - Migration `20261022030000`：解除認領時清理該身分攝影偏好，與攝影寫入使用相同 advisory lock，取得鎖後再驗權限。
 - 加入路徑 `/iceland/join?token=…`。OAuth callback next 加上 sessionStorage 的精確本站加入路徑備援；不把邀請導向一般航班頁。既有成員重開有效連結直接回私人頁；已認領按鈕停用，提交前有確認。
 - 私人頁使用公開空殼等待權限；住宿、攝影點與姓名從授權 DB 載入。前端 seed 保留為後台 bootstrap 輸入，已從 main runtime 移除；倫敦參加者改讀私人文件，不在 bundle 硬編姓名。
@@ -42,4 +43,12 @@
 
 開發 worktree `/Users/unizalin/.codex/worktrees/travelmate-tripbook/travelMate`，分支 `codex/tripbook-continue-20261013`。精確提交本任務變更，不含 `.env.local`、私有 SQL 產物或其他代理新增的 keepalive 交接。入口 main 的原有未提交內容保持不動。
 
-發布狀態：待補記提交、整合與外部部署結果。完整模型名稱與推理等級未提供。
+功能提交 `d4bf2f7`；乾淨整合工作區 `/Users/unizalin/.codex/worktrees/travelmate-userflow-production/travelMate`、分支 `codex/userflow-production-20261022`，保留遠端 keepalive 提交後合併為 `1670f8d`、推送 main。整合後完整 qa:preview 再次通過。Vercel Production deployment `7241892749`／`67gGv4fhxX3teMzXekHmQ1aDB5Ej` 狀態 success。
+
+外部確認正式 `/iceland?section=flights`、`/iceland/join` HTTP 200；入口 `index-BSKY28mA.js` 與 InviteJoin、IcelandJourney、IcelandPlanner 新 chunk 已生效，包含 LINE 瀏覽器提示與管理入口，指定私人姓名／住宿字串零命中；警報 API 回可解析 JSON。
+
+正式實頁使用現有 `unizalin@gmail.com` 登入狀態驗收：「已同步」、行前清單 0/45、四分類存在、個人攝影開關、管理後台可開啟，U 已認領且綁定建立者，另外五位皆未認領。初次實頁發現 admin 回應 null 問題，以第四支 migration 修正並重驗通過。清單說明「五類」改為「四類」，隨追加修正與交接提交發布。
+
+已由受控初始管理操作產生一組正式邀請，資料庫 activeCount=1，只存雜湊；明文僅保留於回報對話的記憶體，不記錄在任何產物。未用 UI 輪替它，以免最後回報的連結失效。
+
+完整模型名稱與推理等級未提供。
