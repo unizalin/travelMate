@@ -1,3 +1,5 @@
+import { publicDayServices, publicStopService } from '../src/data/publicDayExtras'
+import { icelandPhotoSpots, cameraSettingsByPhotoSpotId } from '../src/data/icelandPhotography'
 import { writeFileSync } from 'node:fs'
 import { publicIcelandJourney } from '../src/data/icelandPublic'
 import { publicLondonJourney } from '../src/data/londonPublic'
@@ -12,8 +14,8 @@ const titles: Record<string,string> = {
 }
 for(const day of londonItinerary.days)titles[day.date]=day.title
 const data={
- days:[...new Set(items.map(item=>item.date))].sort().map(date=>({date,title:titles[date]||date,region:date<'2026-10-30'?'倫敦':'冰島',pace:icelandDailyPace[date]??null,items:items.filter(item=>item.date===date).sort((a,b)=>a.order-b.order).map(item=>({id:item.id,name:item.name,location:item.location,navigationTerm:Object.entries(preciseMapTerms).find(([name])=>item.name.includes(name))?.[1] || `${item.name}, ${date<'2026-10-30' ? (date==='2026-10-26'?'Cambridge / London':'London') : 'Iceland'}`,notes:item.notes??'',plannedStart:item.plannedStart??null,plannedEnd:item.plannedEnd??null}))})),
- flights:icelandFlights,packing:PACKING_TEMPLATE,
+ days:[...new Set(items.map(item=>item.date))].sort().map(date=>({date,title:titles[date]||date,region:date<'2026-10-30'?'倫敦':'冰島',pace:icelandDailyPace[date]??null,services:publicDayServices[date]??[],items:items.filter(item=>item.date===date).sort((a,b)=>a.order-b.order).map(item=>({id:item.id,name:item.name,service:publicStopService(item.name)??null,photoSpots:icelandPhotoSpots[item.name]??[],location:item.location,navigationTerm:Object.entries(preciseMapTerms).find(([name])=>item.name.includes(name))?.[1] || `${item.name}, ${date<'2026-10-30' ? (date==='2026-10-26'?'Cambridge / London':'London') : 'Iceland'}`,notes:item.notes??'',plannedStart:item.plannedStart??null,plannedEnd:item.plannedEnd??null}))})),
+ flights:icelandFlights,packing:PACKING_TEMPLATE,cameraSettings:cameraSettingsByPhotoSpotId,
 }
 writeFileSync('artifacts/uiux-airbnb-20261022/data.js','window.PROTOTYPE_DATA = '+JSON.stringify(data).replace(/</g,'\\u003c')+';\n')
 console.log(`Prototype public data: ${data.days.length} days, ${data.flights.length} flights, ${data.packing.reduce((n,g)=>n+g.items.length,0)} packing items.`)
