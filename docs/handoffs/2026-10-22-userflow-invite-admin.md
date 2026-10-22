@@ -52,3 +52,11 @@
 已由受控初始管理操作產生一組正式邀請，資料庫 activeCount=1，只存雜湊；明文僅保留於回報對話的記憶體，不記錄在任何產物。未用 UI 輪替它，以免最後回報的連結失效。
 
 完整模型名稱與推理等級未提供。
+
+
+## 最終發布與正式資料庫驗權
+
+- 最後程式整合提交 `ee4bcbb` 已推送 main；Vercel Production `7241969037`／`CzDLzJ2wzrnVfKtS3Ud3pJzKJ7oZ` 狀態 success，包含第四支 migration 對應回歸與四分類文案修正。四支新 migration 均已與雲端紀錄對齊。
+- 最後整合工作區完整 qa:preview：181 Vitest、32 公開隔離、5 DB 契約、8 通知、type-check、雙 build、check:share 全通過。程式沒有後續修改；其後補記僅文件。
+- 正式 PostgreSQL 以 READ ONLY 交易驗證：anon 對私人旅程表沒有 SELECT 權限；以隨機非成員 subject 模擬 authenticated 角色時，旅程 RLS 回零筆且 admin_state=false；ROLLBACK 無寫入。此為資料庫角色模擬驗證，不宣稱已完成另一位真人帳號的 Google 登入。
+- 正式實頁已確認管理者可開啟後台、U 綁定、五位未認領、有效邀請及清單 0/45。未替使用者改航班、勾選、Memo 或攝影收藏。
