@@ -31,7 +31,13 @@ async function refreshMembership() {
   try {
     const canRead = await canReadJourney(ICELAND_TRIP_ID)
     if (current === epoch) member.value = canRead
-  } catch {
+  } catch (cause) {
+    if (current === epoch) {
+      console.warn('Journey membership check failed', {
+        message: cause instanceof Error ? cause.message : 'unknown_error',
+        code: cause instanceof Error && 'code' in cause ? cause.code : 'UNKNOWN',
+      })
+    }
     if (current === epoch) {
       member.value = false
       membershipError.value = '無法確認旅程資格，請重試；目前仍可查看公開行程。'
