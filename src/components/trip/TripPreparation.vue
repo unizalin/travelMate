@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { photoChecklist } from '@/data/icelandHandbook'
 import type { TripJourney } from '@/domain/tripJourney'
 import { saveLocalJourney } from '@/domain/tripJourney'
-const props=defineProps<{accountId:string;tripId:string;journey:TripJourney}>()
+const props=defineProps<{accountId:string;tripId:string;journey:TripJourney;accountTools?:boolean}>()
 const groups=[{name:'冬季攝影裝備清單',items:['防風防水外層、防水褲、保暖底層與中層','帽子、手套、防水鞋與冰爪','反光背心、頭燈、雨衣放車上易取處','飲水、熱飲、零食、行動電源','廣角／長焦、CPL／ND、鏡頭布、備用電池與記憶卡','泳衣、換洗衣物與防水收納袋']},{name:'每日照片備份',items:['照片複製到 SSD 或電腦','第二份留在記憶卡；雙備份前不格式化','挑 3–5 張標星，不急著重度修圖','充電、乾燥鏡頭；進室內先裝袋回溫']},{name:'攝影清單 · 24 張',items:photoChecklist}]
 const checked=ref<string[]>([])
 const key=computed(()=>`tripbook.prep:${props.accountId}:${props.tripId}`)
@@ -14,6 +14,7 @@ const twd=computed(()=>rate.value===null?'':Math.round(isk.value*rate.value*100)
 let controller:AbortController|undefined
 async function loadRate(){loadingRate.value=true;rateError.value='';controller?.abort();controller=new AbortController();const timeout=setTimeout(()=>controller?.abort(),8000)
  try{const response=await fetch('https://open.er-api.com/v6/latest/ISK',{signal:controller.signal});if(!response.ok)throw Error();const payload:unknown=await response.json();if(!payload||typeof payload!=='object'||!('rates'in payload)||!payload.rates||typeof payload.rates!=='object'||!('TWD'in payload.rates)||typeof payload.rates.TWD!=='number'||!Number.isFinite(payload.rates.TWD)||payload.rates.TWD<=0||!('time_last_update_utc'in payload)||typeof payload.time_last_update_utc!=='string')throw Error();rate.value=payload.rates.TWD;rateDate.value=payload.time_last_update_utc}catch{rateError.value='匯率暫時無法讀取，請重試。';rate.value=null}finally{clearTimeout(timeout);loadingRate.value=false}}
+onMounted(() => { if (!props.accountTools) void loadRate() })
 onBeforeUnmount(()=>controller?.abort())
 const offlineState=ref(''),offlineBusy=ref(false)
 async function download(){offlineBusy.value=true;offlineState.value='正在下載行程與網站…'
@@ -21,18 +22,17 @@ async function download(){offlineBusy.value=true;offlineState.value='正在下�
 </script>
 <template>
   <div class="preparation">
+    <template v-if="!accountTools">
     <section class="emergency"><h2>緊急資訊</h2><p class="emergency-number">冰島緊急電話 <a href="tel:112">112</a></p><p><a href="https://www.112.is/en/112-appid" target="_blank" rel="noreferrer">112 Iceland App ↗</a>（可送定位，出發前先安裝）</p><p>租車公司 24h 救援：待補</p><p><a href="https://www.google.com/maps/search/?api=1&query=hospital+near+me" target="_blank" rel="noreferrer">查最近醫院 ↗</a> · 同行者電話：待補</p></section>
     <section><h2>已確認預約 <small>票面細節仍須核對</small></h2><article class="reservation"><b>11/4 冰洞</b><span>Blue Ice Cave · 行程 09:00–15:00<br /><strong class="warning">集合／報到時間依票券核對</strong></span></article><article class="reservation"><b>11/5 Zodiac</b><span>Jökulsárlón · 行程 11:20–13:20<br /><strong class="warning">集合／報到時間依票券核對</strong></span></article><article class="reservation"><b>航班與其他行程</b><span>依「我的航班」選擇<br />Sky Lagoon／11/7 Blue Lagoon 訂位與票券待核對</span></article></section>
+    <section><h2>ISK 即時匯率</h2><nav class="official"><a href="https://safetravel.is/" target="_blank" rel="noreferrer">SafeTravel 警示 ↗</a><a href="https://umferdin.is/en" target="_blank" rel="noreferrer">Umferðin 路況 ↗</a><a href="https://en.vedur.is/" target="_blank" rel="noreferrer">Veður 天氣 ↗</a><a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is 攝影機 ↗</a></nav><div class="currency"><label>ISK<input v-model.number="isk" type="number" min="0" step="1" /></label><span>⇄</span><label>TWD<input :value="twd" type="number" min="0" step="0.01" :disabled="rate===null" @input="isk=rate?Number(($event.target as HTMLInputElement).value)/rate:0" /></label></div><button type="button" :disabled="loadingRate" @click="loadRate">{{ loadingRate?'讀取中…':'更新匯率' }}</button><p v-if="rateError" role="status" class="muted">{{ rateError }}</p><p v-if="rate" class="muted">1 ISK ≈ {{ rate }} TWD · {{ rateDate }} · 僅供估算</p><a class="muted" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by ExchangeRate-API ↗</a></section>
     <section v-if="$slots['packing-list']" class="packing-section"><slot name="packing-list" /></section>
-    <template v-for="group in groups" :key="group.name">
-      <section>
-        <h2>{{ group.name }} <small>{{ group.items.filter(item=>checked.includes(item)).length }}/{{ group.items.length }}</small></h2>
-        <label v-for="item in group.items" :key="item" class="check"><input v-model="checked" type="checkbox" :value="item" @change="saveChecks" /><span>{{ item }}</span></label>
-      </section>
+
     </template>
-    <p class="muted device-note">行前清單依登入帳號同步，勾選由每人分別儲存；裝備、備份與攝影清單保存在此裝置。</p>
+    <template v-else>
     <section><h2>離線行程</h2><p class="muted">下載整趟行程與網站，弱訊號時使用裝置副本。</p><button type="button" :disabled="offlineBusy" @click="download">{{ offlineBusy ? '下載中…' : '下載／更新離線行程' }}</button><p v-if="offlineState" role="status" class="muted">{{ offlineState }}</p></section>
-    <section><h2>官方連結與工具</h2><nav class="official"><a href="https://safetravel.is/" target="_blank" rel="noreferrer">SafeTravel 警示 ↗</a><a href="https://umferdin.is/en" target="_blank" rel="noreferrer">Umferðin 路況 ↗</a><a href="https://en.vedur.is/" target="_blank" rel="noreferrer">Veður 天氣 ↗</a><a href="https://www.road.is/" target="_blank" rel="noreferrer">road.is 攝影機 ↗</a></nav><div class="currency"><label>ISK<input v-model.number="isk" type="number" min="0" step="1" /></label><span>⇄</span><label>TWD<input :value="twd" type="number" min="0" step="0.01" :disabled="rate===null" @input="isk=rate?Number(($event.target as HTMLInputElement).value)/rate:0" /></label></div><button type="button" :disabled="loadingRate" @click="loadRate">{{ loadingRate?'讀取中…':'更新匯率' }}</button><p v-if="rateError" role="status" class="muted">{{ rateError }}</p><p v-if="rate" class="muted">1 ISK ≈ {{ rate }} TWD · {{ rateDate }} · 僅供估算</p><a class="muted" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by ExchangeRate-API ↗</a></section>
+    <details><summary>攝影裝備與備份</summary><section v-for="group in groups" :key="group.name"><h2>{{group.name}}</h2><label v-for="item in group.items" :key="item" class="check"><input v-model="checked" type="checkbox" :value="item" @change="saveChecks" /><span>{{item}}</span></label></section></details>
+    </template>
   </div>
 </template>
 <style scoped>

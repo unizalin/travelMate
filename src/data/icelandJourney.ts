@@ -20,13 +20,8 @@ export const icelandGroups: JourneyGroup[] = [1, 2, 3].map(index => ({
   membershipConfirmed: false,
 }))
 
-const privateStopDetails: Record<string, Pick<JourneyItem, 'photoTip' | 'notes'>> = {
+const privateStopDetails: Record<string, Pick<JourneyItem, 'notes'>> = {
   'Costco Wholesale Iceland': { notes: '使用者提供營業時間 10:00–21:00；抵達後採買旅程物資。' },
-  'Þingvellir': { photoTip: '建議 08:00–09:00 拍攝；此為攝影提示，尚未預約。' },
-  'Strokkur': { photoTip: '可從側邊平台取景；此為攝影提示，尚未預約。' },
-  'Gullfoss': { photoTip: '下午較有機會遇到彩虹；此為攝影提示，尚未預約。' },
-  'Seljalandsfoss': { photoTip: '使用者筆記：日出或早上；Gljúfrabúi 作延伸點，攜帶雨衣。' },
-  'Reynisfjara': { photoTip: '使用者筆記：日落前約一小時抵達。' },
   'Hali Blue Ice Cave Adventure': { notes: 'Glacier Adventure Base Camp；使用者確認活動時段 09:00–15:00。' },
   'Blue Lagoon': { notes: '11/7 安排；使用者註記 Aurora call、附早餐，服務細節依訂單確認。' },
   'Zodiac Boat Tour': { notes: 'icelagoon.com；使用者確認活動時段 11:20–13:20。' },
@@ -40,7 +35,7 @@ export const icelandItems: JourneyItem[] = publicIcelandItems.map((item) => ({
   ...item,
   id: item.id.replace('public-', ''),
   participation: 'all',
-  photoTip: privateStopDetails[item.name]?.photoTip ?? null,
+  photoTip: item.photoTip ?? null,
   notes: privateStopDetails[item.name]?.notes ?? null,
   photoSpots: icelandPhotoSpots[item.name]?.map(spot => ({ ...spot })),
 }))

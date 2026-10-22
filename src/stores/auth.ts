@@ -1,4 +1,5 @@
 import { supabase } from '@/services/supabase'
+import { safeInvitePath } from '@/services/inviteReturn'
 import { requireGoogleLogin } from '@/services/googleLoginAvailability'
 import type { Session, User } from '@supabase/supabase-js'
 import { defineStore } from 'pinia'
@@ -77,11 +78,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (error) throw error
   }
 
-  async function signInWithOAuth(provider: 'google' | 'line' | 'facebook') {
+  async function signInWithOAuth(provider: 'google' | 'line' | 'facebook', inviteReturn?: string) {
     const redirectTo = new URL(`${window.location.origin}/auth/callback`)
-    if (redirectAfterLogin.value) {
-      redirectTo.searchParams.set('next', redirectAfterLogin.value)
-    }
+    const next = safeInvitePath(inviteReturn) ?? redirectAfterLogin.value
+    if (next) redirectTo.searchParams.set('next', next)
 
     if (provider !== 'google') throw new Error('目前使用 Google 登入。')
     await requireGoogleLogin(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY)
@@ -100,7 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
   // LINE Logic Removed
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) throw error
     user.value = null
     session.value = null

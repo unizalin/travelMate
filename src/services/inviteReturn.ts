@@ -6,9 +6,9 @@ export function safeInvitePath(path: unknown): string | null {
 }
 export function rememberInvite(path: string): void {
   const safe = safeInvitePath(path)
-  if (safe) sessionStorage.setItem(KEY, safe)
+  if (safe) { try { sessionStorage.setItem(KEY, safe) } catch { /* OAuth next carries the same destination when storage is unavailable. */ } }
 }
 export function pendingInvite(): string | null {
-  return safeInvitePath(sessionStorage.getItem(KEY))
+  try { return safeInvitePath(sessionStorage.getItem(KEY)) } catch { return null }
 }
-export function clearInvite(): void { sessionStorage.removeItem(KEY) }
+export function clearInvite(): void { try { sessionStorage.removeItem(KEY) } catch { /* Storage may be disabled. */ } }

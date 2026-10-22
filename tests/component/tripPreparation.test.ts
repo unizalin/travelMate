@@ -15,11 +15,11 @@ describe('preparation checklist presentation', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('offers checkboxes directly and preserves choices only for the same account and trip', async () => {
-    const props = { accountId: 'account-a', tripId: 'fixture', journey: icelandJourney }
+    const props = { accountId: 'account-a', tripId: 'fixture', journey: icelandJourney, accountTools: true }
     const wrapper = mount(TripPreparation, { props })
-    expect(wrapper.find('details').exists()).toBe(false)
-    expect(wrapper.get('input[type="checkbox"]').isVisible()).toBe(true)
-    expect(wrapper.findAll('h2').map(heading => heading.text())).toContain('緊急資訊')
+    expect(wrapper.find('details').exists()).toBe(true)
+    expect(wrapper.findAll('input[type="checkbox"]').length).toBeGreaterThan(0)
+    expect(wrapper.findAll('h2').map(heading => heading.text())).toContain('離線行程')
     expect(wrapper.text()).not.toContain('出發前清單')
     await wrapper.get('input[type="checkbox"]').setValue(true)
     const saved = values.get('tripbook.prep:account-a:fixture')
@@ -34,16 +34,17 @@ describe('preparation checklist presentation', () => {
     restored.unmount()
   })
 
-  it('renders a single standalone packing section before the other checklists', () => {
+  it('orders emergency, reservations, currency and the shared packing template', () => {
     const wrapper = mount(TripPreparation, {
       props: { accountId: 'account-a', tripId: 'fixture', journey: icelandJourney },
-      slots: { 'packing-list': '<div data-testid="packing-list"><h2>行前清單 <small>0/49</small></h2></div>' },
+      slots: { 'packing-list': '<div data-testid="packing-list"><h2>行前清單 <small>0/45</small></h2></div>' },
     })
     const sections = wrapper.findAll('section')
-    expect(sections[2].classes()).toContain('packing-section')
-    expect(sections[2].text()).toContain('行前清單 0/49')
+    expect(sections[3].classes()).toContain('packing-section')
+    expect(sections[3].text()).toContain('行前清單 0/45')
     expect(wrapper.findAll('h2').filter(heading => heading.text().includes('行前清單'))).toHaveLength(1)
-    expect(sections[3].text()).toContain('冬季攝影裝備清單')
+    expect(sections[2].text()).toContain('ISK 即時匯率')
+    expect(wrapper.text()).not.toContain('冬季攝影裝備清單')
     wrapper.unmount()
   })
 })

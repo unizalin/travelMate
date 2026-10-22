@@ -154,7 +154,7 @@ async function saveEdit(item: PackingItem): Promise<void> {
   const epoch = loadEpoch.value
   const title = editingTitle.value.trim()
   if (!title) return
-  try { if (isRemote.value) await preparationService.updateItem(item.id, title); if (epoch !== loadEpoch.value) return; item.title = title; if (!isRemote.value) saveLocal(); editingId.value = null } catch { error.value = '旅伴項目只有 Owner／Editor 可以修改。' }
+  try { if (isRemote.value) await preparationService.updateItem(item.id, title); if (epoch !== loadEpoch.value) return; item.title = title; if (!isRemote.value) saveLocal(); editingId.value = null } catch { error.value = '成員項目只有 Owner／Editor 可以修改。' }
 }
 async function remove(item: PackingItem): Promise<void> {
   const epoch = loadEpoch.value
@@ -198,10 +198,10 @@ watch(() => [props.ownerId, props.canEditShared, props.tripId], () => { void loa
       <div class="embedded-add">
         <div class="embedded-selects">
           <select v-model="activeCategory" aria-label="新增項目分類"><option v-for="category in categories" :key="category" :value="category">{{ category }}</option></select>
-          <select v-model="addingShared" aria-label="新增項目範圍" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">旅伴項目</option></select>
+          <select v-model="addingShared" aria-label="新增項目範圍" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">成員項目</option></select>
         </div>
         <div class="embedded-add-row"><input v-model="newTitle" aria-label="新增行李項目" placeholder="新增行李項目" @keyup.enter="addItem" /><button type="button" :disabled="!newTitle.trim() || (addingShared && !canEditShared)" @click="addItem"><PlusIcon class="h-4 w-4" />新增</button></div>
-        <p>旅伴項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p>
+        <p>成員項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p>
       </div>
     </template>
     <template v-else>
@@ -223,7 +223,7 @@ watch(() => [props.ownerId, props.canEditShared, props.tripId], () => { void loa
       </article>
       <p v-if="visibleItems.length === 0" class="py-6 text-center text-sm text-slate-400">這個分類還沒有你的項目。</p>
     </div>
-    <div class="mt-5 rounded-2xl border border-dashed border-teal-200 bg-teal-50/40 p-3"><div class="flex gap-2"><select v-model="addingShared" class="min-h-10 rounded-xl border border-teal-200 bg-white px-2 text-xs font-bold" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">旅伴項目</option></select><input v-model="newTitle" class="min-h-10 min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 text-sm" placeholder="新增準備項目" @keyup.enter="addItem" /><button type="button" class="packing-add flex min-h-10 items-center gap-1 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white disabled:opacity-40" :disabled="!newTitle.trim() || (addingShared && !canEditShared)" @click="addItem"><PlusIcon class="h-4 w-4" />新增</button></div><p class="mt-2 text-[11px] text-slate-500">旅伴項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p></div>
+    <div class="mt-5 rounded-2xl border border-dashed border-teal-200 bg-teal-50/40 p-3"><div class="flex gap-2"><select v-model="addingShared" class="min-h-10 rounded-xl border border-teal-200 bg-white px-2 text-xs font-bold" :disabled="!canEditShared"><option :value="false">我的項目</option><option :value="true">成員項目</option></select><input v-model="newTitle" class="min-h-10 min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 text-sm" placeholder="新增準備項目" @keyup.enter="addItem" /><button type="button" class="packing-add flex min-h-10 items-center gap-1 rounded-xl bg-teal-800 px-3 text-xs font-bold text-white disabled:opacity-40" :disabled="!newTitle.trim() || (addingShared && !canEditShared)" @click="addItem"><PlusIcon class="h-4 w-4" />新增</button></div><p class="mt-2 text-[11px] text-slate-500">成員項目由 Owner／Editor 管理；未認領前不能建立個人項目。</p></div>
     </template>
   </section>
 </template>

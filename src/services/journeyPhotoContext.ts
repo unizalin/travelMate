@@ -1,9 +1,9 @@
-import { onBeforeUnmount, provide, ref, watch, type InjectionKey, type Ref } from 'vue'
+import { onBeforeUnmount, provide, ref, watch, type Ref } from 'vue'
 import { photoPreferenceService } from '@/services/photoPreferenceService'
 import { loadRoster } from '@/services/journeyRosterService'
 import type { MemberPhotoPreferences } from '@/domain/photoPreferences'
-type PhotoContext = { preferences: Ref<MemberPhotoPreferences | null>; busy: Ref<boolean>; error: Ref<string>; update: (next: MemberPhotoPreferences) => Promise<void> }
-export const journeyPhotoKey: InjectionKey<PhotoContext> = Symbol('journey-photo-preferences')
+import { journeyPhotoKey, type PhotoContext } from '@/domain/journeyPhotoContext'
+export { journeyPhotoKey } from '@/domain/journeyPhotoContext'
 export function provideJourneyPhotos(tripId: Ref<string>, accountId: Ref<string>, enabled: Ref<boolean>): PhotoContext {
  const preferences=ref<MemberPhotoPreferences|null>(null);const busy=ref(false);const error=ref('');let epoch=0
  watch([tripId,accountId,enabled],async()=>{

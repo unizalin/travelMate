@@ -24,8 +24,8 @@ async function login() {
   busy.value = true; error.value = ''
   try {
     const path = '/iceland/join?token=' + token.value
-    rememberInvite(path); auth.openAuthModal('login', path)
-    await auth.signInWithOAuth('google')
+    rememberInvite(path)
+    await auth.signInWithOAuth('google', path)
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '登入失敗，請重試。'; busy.value = false }
 }
 async function confirm() {

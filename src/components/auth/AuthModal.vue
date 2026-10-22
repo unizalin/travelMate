@@ -69,7 +69,7 @@ function handleClose() {
                   {{ sent ? '登入連結已寄出' : '登入 TravelMate' }}
                 </DialogTitle>
                 <p class="mt-2 text-[13px] leading-[1.6] text-[#5F706B]">
-                  {{ sent ? '請到信箱開啟登入連結，繼續旅程。' : '登入後與旅伴一起整理行程、留言與準備事項。' }}
+                  {{ sent ? '請到信箱開啟登入連結，繼續旅程。' : '加入後一起整理行程、留言與準備事項。' }}
                 </p>
               </div>
               <div v-if="sent" class="space-y-5">
@@ -103,7 +103,7 @@ function handleClose() {
                   使用 Google 登入
                 </button>
               </div>
-              <p class="mt-6 border-t border-[#DDE3DE] pt-4 text-[12px] leading-[1.6] text-[#5F706B]">登入後可查看旅伴共享的私人行程內容。</p>
+              <p class="mt-6 border-t border-[#DDE3DE] pt-4 text-[12px] leading-[1.6] text-[#5F706B]">透過邀請連結認領身分後，即可使用共同編輯與私人內容。</p>
             </DialogPanel>
           </TransitionChild>
         </div>

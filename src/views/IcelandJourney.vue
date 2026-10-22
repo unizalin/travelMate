@@ -1,52 +1,82 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, shallowRef } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { loadLocalJourney } from '@/domain/tripJourney'
 import JourneyAdmin from '@/components/trip/JourneyAdmin.vue'
 import TripReader from '@/components/trip/TripReader.vue'
-import { ICELAND_FLIGHTS_PATH } from '@/router/iceland'
+import { ICELAND_TRIP_ID } from '@/router/iceland'
 import type { useAuthStore } from '@/stores/auth'
-
 const CompanionJourney = defineAsyncComponent(async () => (await import('./IcelandPlanner.vue')).default)
-const route = useRoute()
-const router = useRouter()
+const route = useRoute(); const router = useRouter()
 const auth = shallowRef<ReturnType<typeof useAuthStore> | null>(null)
 const signedIn = computed(() => Boolean(auth.value?.user))
+const member = shallowRef(false)
+const membershipReady = shallowRef(false)
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 const loginError = shallowRef('')
+let epoch = 0
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+async function refreshMembership() {
+  const current = ++epoch
+  if (!auth.value?.user) { member.value = false; membershipReady.value = true; return }
+  if (!navigator.onLine) {
+    try { member.value = loadLocalJourney(auth.value.user.id, ICELAND_TRIP_ID) !== null } catch { member.value = false }
+    membershipReady.value = true
+    return
+  }
+  try {
+    const { loadJourney } = await import('@/services/journeyService')
+    await loadJourney(ICELAND_TRIP_ID)
+    if (current === epoch) member.value = true
+  } catch { if (current === epoch) member.value = false }
+  if (current === epoch) membershipReady.value = true
+  if (current === epoch && !member.value && route.query.section && route.query.section !== 'itinerary') {
+    await router.replace({ path: '/iceland', query: { ...route.query, section: 'itinerary' } })
+  }
+}
+watch(() => auth.value?.user?.id, () => { member.value = false; void refreshMembership() })
+watch(() => [route.query.section, membershipReady.value, member.value], async () => {
+  const section=route.query.section
+  if (membershipReady.value && !member.value && section && section !== 'itinerary') await router.replace({ query: { ...route.query, section: 'itinerary' } })
+}, { immediate: true })
 onMounted(async () => {
   if (!configured) return
   try {
     const { useAuthStore } = await import('@/stores/auth')
     auth.value = useAuthStore()
     if (!auth.value.user) await auth.value.initializeAuth()
-  } catch {
-    loginError.value = '登入服務暫時無法連線，仍可查看行程。'
-  }
+    await refreshMembership()
+    refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') void refreshMembership() }, 30_000)
+    window.addEventListener('focus', refreshMembership)
+    window.addEventListener('online', refreshMembership)
+    window.addEventListener('offline', refreshMembership)
+  } catch { loginError.value = '登入服務暫時無法連線，仍可查看行程。' }
 })
+onBeforeUnmount(() => { epoch++; clearInterval(refreshTimer); window.removeEventListener('focus', refreshMembership); window.removeEventListener('online', refreshMembership); window.removeEventListener('offline', refreshMembership) })
 async function signOut() {
-  try {
-    await auth.value?.signOut()
-  } catch {
-    loginError.value = '登出失敗，請稍後再試。'
-  }
+  try { await auth.value?.signOut(); member.value = false }
+  catch { loginError.value = '登出失敗，請稍後再試。' }
 }
-function signIn() {
-  auth.value?.openAuthModal('login', ICELAND_FLIGHTS_PATH)
+function signIn() { auth.value?.openAuthModal('login', '/iceland') }
+async function switchAccount() {
+  try { await signOut(); auth.value?.openAuthModal('login', '/iceland'); await auth.value?.signInWithOAuth('google') }
+  catch { loginError.value = '切換帳號失敗，請重試。' }
 }
 </script>
-
 <template>
-  <CompanionJourney v-if="signedIn" :key="auth?.user?.id">
-    <template #account-actions>
-      <span class="text-xs text-stone-500">{{ auth?.user?.email }}</span>
-      <button type="button" class="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700" @click="signOut">登出</button>
+  <CompanionJourney v-if="member" :key="auth?.user?.id">
+    <template #account-actions><button class="min-h-11 rounded-full border px-4 text-sm" @click="router.replace({query:{section:'me'}})">我的旅程</button></template>
+    <template #management="{ tripId }"><JourneyAdmin :trip-id="tripId" /></template>
+    <template #account-settings>
+      <div><p class="my-3 break-all text-sm">Google 帳號：{{ auth?.user?.email }}</p><button class="mr-5 min-h-11 underline" @click="switchAccount">切換帳號</button><button class="min-h-11 underline" @click="signOut">登出本機</button></div>
     </template>
-    <template #management><JourneyAdmin /></template>
   </CompanionJourney>
-  <TripReader v-else :section="typeof route.query.section === 'string' ? route.query.section : undefined" @select-section="router.replace({ query: { ...route.query, section: $event } })">
+  <TripReader v-else>
     <template #header-actions>
-      <button v-if="configured" type="button" class="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 disabled:opacity-50" :disabled="!auth" @click="signIn">旅伴登入</button>
+      <details v-if="signedIn" class="account-menu"><summary>帳號</summary><div><p class="break-all">目前帳號：{{ auth?.user?.email }}</p><button class="min-h-11" @click="switchAccount">切換帳號</button><button class="min-h-11" @click="signOut">登出本機</button></div></details>
+      <button v-else-if="configured" type="button" class="min-h-11 rounded-full border px-4 text-sm font-semibold disabled:opacity-50" :disabled="!auth" @click="signIn">登入</button>
     </template>
-    <template #header-notice><p v-if="loginError" role="status" class="text-xs text-stone-500">{{ loginError }}</p></template>
+    <template #header-notice><p v-if="signedIn" role="status">尚未加入，請透過邀請連結加入</p><p v-if="loginError" role="status">{{ loginError }}</p></template>
   </TripReader>
 </template>
+<style scoped>.account-menu{position:relative;font-size:13px}.account-menu summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.account-menu>div{position:absolute;right:0;z-index:30;width:280px;padding:16px;border:1px solid #ccd5cf;border-radius:12px;background:#f7f8f6}.account-menu button{display:block}</style>

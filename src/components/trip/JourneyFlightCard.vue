@@ -9,8 +9,8 @@ defineProps<{ flight: IcelandFlight }>()
     <div class="flight-route"><div><b>{{ flight.departure }}</b><span>{{ flight.from }} 出發</span></div><span class="flight-path">起降當地時間</span><div><b>{{ flight.arrival }}</b><span>{{ flight.to }} 抵達</span></div></div>
     <p class="flight-meta">訂位代號：待補 · 行李額：待補</p>
     <p class="flight-meta">台灣 {{ taiwanFlightTime(flight) }}</p>
-    <p v-if="flight.arrivalDate !== flight.date" class="flight-meta">抵達日期：{{ flight.arrivalDate || '待補' }}</p>
-    <p class="checkin"><b>提醒</b>　{{ flight.reminder ?? '線上報到開放時間待確認，以航空公司通知為準。' }}<slot name="reminder" /></p>
+    <p class="flight-meta arrival-date">抵達日期：{{ flight.arrivalDate || '未確認' }}<span v-if="flight.date && flight.arrivalDate && (Date.parse(flight.arrivalDate)-Date.parse(flight.date))===86400000"> · +1 日</span></p>
+    <details v-if="flight.reminder || $slots.reminder" class="checkin"><summary>報到與銜接提醒</summary><p v-if="flight.reminder">{{flight.reminder}}</p><slot name="reminder" /></details>
     <slot />
   </article>
 </template>

@@ -19,11 +19,11 @@ describe('TripReader', () => {
 
   it('keeps both local and Taiwan clocks visible in the compact header', async () => {
     const wrapper = mount(TripReader)
-    const clocks = wrapper.find('.journey-header .clocks')
+    const clocks = wrapper.find('.global-information .clocks')
     expect(clocks.text()).toContain('倫敦')
     expect(clocks.text()).toContain('台灣')
     await wrapper.get('#leg-tab-iceland').trigger('click')
-    expect(wrapper.find('.journey-header .clocks').text()).toContain('冰島')
+    expect(wrapper.find('.global-information .clocks').text()).toContain('冰島')
     wrapper.unmount()
   })
 
@@ -34,22 +34,10 @@ describe('TripReader', () => {
       await wrapper.get(`#day-tab-${date}`).trigger('click')
       expect(wrapper.text()).toContain(name)
     }
-    await wrapper.get('#view-tab-more').trigger('click')
-    expect(wrapper.text()).not.toContain('Víkurkirkja')
-    expect(wrapper.text()).not.toContain('Stjórnarfoss（可選）')
-    expect(wrapper.text()).not.toContain('Skaftafells Glacier TOUR')
-    expect(wrapper.text()).toContain('Blue Lagoon')
-    expect(wrapper.text()).toContain('BA802')
-    expect(wrapper.text()).toContain('行程已確認')
-    expect(wrapper.text()).not.toContain('公開')
-    await wrapper.get('#view-tab-flights').trigger('click')
-    expect(wrapper.text()).toContain('BR068')
-    expect(wrapper.text()).toContain('6 人')
-    expect(wrapper.text()).not.toContain('Hótel Jökulsárlón - Glacier Lagoon Hotel')
-    expect(wrapper.text()).not.toContain('拍攝提示')
-    expect(wrapper.text()).not.toContain('成員 1')
-    expect(wrapper.text()).not.toContain('member-1')
-    expect(wrapper.text()).not.toContain('共用 Memo')
+    expect(wrapper.find('.journey-navigation').exists()).toBe(false)
+    expect(wrapper.find('#view-preparation').exists()).toBe(false)
+    expect(wrapper.find('#view-flights').exists()).toBe(false)
+    expect(wrapper.text()).not.toMatch(/Hótel|member-1|共用 Memo|成員 1/)
     expect(wrapper.findAll('a').some(link => link.text().includes('開啟規劃'))).toBe(false)
   })
 
@@ -119,28 +107,31 @@ describe('TripReader', () => {
     wrapper.unmount()
   })
 
-  it('switches reader views and keeps multiple arrival flight options together', async () => {
-    const wrapper = mount(TripReader, { props: { publicOnly: true } })
-    expect(wrapper.find('#view-daily').isVisible()).toBe(true)
-    expect(wrapper.find('#view-preparation').exists()).toBe(false)
-    expect(wrapper.find('#view-flights').exists()).toBe(false)
+  it('forces public deep links to itinerary without rendering member sections', async () => {
+    const wrapper = mount(TripReader, { props: { publicOnly: true, section: 'flights' }, slots: { flights: '<p>PRIVATE_FLIGHTS</p>', preparation: '<p>PRIVATE_PACKING</p>', me: '<p>PRIVATE_ACCOUNT</p>' } })
+    for (const section of ['flights', 'more', 'me']) {
+      await wrapper.setProps({section})
+      expect(wrapper.find('#view-daily').exists()).toBe(true)
+      expect(wrapper.find('.journey-navigation').exists()).toBe(false)
+      expect(wrapper.text()).not.toMatch(/PRIVATE_FLIGHTS|PRIVATE_PACKING|PRIVATE_ACCOUNT/)
+    }
     await wrapper.get('#leg-tab-iceland').trigger('click')
-    await wrapper.get('#day-tab-2026-10-30').trigger('click')
-    expect(wrapper.find('[aria-label="當日航班方案"]').text()).toContain('FI0501')
-    expect(wrapper.find('[aria-label="當日航班方案"]').text()).toContain('BA802')
-    await wrapper.find('#view-tab-more').trigger('click')
-    expect(wrapper.find('#view-tab-more').attributes('aria-selected')).toBe('true')
-    expect(wrapper.find('#view-preparation').exists()).toBe(true)
-    expect(wrapper.find('#view-daily').exists()).toBe(false)
-    await wrapper.find('#view-tab-flights').trigger('click')
-    expect(wrapper.find('#view-flights').exists()).toBe(true)
-    expect(wrapper.find('#view-daily').exists()).toBe(false)
-    expect(wrapper.find('#view-preparation').exists()).toBe(false)
-    expect(wrapper.find('#view-flights').text()).toContain('CI0073')
-    expect(wrapper.find('#view-flights').text()).toContain('2026-11-08')
-    expect(wrapper.find('#view-flights').text()).toContain('FI0454')
-    expect(wrapper.find('#view-flights .private-stay').exists()).toBe(false)
-    expect(wrapper.findAll('#view-flights .flight-card').length).toBeGreaterThan(0)
+    await wrapper.get('#day-tab-2026-10-31').trigger('click')
+    expect(wrapper.text()).toContain('拍攝建議')
+    expect(wrapper.text()).toContain('iPhone')
+    expect(wrapper.text()).toContain('相機')
+    expect(wrapper.text()).not.toMatch(/收藏|留言|jinyo|Rosanne/)
+    wrapper.unmount()
+  })
+
+  it('provides four member tabs and renders only the selected section', async () => {
+    const wrapper = mount(TripReader, { props: { publicOnly: false, companionMode: true, journey: icelandJourney }, slots: { flights: '<p>我的班次</p>', preparation: '<p>個人行李</p>', me: '<p>我的身分</p>' } })
+    expect(wrapper.findAll('.journey-navigation button').map(b=>b.text())).toEqual(['行程','我的航班','行前準備','我的'])
+    for (const [tab, text] of [['flights','我的班次'],['more','個人行李'],['me','我的身分']]) {
+      await wrapper.get('#view-tab-'+tab).trigger('click')
+      expect(wrapper.text()).toContain(text)
+      expect(wrapper.find('#view-daily').exists()).toBe(false)
+    }
     wrapper.unmount()
   })
 
@@ -167,7 +158,7 @@ describe('TripReader', () => {
     vi.useRealTimers()
   })
 
-  it('keeps the aurora card hidden before the Iceland trip period', () => {
+  it('keeps London free of the Iceland aurora card before the trip', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-10-20T12:00:00Z'))
     const wrapper = mount(TripReader, { props: { publicOnly: true } })

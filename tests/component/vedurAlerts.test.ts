@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 describe('Veður warning banner', () => {
-  it('appears only in the Iceland daily section, refreshes every ten minutes, and clears on failure', async () => {
+  it('appears in both journey legs, refreshes every ten minutes, and clears on failure', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-11-02T12:00:00Z'))
     const warning = {
@@ -35,10 +35,11 @@ describe('Veður warning banner', () => {
     expect(banner.get('a').attributes('href')).toBe('https://en.vedur.is/vidvaranir')
 
     await wrapper.get('#leg-tab-london').trigger('click')
-    expect(wrapper.find('[aria-label="Veður 官方天氣警報"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Veður 官方天氣警報"]').exists()).toBe(true)
     await wrapper.get('#leg-tab-iceland').trigger('click')
     expect(wrapper.find('[aria-label="Veður 官方天氣警報"]').exists()).toBe(true)
     expect(vedur.load).toHaveBeenCalledTimes(1)
+    await wrapper.setProps({publicOnly:false,companionMode:true})
     await wrapper.get('#view-tab-flights').trigger('click')
     expect(wrapper.find('[aria-label="Veður 官方天氣警報"]').exists()).toBe(true)
 

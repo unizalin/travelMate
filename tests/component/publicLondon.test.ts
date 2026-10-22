@@ -15,7 +15,7 @@ describe('public London and Iceland page', () => {
     expect(wrapper.get('h1').text()).toContain('一起去倫敦・冰島')
     expect(wrapper.get('h1').text()).toContain('15 天')
     expect(wrapper.get('.clocks').text()).toMatch(/倫敦.*台灣/)
-    expect(wrapper.findAll('[aria-label="旅程檢視"] button').map(button=>button.text())).toEqual(['每日行程','我的航班','行前準備'])
+    expect(wrapper.findAll('[aria-label="旅程檢視"] button').map(button=>button.text())).toEqual([])
     expect(wrapper.findAll('[aria-label="行程日期"]')).toHaveLength(1)
     const dateTabs = wrapper.findAll('[aria-label="行程日期"] [role="tab"]')
     expect(dateTabs).toHaveLength(6)
@@ -37,10 +37,7 @@ describe('public London and Iceland page', () => {
     expect(wrapper.findAll('[aria-label="行程日期"] [role="tab"]')).toHaveLength(9)
     expect(wrapper.get('#day-tab-2026-11-07').exists()).toBe(true)
     expect(wrapper.get('.clocks').text()).toMatch(/冰島.*台灣/)
-    await wrapper.get('#view-tab-more').trigger('click')
-    expect(wrapper.get('#view-preparation').text()).toContain('行程 09:00–15:00')
-    expect(wrapper.get('#view-preparation').text()).toContain('行程 11:20–13:20')
-    expect(wrapper.get('#view-preparation').text()).toContain('11/7 Blue Lagoon')
+    expect(wrapper.find('#view-preparation').exists()).toBe(false)
     expect(wrapper.find('#view-flights').exists()).toBe(false)
     wrapper.unmount()
   })
@@ -99,10 +96,10 @@ describe('public London and Iceland page', () => {
     wrapper.unmount()
   })
 
-  it('renders an approved London accommodation without rooms or participant details', () => {
+  it('does not render canceled London accommodation cards', () => {
     const journey = { ...publicLondonJourney, accommodations:[{id:'public-london-fixture-stay',tripId:publicLondonJourney.tripId,name:'London fixture hotel',checkIn:'2026-10-24',checkOut:'2026-10-30',participantIds:[],rooms:[],benefits:['早餐依訂單確認']}] }
     const wrapper = mount(LondonItinerary,{props:{journey}})
-    expect(wrapper.get('.compact-stay').text()).toContain('London fixture hotel')
+    expect(wrapper.find('.compact-stay').exists()).toBe(false)
     expect(wrapper.find('.prelude-people,input,textarea,.comments').exists()).toBe(false)
     wrapper.unmount()
   })

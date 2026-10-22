@@ -26,7 +26,7 @@ describe('Invitation joining', () => {
     state.user = null; const { wrapper } = await setup()
     expect(wrapper.text()).toContain('Safari 或 Chrome')
     await wrapper.get('[data-test="invite-login"]').trigger('click')
-    expect(state.oauth).toHaveBeenCalledWith('google'); wrapper.unmount()
+    expect(state.oauth).toHaveBeenCalledWith('google','/iceland/join?token='+'a'.repeat(64)); expect(sessionStorage.getItem('tripbook-invite-return')).toBe('/iceland/join?token='+'a'.repeat(64)); sessionStorage.clear(); wrapper.unmount()
   })
   it('shows an invalid invitation without exposing the identity list', async () => {
     state.preview.mockRejectedValue(new Error('邀請連結已失效，請向建立者索取新連結。'))

@@ -132,10 +132,17 @@ for (const privateModule of ['src/data/icelandMemberNames.ts',
   'src/components/trip/LondonPrelude.vue',
   'src/components/trip/ItineraryActivities.vue',
   'src/services/activityCommentService.ts',
-  'src/components/trip/ActivityComments.vue', 'src/services/auroraPushService.ts', 'src/components/trip/AuroraReminderSettings.vue', 'src/services/journeyRosterService.ts', 'src/components/trip/JourneyRoster.vue', 'src/services/googleLoginAvailability.ts', 'src/components/trip/PhotographySpots.vue', 'src/services/photoPreferenceService.ts', 'src/domain/photoPreferences.ts', 'src/data/icelandPhotography.ts']) {
+  'src/components/trip/ActivityComments.vue', 'src/services/auroraPushService.ts', 'src/components/trip/AuroraReminderSettings.vue', 'src/services/journeyRosterService.ts', 'src/components/trip/JourneyRoster.vue', 'src/services/googleLoginAvailability.ts', 'src/services/photoPreferenceService.ts', 'src/domain/photoPreferences.ts']) {
   test(`rejects private identity/auth module ${privateModule}`, async () => {
     const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', privateModule])
     try { await assert.rejects(() => checkPublicBuild(root), /private module/i) }
     finally { await rm(root, { recursive: true, force: true }) }
   })
 }
+
+ test('allows public shooting guidance while rejecting account preference loaders', async () => {
+ const modules=['src/share.ts','src/components/trip/PhotographySpots.vue','src/data/icelandPhotography.ts','src/domain/journeyPhotoContext.ts']
+ const root=await fixture({'src/share.ts':{file:'assets/index.js',src:'src/share.ts',isEntry:true}},['assets/index.js'],modules)
+ try { assert.equal((await checkPublicBuild(root)).modules,4) }
+ finally { await rm(root,{recursive:true,force:true}) }
+ })

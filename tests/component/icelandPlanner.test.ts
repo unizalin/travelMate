@@ -87,6 +87,22 @@ describe('IcelandPlanner cloud controls', () => {
     authState.initializeAuth.mockReset()
   })
 
+  it('renders an account-scoped downloaded journey read-only when offline', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL','http://supabase.test')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY','anon-key')
+    const connection=vi.spyOn(navigator,'onLine','get').mockReturnValue(false)
+    setAuthUser('offline-account')
+    const {saveLocalJourney}=await import('@/domain/tripJourney')
+    saveLocalJourney('offline-account',icelandJourney)
+    loadJourney.mockRejectedValue(new Error('offline'))
+    const router=makeRouter(); await router.push(`/trips/${icelandJourney.tripId}/journey`)
+    const wrapper=mount(IcelandPlanner,{global:{plugins:[router]}}); await flushPromises()
+    expect(wrapper.text()).toContain('離線副本 · 僅供閱讀')
+    expect(wrapper.text()).toContain('Costco Wholesale Iceland')
+    expect(wrapper.find('.activity-editor,.drag-handle,.edit-footer').exists()).toBe(false)
+    wrapper.unmount(); connection.mockRestore()
+  })
+
   it('uses the same itinerary reader for companions without a second reading destination', async () => {
     const router = makeRouter()
     await router.push('/trips/tripbook-iceland-2026/journey')
@@ -99,7 +115,7 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
-  it('shows the selected night accommodation only after an authorized load', async () => {
+  it('keeps the canceled accommodation card hidden even for members', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
     setAuthUser('qa-owner')
@@ -109,8 +125,7 @@ describe('IcelandPlanner cloud controls', () => {
     const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
     await flushPromises()
     await wrapper.get('#day-tab-2026-11-02').trigger('click')
-    expect(wrapper.get('.compact-stay').text()).toContain('The Barn')
-    expect(wrapper.get('.compact-stay').text()).not.toContain('U16 by Stay in Iceland')
+    expect(wrapper.find('.compact-stay').exists()).toBe(false)
     wrapper.unmount()
   })
 
@@ -125,7 +140,7 @@ describe('IcelandPlanner cloud controls', () => {
 
     const global = wrapper.find('.global-information')
     expect(global.find('[aria-labelledby="aurora-heading"]').exists()).toBe(true)
-    expect(global.element.compareDocumentPosition(wrapper.get('.journey-navigation').element) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(global.element.compareDocumentPosition(wrapper.get('.journey-dates').element) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     const morningCheck = wrapper.find('.morning')
     expect(morningCheck.find('.checks').exists()).toBe(false)
     expect(wrapper.get('.weather-details').find('.morning').exists()).toBe(true)
@@ -157,7 +172,7 @@ describe('IcelandPlanner cloud controls', () => {
     await flushPromises()
     expect(wrapper.find('#view-flights').exists()).toBe(false)
     expect(wrapper.find('#view-preparation').exists()).toBe(false)
-    expect(wrapper.findAll('[aria-label="旅程檢視"] button').find(button => button.text() === '每日行程')?.attributes('aria-current')).toBe('page')
+    expect(wrapper.findAll('[aria-label="旅程檢視"] button').find(button => button.text() === '行程')?.attributes('aria-current')).toBe('page')
     await router.push('/trips/tripbook-iceland-2026/journey?section=flights')
     await flushPromises()
     expect(flightsTab()?.attributes('aria-current')).toBe('page')
@@ -449,7 +464,7 @@ describe('IcelandPlanner cloud controls', () => {
 
     nextResponse.resolve({ tripId: icelandJourney.tripId, revision: 4, journey: nextJourney, canEdit: true, updatedAt: '2026-10-13T00:00:01Z' })
     await flushPromises()
-    expect({ status: wrapper.find('.journey-status').text(), buttons: wrapper.findAll('button').map(button => button.text()) }).toEqual(expect.objectContaining({ buttons: expect.arrayContaining(['編輯行程']) }))
+    expect({ buttons: wrapper.findAll('button').map(button => button.text()) }).toEqual(expect.objectContaining({ buttons: expect.arrayContaining(['編輯行程']) }))
     await wrapper.findAll('button').find(button => button.text() === '編輯行程')!.trigger('click')
     expect((wrapper.find('.activity-editor input').element as HTMLInputElement).value).toBe('新帳號名稱')
     wrapper.unmount()

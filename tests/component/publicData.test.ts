@@ -10,10 +10,10 @@ describe('public Iceland journey snapshot', () => {
     expect(publicIcelandJourney.members).toEqual([])
     expect(publicIcelandJourney.groups).toEqual([])
     expect(publicIcelandJourney.accommodations).toEqual([])
-    expect(publicIcelandJourney.items.every(item => item.photoTip == null)).toBe(true)
-    expect(publicIcelandJourney.items.every(item => item.photoSpots == null)).toBe(true)
+    expect(publicIcelandJourney.items.some(item => item.photoTip)).toBe(true)
+    expect(publicIcelandJourney.items.some(item => item.photoSpots?.length)).toBe(true)
     expect(publicIcelandJourney.transports.every(transport => transport.participantIds.length === 0 && transport.notes == null)).toBe(true)
-    expect(JSON.stringify(publicIcelandJourney)).not.toMatch(/member-\d|group-\d|Hótel|Aurora Igloo|Silica Hotel|攝影提示/)
+    expect(JSON.stringify(publicIcelandJourney)).not.toMatch(/member-\d|group-\d|Hótel|Aurora Igloo|Silica Hotel/)
   })
 
   it('publishes London dates and activity notes without identities, assignments or private fields', () => {

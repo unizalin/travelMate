@@ -36,8 +36,8 @@ export async function joinInvite(token: string, memberId: string): Promise<{ tri
   if (typeof value.tripId !== 'string') throw new Error('旅程資料格式無效。')
   return { tripId: value.tripId }
 }
-export async function loadAdminState(): Promise<AdminState> {
-  const value = record(await invoke('tripbook_admin_state'))
+export async function loadAdminState(tripId: string): Promise<AdminState> {
+  const value = record(await invoke('tripbook_admin_state', { p_trip_id: tripId }))
   if (value.isAdmin !== true) return { isAdmin: false }
   if (typeof value.inviteActive !== 'boolean' || !Array.isArray(value.members)) throw new Error('管理資料格式無效。')
   return { isAdmin: true, inviteActive: value.inviteActive, members: value.members.map(item => {
@@ -46,10 +46,10 @@ export async function loadAdminState(): Promise<AdminState> {
     return { id: m.id, name: m.name, email: m.email, claimedAt: m.claimedAt, isOwner: m.isOwner }
   }) }
 }
-export async function rotateInvite(): Promise<string> {
-  const value = await invoke('tripbook_rotate_invite')
+export async function rotateInvite(tripId: string): Promise<string> {
+  const value = await invoke('tripbook_rotate_invite', { p_trip_id: tripId })
   if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) throw new Error('邀請資料格式無效。')
   return value
 }
-export const revokeInvite = () => invoke('tripbook_revoke_invite')
-export const removeMember = (memberId: string) => invoke('tripbook_remove_member', { p_member_id: memberId })
+export const revokeInvite = (tripId: string) => invoke('tripbook_revoke_invite', { p_trip_id: tripId })
+export const removeMember = (tripId: string, memberId: string) => invoke('tripbook_remove_member', { p_trip_id: tripId, p_member_id: memberId })

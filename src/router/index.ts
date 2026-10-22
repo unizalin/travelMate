@@ -71,8 +71,7 @@ const router = createRouter({
     {
       path: '/trips/:tripId/map',
       name: 'trip-map-overview',
-      component: () => import('../views/TripMapOverview.vue'),
-      meta: { requiresAuth: true, title: '地圖總覽' },
+      redirect: '/iceland',
     },
     {
       path: '/trips/:tripId/day/:dayNumber',
@@ -81,32 +80,27 @@ const router = createRouter({
     {
       path: '/trips/:id',
       name: 'trip-detail',
-      component: () => import('../views/TripDetail.vue'),
-      meta: { requiresAuth: true, title: '旅程詳情' },
+      redirect: '/iceland',
     },
     {
       path: '/trips/:tripId/itinerary/:dayNumber',
       name: 'day-detail',
-      component: () => import('../views/DayDetail.vue'),
-      meta: { requiresAuth: true, title: '單日行程' },
+      redirect: '/iceland',
     },
     {
       path: '/trips/:tripId/overview',
       name: 'trip-overview',
-      component: () => import('../views/TripOverview.vue'),
-      meta: { requiresAuth: true, title: '旅程概覽' },
+      redirect: '/iceland',
     },
     {
       path: '/join',
       name: 'join-trip',
-      component: () => import('../views/JoinTrip.vue'),
-      meta: { requiresAuth: true, title: '加入旅程' },
+      redirect: '/iceland',
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('../views/Profile.vue'),
-      meta: { requiresAuth: true, title: '個人設定' },
+      redirect: '/iceland?section=me',
     },
   ],
 })
