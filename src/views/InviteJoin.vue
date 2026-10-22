@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { previewInvite, joinInvite, type InviteMember } from '@/services/journeyInviteService'
+import { canReadJourney } from '@/services/journeyService'
+import { ICELAND_TRIP_ID } from '@/router/iceland'
 import { clearInvite, rememberInvite } from '@/services/inviteReturn'
 const route = useRoute(); const router = useRouter(); const auth = useAuthStore()
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token : '')
@@ -14,7 +16,7 @@ async function load() {
     if (!/^[a-f0-9]{64}$/.test(token.value)) throw new Error('邀請連結已失效，請向建立者索取新連結。')
     if (auth.user) {
       const preview = await previewInvite(token.value)
-      if (preview.joined) { clearInvite(); await router.replace('/iceland?section=flights'); return }
+      if (await canReadJourney(ICELAND_TRIP_ID)) { clearInvite(); await router.replace('/iceland?section=flights'); return }
       members.value = preview.members
     }
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '無法讀取邀請。' }

@@ -51,6 +51,15 @@ describe('Invitation joining', () => {
     wrapper.unmount()
   })
 
+  it('uses owner membership rather than requiring a claim in the invite preview', async () => {
+    state.joined = true
+    state.preview.mockResolvedValue({ joined: false, members: [{ id: 'member-4', name: 'Fixture', claimed: false }] })
+    const { wrapper, router } = await setup()
+    expect(router.currentRoute.value.fullPath).toBe('/iceland?section=flights')
+    expect(state.join).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('offers Google login with a preserved invitation destination', async () => {
     state.user = null; const { wrapper } = await setup()
     expect(wrapper.text()).toContain('Safari 或 Chrome')
