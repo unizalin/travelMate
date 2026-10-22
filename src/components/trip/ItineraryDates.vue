@@ -27,12 +27,55 @@ function navigate(event: KeyboardEvent, index: number) {
   </div>
 </template>
 <style scoped>
-.journey-dates{display:flex;gap:10px;position:sticky;top:0;z-index:5;overflow-x:auto;scrollbar-width:none;padding:14px 18px 16px;margin:0 -18px;border-bottom:1px solid #dde3de;background:#f7f8f6;scroll-padding-inline:18px;scroll-snap-type:x proximity}
-.journey-dates button{flex:none;width:84px;min-height:58px;padding:9px 2px;border:1px solid #dde3de;border-radius:13px;scroll-snap-align:start;background:white;color:#263331;text-align:center}
-.journey-dates [aria-selected=true]{background:#397d86;border-color:#397d86;color:white}
-.journey-dates span{display:block;font-size:10px;letter-spacing:.1em;color:#7a8783}.journey-dates strong{display:block;font-size:13px;font-weight:700;white-space:nowrap}.journey-dates small{font-size:13px;font-weight:700}
-.journey-dates [aria-selected=true] span{color:#cfe3e6}
-.journey-dates button:focus-visible{outline:3px solid #83b3b6;outline-offset:2px}
-.journey-dates::-webkit-scrollbar{display:none}
-@media(min-width:768px){.journey-dates{padding-inline:28px;margin-inline:-28px}}
+.journey-dates {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 3px 12px;
+  margin-bottom: 12px;
+  scroll-padding-inline: 3px;
+  scroll-snap-type: x proximity;
+}
+.journey-dates button {
+  display: flex;
+  flex: 0 0 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 64px;
+  padding: 10px 6px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #263331;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  scroll-snap-align: start;
+}
+.journey-dates span {
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: .08em;
+  color: #7a8783;
+  white-space: nowrap;
+}
+.journey-dates strong {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.journey-dates small { display: none; }
+.journey-dates [aria-selected=true] {
+  background: #233e49;
+  color: #f7f8f6;
+}
+.journey-dates [aria-selected=true] span { color: #e5ebdf; }
+.journey-dates button:focus-visible { outline: 3px solid #83b3b6; outline-offset: 2px; }
+.journey-dates::-webkit-scrollbar { display: none; }
+@media (hover: hover) {
+  .journey-dates button:not([aria-selected=true]):hover { background: #e5ebdf; }
+}
 </style>
