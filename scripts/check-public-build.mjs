@@ -3,6 +3,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 const PRIVATE_MODULE_PATTERNS = [
+  /(?:^|\/)src\/components\/trip\/PhotoPreferenceSettings\.vue$/i,
   /(?:^|\/)src\/domain\/londonJourney\.(?:ts|js)$/i,
   /(?:^|\/)src\/services\/londonJourneyService\.(?:ts|js)$/i,
   /(?:^|\/)src\/data\/londonPrelude\.(?:ts|js)$/i,
@@ -17,9 +18,7 @@ const PRIVATE_MODULE_PATTERNS = [
   /(?:^|\/)src\/services\/photoPreferenceService\.(?:ts|js)$/i,
   /(?:^|\/)src\/domain\/photoPreferences\.(?:ts|js)$/i,
   /(?:^|\/)src\/components\/trip\/JourneyRoster\.vue$/i,
-  /(?:^|\/)src\/components\/trip\/PhotographySpots\.vue$/i,
   /(?:^|\/)src\/data\/icelandJourney\.(?:ts|js)$/i,
-  /(?:^|\/)src\/data\/icelandPhotography\.(?:ts|js)$/i,
   /(?:^|\/)src\/services\/supabase\.(?:ts|js)$/i,
   /(?:^|\/)src\/services\/journeyService\.(?:ts|js)$/i,
   /(?:^|\/)src\/stores\/auth\.(?:ts|js)$/i,

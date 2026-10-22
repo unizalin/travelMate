@@ -1,0 +1,144 @@
+const DATA = window.PROTOTYPE_DATA;
+const icons = {
+ route:'<path d="M5 4v12a4 4 0 0 0 4 4h7"/><circle cx="5" cy="4" r="2"/><path d="m13 17 3 3-3 3M11 4h8M11 9h5"/>',
+ plane:'<path d="m22 2-8 20-3-9-9-3Z"/><path d="m22 2-11 11"/>',
+ checklist:'<path d="M9 4h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m7 12 2 2 4-4M7 18h10"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 22v-2a8 8 0 0 1 16 0v2"/>',
+ arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',
+ chevron:'<path d="m9 5 7 7-7 7"/>',
+ external:'<path d="M14 3h7v7m0-7L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>',
+ pin:'<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-12 4h2m4 0h2m-8 3h2"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+ comment:'<path d="M21 11a8 8 0 0 1-8 8H7l-4 3V7a5 5 0 0 1 5-5h5a8 8 0 0 1 8 9Z"/><path d="M7 8h10M7 12h6"/>',
+ camera:'<path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/>',
+ download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+ bell:'<path d="M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10m-11 13h4"/>',
+ shield:'<path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6Z"/><path d="m8 12 3 3 5-6"/>',
+ check:'<path d="m5 12 4 4L19 6"/>',
+ close:'<path d="m6 6 12 12M6 18 18 6"/>',
+ settings:'<path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3" fill="white"/><circle cx="16" cy="17" r="3" fill="white"/>',
+ logout:'<path d="M9 4H3v16h6m5-13 5 5-5 5M8 12h12"/>',
+};
+const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.info}</svg>`;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const navs = [{id:'itinerary',label:'行程',icon:'route'},{id:'flights',label:'我的航班',icon:'plane'},{id:'checklist',label:'行前準備',icon:'checklist'},{id:'me',label:'我的',icon:'user'}];
+const state = { view:'itinerary',date:'2026-11-02',role:'public',flights:{},packed:new Set(),openCategories:new Set(['必帶']),comments:{},openThreads:new Set(),photography:true,favorites:new Set() };
+const joined = () => ['member','admin'].includes(state.role);
+const day = () => DATA.days.find(item => item.date === state.date) || DATA.days[0];
+const dateText = date => date ? new Intl.DateTimeFormat('zh-TW',{month:'long',day:'numeric',weekday:'long',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z')) : '日期待補';
+const shortDate = date => date ? `${Number(date.slice(5,7))}/${Number(date.slice(8,10))}` : '日期待補';
+const week = date => new Intl.DateTimeFormat('zh-TW',{weekday:'short',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z')).replace('週','');
+function centerSelectedDate(){ const ribbon=document.querySelector('.date-ribbon');const selected=ribbon?.querySelector('[aria-selected="true"]');if(ribbon&&selected)ribbon.scrollTo({left:selected.offsetLeft-(ribbon.clientWidth-selected.offsetWidth)/2,behavior:'instant'}); }
+window.addEventListener('resize',centerSelectedDate);
+const announce = text => { document.querySelector('#announcement').textContent = text; };
+function navMarkup(){ return navs.filter(n=>joined()||n.id==='itinerary').map(n=>`<button class="nav-item" data-view="${n.id}" ${state.view===n.id?'aria-current="page"':''}>${icon(n.icon)}<span>${n.label}</span></button>`).join(''); }
+function render(options={}){
+ if(state.view!=='itinerary'&&!joined())state.view='itinerary';
+ document.querySelector('#preview-tools').innerHTML=rolePicker();
+ document.querySelector('#mobile-nav').hidden=!joined();
+ document.body.classList.toggle('nonmember',!joined());
+ document.querySelector('#mobile-nav').style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
+ const scroll = document.querySelector('.date-ribbon')?.scrollLeft || 0;
+ document.querySelector('#desktop-nav').innerHTML=navMarkup();document.querySelector('#mobile-nav').innerHTML=joined()?navMarkup():'';
+ document.querySelector('#account-button').innerHTML=`<span class="account-label">${joined()?'我的旅程':state.role==='unjoined'?'帳號':'登入'}</span><span class="avatar">${joined()?'旅':icon('user')}</span>`;
+ document.querySelector('#account-button').dataset.action=state.role==='public'?'login':'account';
+ document.querySelector('#role-status').innerHTML=roleStatus();
+ document.querySelector('#main').innerHTML=({itinerary:itineraryView,flights:flightsView,checklist:checklistView,me:meView}[state.view])();
+ document.title=`${navs.find(n=>n.id===state.view).label} · TravelMate 設計預覽`;
+ if(state.view==='itinerary'){
+  const ribbon=document.querySelector('.date-ribbon');ribbon.scrollLeft=scroll;
+  if(options.centerDate)centerSelectedDate();
+ }
+ if(options.focusDate)document.querySelector(`[data-date="${state.date}"]`)?.focus({preventScroll:true});
+}
+function intro(title,caption,eyebrow='LONDON → ICELAND · 2026'){
+ return `<div class="intro"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p class="caption">${caption}</p></div><div class="intro-side">${state.view==='itinerary'?`<span class="chip">${icon('route')}15 天</span><button class="text-button" data-action="dates" aria-label="查看所有行程日期">${icon('calendar')}所有日期</button>`:''}</div></div>`;
+}
+function guestCard(){if(state.role==='unjoined')return unjoinedCard();return `<section class="aside-card"><div class="route-marker">${icon('user')}<h3>一起規劃這趟旅程</h3></div><p>受邀加入後，可以選擇航班、留言，一起編輯這趟旅程。</p><button class="primary-button full" data-action="login">登入 ${icon('arrow')}</button><p class="tiny">一般訪客也能自由查看公開行程。</p></section>`;}
+function itineraryView(){
+ const d=day();const index=DATA.days.filter(x=>x.region===d.region).findIndex(x=>x.date===d.date)+1;
+ const dates=DATA.days.map(x=>`<button class="date-button" role="tab" aria-label="${esc(dateText(x.date))} ${x.region}" aria-selected="${x.date===state.date}" aria-controls="selected-day-content" tabindex="${x.date===state.date?0:-1}" data-date="${x.date}"><span class="weekday">${week(x.date)}</span><strong>${shortDate(x.date)}</strong><span class="region-dot"></span></button>`).join('');
+ const cards=d.items.map((item,i)=>`<li class="activity"><span class="activity-number">${String(i+1).padStart(2,'0')}</span><article class="activity-body"><div class="activity-top"><h3>${esc(item.name)}</h3>${item.plannedStart?`<time>${esc(item.plannedStart.slice(11,16))}</time>`:''}</div>${item.notes?`<p class="activity-note">${esc(item.notes)}</p>`:''}<div class="activity-actions"><a class="text-button" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.navigationTerm||item.name)}" target="_blank" rel="noreferrer">${icon('pin')}開啟導航 ${icon('external')}</a></div>${item.service?`<p class="stop-service">廁所：<a href="${mapsUrl(item.service.query)}" target="_blank" rel="noreferrer">${esc(item.service.label)} ↗</a></p>`:''}${joined()?commentThread(item):''}${photoAdvice(item)}</article></li>`).join('');
+ return `${intro('一起去倫敦・冰島','10 月 24 日 – 11 月 7 日 · 15 天的旅行')}${reminders()}<div class="date-toolbar"><span>行程日期</span><button class="outline-button" data-action="today">回到今天</button></div><div class="date-ribbon" role="tablist" aria-label="行程日期">${dates}</div><div class="main-grid"><div id="selected-day-content" role="tabpanel" aria-label="${esc(dateText(d.date))}"><div class="day-heading"><div><p class="caption">${dateText(d.date)} · ${d.region}第 ${index} 天</p><h2>${esc(d.title)}</h2><div class="day-meta"><span>${icon('pin')}</span><span>${d.region}</span><i class="dot"></i><span>${d.items.length} 個行程</span><i class="dot"></i><span>${joined()?'共同行程':'公開行程'}</span></div></div>${joined()?`<button class="small-icon" data-action="edit" aria-label="編輯當日行程">${icon('settings')}</button>`:''}</div>${d.pace?`<div class="pace-note">${icon('info')}<p>${esc(d.pace.keep)}</p></div>`:''}<ol class="timeline">${cards}</ol>${d.pace?`<details class="quiet-link"><summary>如果時間或天氣有變</summary><p>${esc(d.pace.skip)}</p></details>`:''}</div><aside class="aside">${joined()?`<section class="aside-card"><p class="eyebrow">這趟旅程，由我們一起完成</p><h3>出發前，再確認一下</h3><p>你的行李清單已完成 ${state.packed.size}/45 項。每個人都能保留自己的準備進度。</p><button class="outline-button full" data-view="checklist">查看我的清單 ${icon('arrow')}</button></section>`:guestCard()}<section class="aside-card"><h3>沿途實用</h3>${dayServices(d)}<p>開車前查看天氣與道路狀況，行程保留彈性。</p><div class="aside-links"><a href="https://safetravel.is/" target="_blank" rel="noreferrer">SafeTravel 安全提醒 ${icon('external')}</a><a href="https://umferdin.is/en" target="_blank" rel="noreferrer">即時道路狀況 ${icon('external')}</a><a href="https://en.vedur.is/" target="_blank" rel="noreferrer">冰島天氣 ${icon('external')}</a></div></section><p class="tiny">時間依活動票券與航空公司通知核對；未確認的時段維持待補。</p></aside></div>`;
+}
+const groups=[['outbound-taipei','從台灣出發'],['to-iceland','前往冰島'],['from-iceland','離開冰島'],['return-europe','從歐洲回程'],['return-asia','亞洲轉機']];
+function flightsView(){
+ return `${intro('我的航班',joined()?'選擇自己的班次，核對會合時間。':'查看這趟旅程的航班方案，時間以起降當地為準。')}<div class="main-grid"><div>${flightSummary()}${!joined()?`<section class="guest-banner"><div><h3>選好航班，方便大家會合</h3><p>受邀加入後，就能選擇自己的航班。</p></div><button class="outline-button" data-action="${state.role==='unjoined'?'account':'login'}">${state.role==='unjoined'?'查看帳號':'登入'}</button></section>`:''}${groups.map(([group,title])=>`<div class="section-label"><h2>${title}</h2><span>${joined()?(state.flights[group]?'已選擇':'尚未選擇'):'航班方案'}</span></div>${DATA.flights.filter(f=>f.group===group).map(f=>{const selected=state.flights[group]===f.id;return `<article class="flight-card"><div class="flight-top"><strong>${esc(f.name)}</strong><span class="flight-tag ${selected?'chosen':''}">${selected?'我搭這班':esc(shortDate(f.date))}</span></div><div class="flight-route"><div class="flight-end"><strong>${f.departure}</strong><span class="airport">${f.from}</span></div><div class="flight-path">${icon('plane')}</div><div class="flight-end end"><strong>${f.arrival}</strong><span class="airport">${f.to}</span><span class="arrival-date">${arrivalLabel(f)}</span></div></div><div class="flight-bottom"><span>起降當地時間</span>${joined()?`<button class="flight-choice" data-flight="${f.id}" aria-pressed="${selected}"><span class="radio"></span>${selected?'取消選擇':'選擇此航班'}</button>`:''}</div>${selected&&joined()?`<p class="companions">同行：${identity()}、${state.role==='admin'?'jinyo':'U、jinyo'} <small>示意名單</small></p>`:''}${f.reminder?`<details class="quiet-link flight-note"><summary>報到與銜接提醒</summary><p>${esc(f.reminder)}</p></details>`:''}</article>`}).join('')}`).join('')}<p class="prototype-foot">這裡的選班僅用於原型預覽，不會更新正式旅程。</p></div><aside class="aside"><section class="aside-card"><h3>各自出發，一起會合</h3><p>每個航段分別選擇，不會預設所有人都搭同一班。抵達時間與轉機日期以票券為準。</p><button class="text-button" data-view="itinerary">回到每日行程 ${icon('arrow')}</button></section></aside></div>`;
+}
+function checklistView(){
+ return `${intro('行前準備','少一點臨出門的慌張，把要帶的東西一項項準備好。')}<div class="main-grid"><div>${preparationCards()}<section class="progress-box"><div class="progress-line"><div><p class="tiny">我的準備進度</p><strong>${state.packed.size} <small>/ 45 項</small></strong></div><span>${progressCaption()}</span></div><div class="progress-track" role="progressbar" aria-label="準備進度" aria-valuemin="0" aria-valuemax="45" aria-valuenow="${state.packed.size}"><i style="width:${state.packed.size/45*100}%"></i></div></section>${DATA.packing.map(group=>`<details class="packing-category" data-category="${group.category}" ${state.openCategories.has(group.category)?'open':''}><summary>${group.category}<span>${group.items.filter(item=>state.packed.has(item)).length}/${group.items.length}</span></summary><div class="packing-items">${group.items.map((item,index)=>`<label class="packing-row"><input type="checkbox" data-packing="${esc(item)}" aria-label="${esc(item)}" ${state.packed.has(item)?'checked':''}/><span>${esc(item)}</span></label>`).join('')}</div></details>`).join('')}<p class="helper-line">${icon('info')}原型勾選只在這次預覽有效，重新整理會重設。</p></div><aside class="aside"><section class="aside-card"><h3>你的清單，你的進度</h3><p>大家使用同一份行李範本，各自保存勾選。攝影、離線與通知設定集中放在「我的」。</p>${joined()?`<button class="text-button" data-view="me">前往我的設定 ${icon('arrow')}</button>`:''}</section>${!joined()?guestCard():''}</aside></div>`;
+}
+function settingsRow(title,description,name,action,extra=''){return `<button class="settings-row" data-action="${action}">${icon(name)}<div><strong>${title}</strong><p>${description}</p></div>${extra||icon('chevron')}</button>`;}
+function meView(){
+ if(!joined())return '';
+ const count=Object.values(state.flights).filter(Boolean).length;
+ return `${intro('我的','身分、待辦與帳號，一頁查看。')}<div class="my-single"><section class="profile-head"><div class="avatar">${state.role==='admin'?'U':'旅'}</div><div><h2>${identity()}</h2><p class="caption">已認領成員${state.role==='admin'?' · 管理者':''} · 示意狀態</p></div></section>${memberTodos()}<section class="my-section"><h2>我的航班</h2><button class="text-button" data-view="flights">${count?`已選 ${count} 段`:'尚未選擇'} · 查看航班 ${icon('arrow')}</button></section>${state.role==='admin'?`<section class="my-section"><h2>邀請管理</h2><button class="text-button" data-action="admin">邀請連結與認領狀態 ${icon('arrow')}</button></section>`:''}<section class="my-section"><h2>帳號</h2><p>Google 帳號：${state.account||'member@example.com'}（示意）</p><p class="tiny">最後同步：尚未串接 · 主題依正式站規則</p><div class="compact-actions"><button class="text-button" data-action="photo-settings">攝影偏好與收藏</button><button class="text-button" data-action="offline">離線行程</button><button class="text-button" data-action="notifications">通知提醒</button><button class="text-button" data-action="logout">登出本機</button></div></section><p class="prototype-foot">原型不讀取真實 Google 帳號，也不儲存資料。</p></div>`;
+}
+const sheet=document.querySelector('#sheet');
+function showSheet(title,body){document.querySelector('#sheet-content').innerHTML=`<div class="sheet-top"><h2 id="sheet-title">${esc(title)}</h2><button class="close-button" data-action="close" aria-label="關閉">${icon('close')}</button></div><div class="sheet-body">${body}</div>`;if(!sheet.open)sheet.showModal();}
+function itemById(id){return DATA.days.flatMap(d=>d.items).find(item=>item.id===id);}
+function changeView(view){if(!navs.some(n=>n.id===view)||view!=='itinerary'&&!joined())return;state.view=view;render({centerDate:true});window.scrollTo({top:0,behavior:'instant'});announce(`已切換到${navs.find(n=>n.id===view).label}`);}
+function changeRole(role){state.role=role;state.flights={};state.packed.clear();state.comments={};state.openThreads.clear();state.photography=true;state.favorites.clear(); if(sheet.open)sheet.close();render({centerDate:true});announce(`已切換${role==='public'?'公開訪客':role==='member'?'成員':'建立者'}預覽`);}
+function handleAction(action,target){
+ const item=target.dataset.item?itemById(target.dataset.item):null;
+ if(action==='close'){sheet.close();return;}
+ if(action==='account'){if(joined())changeView('me');else {const menu=document.querySelector('.account-menu');if(menu)menu.open=!menu.open;}return;}
+ if(action==='dates'){showSheet('選擇行程日期',`<div class="sheet-days">${DATA.days.map(d=>`<button data-jump-date="${d.date}" aria-selected="${state.date===d.date}">${shortDate(d.date)}（${week(d.date)}）</button>`).join('')}</div>`);return;}
+ if(action==='login'){showSheet('登入',`<p>受邀成員使用 Google 帳號登入後，回到同一份旅程。</p><p class="tiny">這是設計原型，不會登入你的 Google 帳號。一般登入不會自動加入旅程。下方可預覽尚未加入的狀態。</p><button class="primary-button full" data-action="demo-login">預覽登入但尚未加入 ${icon('arrow')}</button>`);return;}
+ if(action==='demo-login'){changeRole('unjoined');return;}
+ if(action==='switch-account'){state.account=state.account==='alternate@example.com'?'guest@example.com':'alternate@example.com';if(sheet.open)sheet.close();render();document.querySelector('.account-menu').open=true;announce('已切換示意帳號，仍未加入旅程');return;}
+ if(action==='today'){const zone=day().region==='冰島'?'Atlantic/Reykjavik':'Europe/London';const now=new Intl.DateTimeFormat('sv-SE',{timeZone:zone}).format(new Date());if(DATA.days.some(d=>d.date===now)){state.date=now;render({centerDate:true});}else showSheet('今天不在旅程日期內',`<p>當地今天是 ${now}。旅程期間為 10/24–11/7，保留目前查看日期。</p>`);return;}
+ if(action==='logout'){changeRole('public');changeView('itinerary');return;}
+ if(action==='edit'){showSheet('編輯這一天',`<p>活動名稱、導航位置與排序，沿用目前的共同編輯功能。</p><p>這一輪先確認閱讀與操作層級；正式編輯資料會在原型確認後接回。</p><button class="outline-button full" data-action="close" style="margin-top:20px">回到行程</button>`);return;}
+ if(action==='identity'){showSheet('身分與帳號',`<p>這個位置顯示你已認領的身分與 Google 帳號。</p><p>已加入成員再次登入直接回到私人旅程，不必重選名字。選錯身分時，由建立者協助解除。</p><p class="tiny">目前是預覽身分，沒有載入真實帳號。</p>`);return;}
+ if(action==='photo-settings'&&joined()){showSheet('攝影偏好與收藏',`<label class="settings-row"><div><strong>顯示拍攝建議</strong><p>只影響自己的閱讀畫面。</p></div><input id="photo-toggle" type="checkbox" ${state.photography?'checked':''}/></label><p>已收藏 ${state.favorites.size} 個拍攝點（本次預覽）</p>${DATA.days.flatMap(d=>d.items).flatMap(i=>i.photoSpots||[]).map(spot=>`<label class="packing-row"><input type="checkbox" data-favorite="${esc(spot.id)}" ${state.favorites.has(spot.id)?'checked':''}>${esc(spot.title)}（${spot.device==='both'?'iPhone／相機':spot.device==='phone'?'iPhone':'相機'}）</label>`).join('')}<p class="tiny">偏好與收藏不會寫入雲端。</p>`);return;}
+ if(action==='offline'||action==='notifications'){showSheet(action==='offline'?'離線行程':'通知與提醒',`<p>${action==='offline'?'下載旅程後，在弱訊號時也能查日期、地點與行程。':'設定行前與極光提醒，並在自己的裝置測試通知。'}</p><p class="tiny">原型只展示設定入口，沒有下載或要求裝置通知權限。</p><a class="outline-button full" href="https://travel-mate-nine-rho.vercel.app/iceland?section=more" target="_blank" rel="noreferrer" style="margin-top:20px">到正式站設定 ${icon('external')}</a>`);return;}
+ if(action==='admin'){showSheet('邀請管理',`<p>邀請與帳號管理放在建立者專區，和日常行程分開。</p><div class="member-row"><span>我（建立者）</span><small>已認領 · 示意</small></div>${[2,3,4,5,6].map(n=>`<div class="member-row"><span>成員 ${n}</span><small>未認領 · 示意</small></div>`).join('')}<a class="outline-button full" style="margin-top:20px" href="https://travel-mate-nine-rho.vercel.app/iceland?section=more" target="_blank" rel="noreferrer">到正式後台管理 ${icon('external')}</a><p class="tiny">原型不產生或撤銷真實邀請連結。</p>`);}
+}
+document.addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button)return;
+ if(button.dataset.view){if(sheet.open)sheet.close();changeView(button.dataset.view);return;}
+ if(button.dataset.date){state.date=button.dataset.date;render({centerDate:true,focusDate:true});announce(dateText(state.date));return;}
+ if(button.dataset.jumpDate){state.date=button.dataset.jumpDate;sheet.close();changeView('itinerary');return;}
+ if(button.dataset.flight){const flight=DATA.flights.find(f=>f.id===button.dataset.flight);state.flights[flight.group]=state.flights[flight.group]===flight.id?null:flight.id;const y=window.scrollY;render();window.scrollTo({top:y});document.querySelector(`[data-flight="${flight.id}"]`)?.focus({preventScroll:true});announce('原型航班選擇已更新');return;}
+ if(button.dataset.saveComment&&joined()){const id=button.dataset.saveComment;const input=button.closest('.comment-thread').querySelector('textarea');const value=input.value.trim();if(!value){input.focus();return;}state.comments[id]??=[];state.comments[id].push({text:value,author:identity(),time:new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit'}).format(new Date())});state.openThreads.add(id);const y=window.scrollY;render();window.scrollTo({top:y});document.querySelector(`[data-thread="${id}"] textarea`)?.focus({preventScroll:true});announce('留言已加入本次原型討論串');return;}
+ if(button.dataset.action)handleAction(button.dataset.action,button);
+});
+document.addEventListener('change',event=>{
+ const target=event.target;
+ if(target.id==='role-select'){changeRole(target.value);return;}
+ if(target.dataset.packing){const item=target.dataset.packing;target.checked?state.packed.add(item):state.packed.delete(item);const y=window.scrollY;render();window.scrollTo({top:y});[...document.querySelectorAll('[data-packing]')].find(input=>input.dataset.packing===item)?.focus({preventScroll:true});announce(`原型已完成 ${state.packed.size}/45 項`);return;}
+ if(target.id==='currency-isk'){const rate=Number(document.querySelector('#currency-rate').value);document.querySelector('#currency-result').textContent=(Number(target.value)*rate).toFixed(2)+' TWD';return;}
+ if(target.id==='currency-rate'){const amount=Number(document.querySelector('#currency-isk').value);document.querySelector('#currency-result').textContent=(amount*Number(target.value)).toFixed(2)+' TWD';return;}
+ if(target.dataset.favorite&&joined()){target.checked?state.favorites.add(target.dataset.favorite):state.favorites.delete(target.dataset.favorite);handleAction('photo-settings',target);return;}
+ if(target.id==='photo-toggle'){state.photography=target.checked;render();announce(state.photography?'顯示攝影建議':'隱藏攝影建議');}
+});
+document.addEventListener('input',event=>{if(!['currency-isk','currency-rate'].includes(event.target.id))return;const amount=Number(document.querySelector('#currency-isk').value);const rate=Number(document.querySelector('#currency-rate').value);document.querySelector('#currency-result').textContent=Number.isFinite(amount)&&Number.isFinite(rate)&&amount>=0&&rate>0?(amount*rate).toFixed(2)+' TWD':'請輸入有效金額與匯率';});
+document.addEventListener('toggle',event=>{const target=event.target;if(target.classList?.contains('comment-thread')){target.open?state.openThreads.add(target.dataset.thread):state.openThreads.delete(target.dataset.thread);}if(target.classList?.contains('packing-category')){target.open?state.openCategories.add(target.dataset.category):state.openCategories.delete(target.dataset.category)}},true);
+document.addEventListener('keydown',event=>{
+ const target=event.target.closest('[data-date]');if(!target||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+ event.preventDefault();const i=DATA.days.findIndex(d=>d.date===state.date);const next=event.key==='Home'?0:event.key==='End'?DATA.days.length-1:(i+(event.key==='ArrowRight'?1:-1)+DATA.days.length)%DATA.days.length;
+ state.date=DATA.days[next].date;render({centerDate:true,focusDate:true});announce(dateText(state.date));
+});
+sheet.addEventListener('click',event=>{if(event.target!==sheet)return;const rect=sheet.getBoundingClientRect();if(event.clientY<rect.top||event.clientY>rect.bottom||event.clientX<rect.left||event.clientX>rect.right)sheet.close();});
+
+function identity(){return state.role==='admin'?'U':'Rosanne 🌹';}
+function rolePicker(){return `<section class="aside-card role-picker"><label for="role-select">原型預覽身分</label><select id="role-select"><option value="public" ${state.role==='public'?'selected':''}>未登入訪客</option><option value="unjoined" ${state.role==='unjoined'?'selected':''}>已登入未加入</option><option value="member" ${state.role==='member'?'selected':''}>已認領成員</option><option value="admin" ${state.role==='admin'?'selected':''}>建立者（管理）</option></select><p class="tiny">只切換畫面，不代表登入或取得權限。</p></section>`;}
+function unjoinedCard(){return '<section class="guest-banner"><h3>此帳號尚未加入旅程，請透過邀請連結加入</h3><p>目前僅能查看公開內容。帳號操作位於頁首。</p></section>';}
+function roleStatus(){return joined()?`<div class="status-inner private-status"><strong>私人版 · 以 ${identity()} 瀏覽${state.role==='admin'?'（管理者）':''}</strong></div>`:`<div class="status-inner public-status"><strong>公開版 · ${state.role==='unjoined'?'已登入，尚未加入':'唯讀行程'}</strong>${state.role==='unjoined'?`<details class="account-menu"><summary>帳號選單</summary><div><p>Google 帳號：${state.account||'guest@example.com'}（示意）</p><button class="text-button" data-action="switch-account">切換帳號</button><button class="text-button" data-action="logout">登出本機</button></div></details><p>請透過邀請連結加入</p>`:'<button class="text-button" data-action="login">登入</button>'}</div>`;}
+function memberTodos(){return joined()?`<section class="todo-note"><strong>我的待辦</strong><p>${state.packed.size<45?`行李尚有 ${45-state.packed.size} 項未完成 · `:''}預約票券時間待核對</p><button class="text-button" data-view="checklist">查看行前準備</button></section>`:'';}
+function reminders(){const iceland=day().region==='冰島';const clock=zone=>new Intl.DateTimeFormat('zh-TW',{timeZone:zone,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());return `<section class="reminder-stack" aria-label="旅程提醒">${joined()?`<section class="aside-card attention-card"><h2>出發前先注意</h2><p>全域通知：11/7 Blue Lagoon 與所選航班銜接須先核對；活動報到依票券時間。</p><p class="tiny">提醒版式預覽，未讀取即時警報。</p>${memberTodos()}</section>`:''}${iceland?'<section class="aside-card aurora-card"><h3>今晚極光</h3><p>尚未載入即時雲量與 Kp，暫無條件判定。</p><p class="tiny">依冰島當地今晚；不預測目前選取的未來日期。</p></section>':''}<div class="dual-clock"><div><span>${iceland?'冰島':'倫敦'}當地現在</span><strong>${clock(iceland?'Atlantic/Reykjavik':'Europe/London')}</strong></div><div><span>台灣現在</span><strong>${clock('Asia/Taipei')}</strong></div></div></section>`;}
+function preparationCards(){return `<section class="aside-card preparation-card"><h2>緊急資訊</h2><a class="emergency-call" href="tel:112">冰島緊急電話 112</a><a class="text-button" href="https://www.google.com/maps/search/?api=1&query=hospital+near+me" target="_blank" rel="noreferrer">查最近醫院 ${icon('external')}</a><p>租車 24h 救援電話：尚未提供，請依租車合約核對。</p></section><section class="aside-card preparation-card"><h2>預約與票券</h2>${[['11/4 冰洞','09:00–15:00 · 集合／報到時間請核對票券'],['11/5 Zodiac','11:20–13:20 · 集合／報到時間請核對票券'],['10/31 Sky Lagoon','票券入場時間尚未提供，請核對訂單'],['11/7 Blue Lagoon','票券入場時間尚未提供，請核對離境銜接']].map(([name,time])=>`<article class="reservation-row"><strong>${name}</strong><p>票券時間：${time}</p></article>`).join('')}${memberTodos()}</section><section class="aside-card preparation-card"><h2>ISK 匯率換算</h2><p class="tiny">原型示意，非即時匯率；可自行輸入估算匯率。</p><label class="currency-field">ISK 金額<input id="currency-isk" type="number" min="0" value="1000"></label><label class="currency-field">1 ISK 換 TWD（示意）<input id="currency-rate" type="number" min="0" step="0.001" value="0.23"></label><output id="currency-result">230.00 TWD</output></section>`;}
+function progressCaption(){return state.packed.size===45?'準備完成':state.packed.size===0?'慢慢準備':45-state.packed.size<5?'就快好了':'繼續加油';}
+function arrivalLabel(f){if(!f.arrivalDate)return '抵達日期：未確認';const offset=f.date?Math.round((new Date(f.arrivalDate)-new Date(f.date))/86400000):0;return `抵達 ${shortDate(f.arrivalDate)}${offset>0?`（+${offset} 日）`:'（當日）'}`;}
+function flightSummary(){const selected=DATA.flights.filter(f=>state.flights[f.group]===f.id);return joined()&&selected.length?`<details class="aside-card selected-summary"><summary>已選 ${selected.length} 個航段 · 查看摘要</summary>${selected.map(f=>`<p>${f.name} · ${f.from} → ${f.to} · ${f.arrival} ${arrivalLabel(f)}</p>`).join('')}</details>`:'';}
+function mapsUrl(query){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query);}
+function dayServices(d){return d.services?.length?`<section class="day-services"><h3>沿途服務</h3>${d.services.map(service=>`<a href="${mapsUrl(service.query)}" target="_blank" rel="noreferrer">${service.kind==='fuel'?'加油':'廁所'}：${esc(service.label)} ↗</a>`).join('')}</section>`:'';}
+function photoAdvice(item){
+ const spots=item.photoSpots||[];if(!spots.length||joined()&&!state.photography)return '';
+ const row=(device,label,fallback)=>{const values=spots.filter(s=>s.device===device||s.device==='both');return `<div class="photo-row"><b>${label}</b><div>${values.length?values.map(spot=>`<p>${esc(spot.composition)}${spot.safetyNote?` <span>${esc(spot.safetyNote)}</span>`:''}${device==='camera'&&DATA.cameraSettings[spot.id]?`<small>建議參數：${esc(DATA.cameraSettings[spot.id])}</small>`:''}</p>`).join(''):`<p>${fallback}</p>`}</div></div>`;};
+ return `<details class="photo-advice quiet-link"><summary>拍攝建議</summary><div class="photo-panel">${row('phone','iPhone','先用 1× 構圖，保留高光；人物與地景各留一張。')}${row('camera','相機','依現場光線調整曝光；風大或浪區先確保站位安全。')}</div></details>`;
+}
+function commentThread(item){const comments=state.comments[item.id]||[];return `<details class="comment-thread quiet-link" data-thread="${esc(item.id)}" ${state.openThreads.has(item.id)?'open':''}><summary>留言 · ${comments.length} 則</summary><div class="comment-panel">${comments.length?comments.map(comment=>`<article class="comment-entry"><strong>${esc(comment.author)}</strong><time>${esc(comment.time)}</time><p>${esc(comment.text)}</p></article>`).join(''):'<p class="tiny">目前沒有留言。</p>'}<label class="field-label">新增留言<textarea maxlength="2000" aria-label="${esc(item.name)} 新增留言" placeholder="寫下想一起討論的事…"></textarea></label><button class="text-button" data-save-comment="${esc(item.id)}">送出留言</button><p class="tiny">僅保留於本次預覽，重新整理會清空。</p></div></details>`;}
+render({centerDate:true});

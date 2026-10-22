@@ -1,3 +1,4 @@
+import { icelandPhotoSpots, icelandPhotoTips } from './icelandPhotography'
 import type { JourneyItem, JourneyTransport, TripJourney } from '@/domain/tripJourney'
 
 /**
@@ -53,6 +54,8 @@ export const publicIcelandItems: JourneyItem[] = sharedStops.map((stop, index) =
   id: stop.id,
   date: stop.date,
   name: stop.name,
+  photoSpots: icelandPhotoSpots[stop.name],
+  photoTip: icelandPhotoTips[stop.name] ?? null,
   location: stop.location,
   order: sharedStops.slice(0, index).filter(candidate => candidate.date === stop.date).length + 1,
   plannedStart: stop.id === 'public-iceland-stop-25' ? '2026-11-04T09:00:00Z' : stop.id === 'public-iceland-stop-29' ? '2026-11-05T11:20:00Z' : null,

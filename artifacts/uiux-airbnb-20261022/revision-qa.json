@@ -1,0 +1,262 @@
+{
+  "widths": [
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "itinerary",
+      "bg": "#fff",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "flights",
+      "bg": "#fff",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "preparation",
+      "bg": "#fff",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "me",
+      "bg": "#fff",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "itinerary",
+      "bg": "#fff",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "flights",
+      "bg": "#fff",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "preparation",
+      "bg": "#fff",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "me",
+      "bg": "#fff",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "itinerary",
+      "bg": "#191919",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "flights",
+      "bg": "#191919",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "preparation",
+      "bg": "#191919",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "me",
+      "bg": "#191919",
+      "scroll": 375,
+      "smallButtons": 0,
+      "width": 375
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "itinerary",
+      "bg": "#191919",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "flights",
+      "bg": "#191919",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "preparation",
+      "bg": "#191919",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "me",
+      "bg": "#191919",
+      "scroll": 390,
+      "smallButtons": 0,
+      "width": 390
+    }
+  ],
+  "bottoms": [
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "itinerary",
+      "bottom": 557.234375,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "flights",
+      "bottom": 556.703125,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "preparation",
+      "bottom": 557.109375,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "light",
+      "view": "me",
+      "bottom": 557.453125,
+      "nav": 598
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "itinerary",
+      "bottom": 734.4375,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "flights",
+      "bottom": 733.703125,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "preparation",
+      "bottom": 734.234375,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "light",
+      "view": "me",
+      "bottom": 734.453125,
+      "nav": 775
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "itinerary",
+      "bottom": 557.234375,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "flights",
+      "bottom": 556.703125,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "preparation",
+      "bottom": 557.109375,
+      "nav": 598
+    },
+    {
+      "size": "se",
+      "theme": "dark",
+      "view": "me",
+      "bottom": 557.453125,
+      "nav": 598
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "itinerary",
+      "bottom": 734.4375,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "flights",
+      "bottom": 733.703125,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "preparation",
+      "bottom": 734.234375,
+      "nav": 775
+    },
+    {
+      "size": "14",
+      "theme": "dark",
+      "view": "me",
+      "bottom": 734.453125,
+      "nav": 775
+    }
+  ]
+}

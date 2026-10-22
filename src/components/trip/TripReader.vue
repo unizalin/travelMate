@@ -8,14 +8,14 @@ import { publicIcelandJourney } from '@/data/icelandPublic'
 import { publicLondonJourney } from '@/data/londonPublic'
 import { icelandTrip } from '@/data/icelandTrip'
 import { icelandDailyPace } from '@/data/icelandDailyPace'
+import { CalendarDaysIcon, PaperAirplaneIcon, ClipboardDocumentCheckIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
+import PhotographySpots from './PhotographySpots.vue'
 import JourneyClocks from './JourneyClocks.vue'
 import ItineraryDates from './ItineraryDates.vue'
 import LondonItinerary from './LondonItinerary.vue'
 import ItineraryActivity from './ItineraryActivity.vue'
-import JourneyFlightCard from './JourneyFlightCard.vue'
 import DayConditions from '@/components/trip/DayConditions.vue'
 import AuroraConditions from '@/components/trip/AuroraConditions.vue'
-import PublicPreparation from './PublicPreparation.vue'
 import { handbookDays } from '@/data/icelandHandbook'
 import { publicDayServices, publicNavTerm, publicServiceMapsUrl, publicStopService } from '@/data/publicDayExtras'
 import { loadVedurAlerts, type VedurAlert } from '@/services/vedurAlertService'
@@ -45,8 +45,6 @@ function navigateViews(event: KeyboardEvent) {
 }
 const slots = useSlots()
 const hasLondon = computed(() => props.publicOnly || Boolean(slots.prelude))
-const tripToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Atlantic/Reykjavik', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-const tripIsActive = tripToday >= '2026-10-30' && tripToday <= '2026-11-07'
 const vedurAlerts = ref<VedurAlert[]>([])
 const vedurNow = ref(Date.now())
 const alertAbort = new AbortController()
@@ -76,12 +74,14 @@ function touchEnd(event: TouchEvent) { if(event.target instanceof Element && eve
 
 const activeView = ref('daily')
 const readerViews = computed(() => [
-  { id: 'daily', label: '每日行程' },
-  { id: 'flights', label: '我的航班' },
-  { id: 'more', label: '行前準備' },
+  { id: 'daily', label: '行程', icon: CalendarDaysIcon },
+  { id: 'flights', label: '我的航班', icon: PaperAirplaneIcon },
+  { id: 'more', label: '行前準備', icon: ClipboardDocumentCheckIcon },
+  { id: 'me', label: '我的', icon: UserCircleIcon },
 ])
-watch(() => props.section, section => {
-  activeView.value = section === 'flights' || section === 'more' ? section : 'daily'
+watch(() => [props.section, props.publicOnly], () => {
+  const section = props.section
+  activeView.value = !props.publicOnly && (section === 'flights' || section === 'more' || section === 'me') ? section : 'daily'
 }, { immediate: true })
 function selectView(view: string) {
   activeView.value = view
@@ -89,10 +89,7 @@ function selectView(view: string) {
   document.querySelector('.journey-header')?.scrollIntoView?.({ block: 'start' })
 }
 const dailyFlights = computed(() => icelandFlights.filter(f => f.date === selectedDay.value?.date && ['to-iceland', 'from-iceland'].includes(f.group)))
-const publicFlightOptions = computed(() => [...icelandFlights].sort((a, b) => {
-  const priority = (id: string) => id === 'ba802' ? 0 : id === 'ba801' ? 1 : 2
-  return priority(a.id) - priority(b.id)
-}))
+
 
 const timeline = computed<DailyTimeline[]>(() => props.publicOnly ? [...buildDailyTimeline(publicLondonJourney).filter(day => day.date < '2026-10-30'), ...buildDailyTimeline(publicIcelandJourney).filter(day => day.date >= '2026-10-30')] : buildDailyTimeline(props.journey))
 const days = computed(() => timeline.value.filter(day => day.events.some(event => event.type === 'item' || event.type === 'transport')))
@@ -113,7 +110,7 @@ const selectedEvents = computed(() => selectedDay.value?.events.filter(event => 
 const publicActivities = computed(() => selectedEvents.value.flatMap(event => {
   const item = event.item
   if (!item) return []
-  return [{ id: item.id, date: item.date, name: item.name, location: item.location, order: item.order, plannedStart: item.plannedStart, plannedEnd: item.plannedEnd, actualStart: null, actualEnd: null, status: item.status, reminder: item.reminder ?? null, notes: [item.location, item.notes || null, icelandTrip.suppliedOpeningHours[item.id] ? `提供的營業時間：${icelandTrip.suppliedOpeningHours[item.id]}` : null].filter(Boolean).join(' · ') }]
+  return [{ id: item.id, date: item.date, name: item.name, location: item.location, order: item.order, plannedStart: item.plannedStart, plannedEnd: item.plannedEnd, actualStart: null, actualEnd: null, status: item.status, photoTip: item.photoTip, reminder: item.reminder ?? null, notes: [item.location, item.notes || null, icelandTrip.suppliedOpeningHours[item.id] ? `提供的營業時間：${icelandTrip.suppliedOpeningHours[item.id]}` : null].filter(Boolean).join(' · ') }]
 }).sort((left, right) => left.order - right.order))
 const flights = computed(() => props.journey.transports.filter(transport => transport.kind === 'flight'))
 
@@ -158,33 +155,36 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 </script>
 
 <template>
-  <main class="trip-reader iceland-reader min-h-screen">
+  <main class="trip-reader iceland-reader min-h-screen" :class="{nonmember:publicOnly}">
     <header class="journey-header">
+      <div class="site-header-row"><div class="site-brand">travelmate<span>.</span></div>      <div role="tablist" aria-label="旅程檢視" v-if="!publicOnly" class="journey-navigation">
+        <button v-for="view in readerViews" :id="`view-tab-${view.id}`" :key="view.id" role="tab" type="button" :tabindex="activeView === view.id ? 0 : -1" @keydown="navigateViews" :aria-selected="activeView === view.id" :aria-current="activeView === view.id ? 'page' : undefined" :aria-controls="`view-${view.id === 'more' ? 'preparation' : view.id}`" class="min-h-11 rounded-xl px-4 py-2 text-sm font-bold" :class="activeView === view.id ? 'bg-[var(--iceland-action)] text-white' : 'bg-stone-100 text-stone-600'" @click="selectView(view.id)"><component :is="view.icon" aria-hidden="true" />{{ view.label }}</button>
+      </div><div class="account-actions"><slot name="header-actions" /></div></div>
       <div class="journey-header__inner mx-auto max-w-6xl">
-        <div class="brand-row"><p>{{ hasLondon ? 'LONDON · ICELAND · 2026' : 'ICELAND · 2026' }}</p><slot name="header-actions" /></div>
-        <h1 class="journey-title">{{ hasLondon ? '一起去倫敦・冰島' : '一起去冰島' }} <small>{{ hasLondon ? '10/24–11/7 · 15 天 · 6 人' : '10/30–11/7 · 9 天 · 6 人' }}</small></h1>
+        <div class="brand-row"><p>{{ hasLondon ? 'LONDON · ICELAND · 2026' : 'ICELAND · 2026' }}</p></div>
+        <h1 v-if="activeView==='daily'" class="journey-title">{{ hasLondon ? '一起去倫敦・冰島' : '一起去冰島' }} <small>{{ hasLondon ? '10/24–11/7 · 15 天 · 6 人' : '10/30–11/7 · 9 天 · 6 人' }}</small></h1>
+        <h1 v-if="activeView!=='daily'" class="journey-title">{{readerViews.find(view=>view.id===activeView)?.label}}</h1>
         <div v-if="slots['header-notice']" class="header-notice"><slot name="header-notice" /></div>
-        <JourneyClocks :region="selectedIsLondon && activeView === 'daily' ? 'london' : 'iceland'" />
       </div>
     </header>
 
     <div class="journey-content mx-auto max-w-6xl">
-      <div v-if="!selectedIsLondon" class="global-information">
+      <div class="global-information">
         <VedurAlertBanner :alerts="currentVedurAlerts" />
         <template v-if="activeView === 'daily'">
-          <slot name="global-information"><AuroraConditions v-if="!companionMode && tripIsActive" compact /></slot>
-          <div v-if="!tripIsActive" class="aurora-placeholder"><b>極光資訊 · 冰島段</b><span>旅程當晚才顯示即時雲量與 Kp；目前沒有此行程日期的預報。</span></div>
+          <slot v-if="!publicOnly" name="attention" />
+          <slot v-if="!selectedIsLondon" name="global-information"><AuroraConditions v-if="!selectedIsLondon && !companionMode" compact /></slot>
+          <JourneyClocks :region="selectedIsLondon ? 'london' : 'iceland'" />
         </template>
       </div>
-      <div role="tablist" aria-label="旅程檢視" class="journey-navigation">
-        <button v-for="view in readerViews" :id="`view-tab-${view.id}`" :key="view.id" role="tab" type="button" :tabindex="activeView === view.id ? 0 : -1" @keydown="navigateViews" :aria-selected="activeView === view.id" :aria-current="activeView === view.id ? 'page' : undefined" :aria-controls="`view-${view.id === 'more' ? 'preparation' : view.id}`" class="min-h-11 rounded-xl px-4 py-2 text-sm font-bold" :class="activeView === view.id ? 'bg-[var(--iceland-action)] text-white' : 'bg-stone-100 text-stone-600'" @click="selectView(view.id)">{{ view.label }}</button>
-      </div>
+
       <section v-if="activeView === 'daily'" id="view-daily" role="tabpanel" aria-labelledby="view-tab-daily" class="daily-content">
         <div @touchstart.passive="touchStart" @touchend.passive="touchEnd">
         <div v-if="hasLondon" class="journey-legs" role="tablist" aria-label="旅程切換">
           <button id="leg-tab-london" type="button" role="tab" :aria-selected="activeLeg === 'london'" :tabindex="activeLeg === 'london' ? 0 : -1" @click="selectLeg('london')">倫敦前段 <small>10/24–10/29</small></button>
           <button id="leg-tab-iceland" type="button" role="tab" :aria-selected="activeLeg === 'iceland'" :tabindex="activeLeg === 'iceland' ? 0 : -1" @click="selectLeg('iceland')">冰島九天 <small>10/30–11/7</small></button>
         </div>
+        <div class="date-toolbar"><span>{{selectedIsLondon ? '倫敦' : '冰島'}}行程日期</span><button type="button" @click="selectedDate=tripOpeningDate(days.map(day=>day.date));activeLeg=selectedDate<'2026-10-30'?'london':'iceland'">回到今天</button></div>
         <ItineraryDates v-model="selectedDate" :dates="legDays.map(day => day.date)" />
         <div :id="selectedDay ? `day-panel-${selectedDay.date}` : undefined" role="tabpanel" :aria-labelledby="selectedDay ? `day-tab-${selectedDay.date}` : undefined">
 
@@ -194,20 +194,20 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <template v-else>
         <slot name="route-summary"><p v-if="selectedDay" class="route-line">{{ publicActivities.filter(item => item.status !== 'fallback').map(item => item.name).join(' → ') }}</p></slot>
         <DayConditions v-if="selectedDay" :date="selectedDay.date" :activity-names="selectedDay.events.filter(event => event.type === 'item').map(event => event.name)">
-          <template #after-weather><p v-if="publicOnly && selectedDay && handbookDays[selectedDay.date]" class="practical-line"><b>沿途實用</b> {{ handbookDays[selectedDay.date].fuel }} · 廁所請於遊客中心或停車場確認開放 · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">查看即時路況 ↗</a></p><p v-if="publicOnly && selectedDay && publicDayServices[selectedDay.date]" class="services-line"><b>沿途服務</b><a v-for="service in publicDayServices[selectedDay.date]" :key="`${service.kind}-${service.label}`" :href="publicServiceMapsUrl(service.query)" target="_blank" rel="noreferrer">{{ service.kind === 'fuel' ? '加油' : '廁所' }}：{{ service.label }} ↗</a></p><slot name="day-practical" /></template>
+          <template #after-weather><p v-if="publicOnly && selectedDay && handbookDays[selectedDay.date]" class="practical-line"><b>沿途實用</b> {{ handbookDays[selectedDay.date].fuel }} · 廁所請於遊客中心或停車場確認開放 · <a href="https://umferdin.is/en" target="_blank" rel="noreferrer">查看即時路況 ↗</a></p><p v-if="selectedDay && publicDayServices[selectedDay.date]" class="services-line"><b>沿途服務</b><a v-for="service in publicDayServices[selectedDay.date]" :key="`${service.kind}-${service.label}`" :href="publicServiceMapsUrl(service.query)" target="_blank" rel="noreferrer">{{ service.kind === 'fuel' ? '加油' : '廁所' }}：{{ service.label }} ↗</a></p><slot name="day-practical" /></template>
           <template #checks><slot name="daily-start" /></template>
         </DayConditions>
         <slot name="day-content">
-        <div v-if="selectedPlanB" class="public-plan-b" aria-label="今日應變">
+        <details v-if="selectedPlanB" class="public-plan-b" aria-label="今日應變"><summary>Plan B</summary>
           <b>應變</b>
           <span><strong>保住</strong> {{ selectedPlanB.keep }} <i aria-hidden="true">｜</i> <strong>先刪</strong> {{ selectedPlanB.skip }}</span>
-        </div>
+        </details>
 
         <div v-if="publicOnly && dailyFlights.length" class="daily-flight-options" aria-label="當日航班方案">
           <p v-for="flight in dailyFlights" :key="flight.id"><b>{{ flight.name }} · {{ flight.from }} → {{ flight.to }}</b> · {{ flight.departure }}–{{ flight.arrival }}</p>
-          <small>起降當地時間 · 受邀旅伴登入後可選擇自己的航班。</small>
+          <small>起降當地時間 · 加入後可選擇自己的航班。</small>
         </div>
-        <ol v-if="publicOnly && selectedDay" class="public-activities"><ItineraryActivity v-for="(item,index) in publicActivities" :key="item.id" :item="item" :index="index" :next="item.status === 'next'" :navigation-term="publicNavTerm(item.name)" :facility-label="publicStopService(item.name)?.label" :facility-query="publicStopService(item.name)?.query" /></ol>
+        <ol v-if="publicOnly && selectedDay" class="public-activities"><ItineraryActivity v-for="(item,index) in publicActivities" :key="item.id" :item="item" :index="index" :next="item.status === 'next'" :navigation-term="publicNavTerm(item.name)" :facility-label="publicStopService(item.name)?.label" :facility-query="publicStopService(item.name)?.query"><template #photography><PhotographySpots :item="{...item,photoSpots:publicIcelandJourney.items.find(source=>source.id===item.id)?.photoSpots}" /></template></ItineraryActivity></ol>
         <div v-else-if="selectedDay" class="mt-4 space-y-3">
           <article v-for="event in selectedEvents" :key="event.id" class="reader-event" :class="event.type === 'transport' ? 'border-l-4 border-l-amber-400' : ''">
             <div class="flex gap-4">
@@ -243,27 +243,15 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <slot v-if="!publicOnly" name="daily-footer" />
       </section>
 
-      <section v-if="activeView === 'more'" id="view-preparation" role="tabpanel" aria-labelledby="view-tab-more" class="preparation-content">
+      <section v-if="!publicOnly && activeView === 'me'" id="view-me" role="tabpanel" aria-labelledby="view-tab-me"><slot name="me" /></section>
+      <section v-if="!publicOnly && activeView === 'more'" id="view-preparation" role="tabpanel" aria-labelledby="view-tab-more" class="preparation-content">
         <slot v-if="!publicOnly" name="preparation" />
-        <div v-if="publicOnly" class="public-preparation">
-          <p class="public-access-note">登入後可使用個人準備清單、離線下載與提醒設定。</p>
-          <PublicPreparation />
-        </div>
-        <details v-if="publicOnly && icelandTrip.alerts.length" class="route-notices">
-          <summary>行前提醒 <span>{{ icelandTrip.alerts.length }} 則</span></summary>
-          <article v-for="alert in icelandTrip.alerts" :key="alert.title">
-            <h3>{{ alert.title }}</h3>
-            <p>{{ alert.message }}</p>
-          </article>
-        </details>
+
       </section>
 
-      <div v-if="activeView === 'flights'" class="flight-section" id="view-flights">
+      <div v-if="!publicOnly && activeView === 'flights'" class="flight-section" id="view-flights">
       <slot name="flights">
-      <section v-if="publicOnly" role="tabpanel" aria-labelledby="view-tab-flights">
-        <p class="public-access-note">受邀旅伴登入後可選擇自己的航班；以下為行程航班方案，時間以當地為主。</p>
-        <div class="public-flights"><JourneyFlightCard v-for="flight in publicFlightOptions" :key="flight.id" :flight="flight" /></div>
-      </section>
+
 
       <section v-if="!publicOnly" role="tabpanel" aria-labelledby="view-tab-flights" class="mt-12">
         <div class="flex items-end justify-between gap-4">
@@ -297,7 +285,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
         <RouterLink :to="{ name: 'iceland-planner', params: { tripId: props.journey.tripId } }" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-teal-900 px-5 text-sm font-bold text-white transition hover:bg-[var(--iceland-action)] sm:mt-0">開啟規劃</RouterLink>
       </div>
 
-      <p v-if="!companionMode" class="mt-12 text-center text-xs leading-5 text-slate-400">此頁提供行程、日期、地點與航班摘要；受邀旅伴登入後可選擇航班、查看住宿與攝影提示。</p>
+      <p v-if="!companionMode" class="mt-12 text-center text-xs leading-5 text-slate-400">此頁提供行程、日期、地點與航班摘要；加入後可選擇航班、共同編輯。</p>
     </div>
   </main>
 </template>
@@ -378,4 +366,10 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 .daily-flight-options { margin-top: 8px; padding: 8px 0; border-top: 1px solid var(--iceland-line); font-size: 12px; line-height: 1.6; color: var(--iceland-muted); }.daily-flight-options b { color: var(--iceland-glacier); font-weight: 500; }.daily-flight-options small { font-size: 11px; }
 @media(min-width: 768px) { .journey-header__inner { padding: 24px 28px 8px; }.journey-content { padding: 0 28px 48px; } }
 @media(prefers-reduced-motion: reduce) { .iceland-reader * { transition: none !important; scroll-behavior: auto !important; } }
+
+.site-brand{font-size:26px;font-weight:700;letter-spacing:-1px;padding:20px max(20px,calc((100vw - 1128px)/2));border-bottom:1px solid #dde3de}.site-brand span{color:#397d86}.journey-content{max-width:1128px;padding-bottom:110px}.journey-header__inner{max-width:1128px}.journey-title{font-size:28px;letter-spacing:-.5px}.journey-navigation svg{width:23px;height:23px}.journey-navigation button{display:flex;align-items:center;justify-content:center;gap:8px}.date-toolbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:20px}.date-toolbar button{color:#397d86;min-height:44px}.global-information{margin-top:16px}.global-information :deep(.clocks){display:grid;padding:18px;background:#e5ebdf;border-radius:14px;font-size:15px;line-height:1.7}.public-plan-b{display:block}.public-plan-b summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}.journey-navigation{margin-bottom:22px}.journey-navigation [role="tab"][aria-selected="true"]{color:#397d86;background:#e5ebdf}.journey-dates{position:static}.iceland-reader{color-scheme:light}.global-information:empty{display:none}
+@media(max-width:743px){.site-brand{font-size:22px;padding:18px 20px}.journey-header__inner{padding:24px 20px 8px}.journey-title{font-size:24px}.journey-title small{font-size:13px}.journey-content{padding-left:20px;padding-right:20px}.journey-navigation{position:fixed;bottom:0;left:0;right:0;z-index:40;background:#f7f8f6;border-top:1px solid #dde3de;padding:7px 10px calc(7px + env(safe-area-inset-bottom));margin:0;gap:0}.journey-navigation button{flex-direction:column;font-size:10px;min-height:54px;gap:5px;border-radius:0}.journey-navigation [role="tab"][aria-selected="true"]{background:transparent}.activity{padding-top:16px}.brand-row{font-size:11px}.global-information{margin-top:12px}}
+
+.site-header-row{display:flex;align-items:center;gap:24px;border-bottom:1px solid #dde3de;max-width:1128px;margin:auto;padding:0 20px;min-height:80px}.site-brand{border:0;padding:18px 0;flex:1}.account-actions{display:flex;gap:10px;align-items:center}.site-header-row .journey-navigation{margin:0;gap:20px;padding:0;background:transparent}.site-header-row .journey-navigation button{padding:12px 0;font-size:14px;background:transparent!important}.journey-title small{display:block;font-size:14px;margin:12px 0 0;font-weight:400;color:#4e605a}.brand-row{margin-bottom:12px}.nonmember .journey-content{padding-bottom:24px}.journey-content :deep(.journey-dates){position:static;border-bottom:0;margin-bottom:16px}.journey-content :deep(.journey-dates button){border:0;background:transparent;min-width:58px;width:58px;padding:0}.journey-content :deep(.journey-dates strong){padding:9px 2px;border-radius:10px}.journey-content :deep(.journey-dates [aria-selected=true] strong){background:#233e49;color:#f7f8f6}.journey-content :deep(.journey-dates [aria-selected=true]){color:#263331}.journey-content :deep(.journey-dates [aria-selected=true] span){color:#4e605a}.journey-content :deep(.journey-dates small){display:none}
+@media(max-width:743px){.site-header-row{min-height:68px}.site-header-row .journey-navigation{gap:0;padding:7px 10px calc(7px + env(safe-area-inset-bottom));background:#f7f8f6;margin:0}.site-header-row .journey-navigation button{font-size:10px;padding:3px 0}.journey-title small{font-size:13px}.journey-content :deep(.journey-dates){gap:3px;padding-block:8px;margin-top:0}.journey-header__inner{padding-top:25px}.global-information{margin-top:16px}}
 </style>

@@ -50,11 +50,12 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
     <p v-if="busy" role="status" class="mt-3 text-sm">正在同步…</p>
     <template v-if="loaded">
       <p v-if="!self" class="mt-3 text-sm text-stone-600">請使用有效邀請連結認領自己的身分。</p>
+      <p v-if="self" class="selected-summary">已選 {{myFlights.length}} 段：{{myFlights.map(f=>f.name).join('、') || '尚未選擇'}}</p>
       <p v-if="self" class="self-name">{{ label(self.memberId) }}</p>
       <p v-if="self && !myFlights.length" class="muted">尚未選擇航班，請先選擇自己搭的班次。</p>
-      <div class="flight-cards"><JourneyFlightCard v-for="flight in selecting || (self && !myFlights.length) ? icelandFlights : myFlights" :key="flight.id" :flight="flight">
-        <template #reminder><span v-if="flight.id==='ba801'">11/7 Blue Lagoon 與這班航班的銜接待核對；退房、加油、還車及機場抵達時間依實際預約安排。</span><span v-else-if="flight.group==='from-iceland'">加油、還車與機場抵達時間依這班機另行確認。</span></template>
-        <p class="muted">搭乘旅伴：{{ roster.choices.filter(choice => choice.flightId === flight.id).map(choice => label(choice.memberId)).join('、') || '尚未選擇' }}</p>
+      <div class="flight-cards"><JourneyFlightCard v-for="flight in icelandFlights" :key="flight.id" :flight="flight">
+        <template v-if="flight.group==='from-iceland'" #reminder><span v-if="flight.id==='ba801'">11/7 Blue Lagoon 與這班航班的銜接待核對；退房、加油、還車及機場抵達時間依實際預約安排。</span><span v-else-if="flight.group==='from-iceland'">加油、還車與機場抵達時間依這班機另行確認。</span></template>
+        <p class="muted">同行名單：{{ roster.choices.filter(choice => choice.flightId === flight.id).map(choice => label(choice.memberId)).join('、') || '尚未選擇' }}</p>
         <button v-if="selecting || (self && !myFlights.length)" type="button" :aria-pressed="selected(flight.id)" :disabled="busy || !canEdit || !self" @click="run(() => chooseFlight(tripId,flight.id,!selected(flight.id)))">{{ selected(flight.id)?'取消搭乘':'我搭這班' }}</button>
       </JourneyFlightCard></div>
     </template>

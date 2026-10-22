@@ -56,3 +56,11 @@ export const icelandPhotoSpots: Record<string, PhotoSpot[]> = {
     { id: 'photo-blue-lagoon-steam', title: '熔岩、水面與蒸氣剪影', device: 'phone', composition: '乳藍水面、黑色熔岩與藍調時刻的蒸氣人物剪影。', suggestedTime: '藍調時刻', safetyNote: '以場地方規與不影響他人為前提。', sourceLabel: '2026 Iceland Winter Photo Travel Book' },
   ],
 }
+
+export const icelandPhotoTips: Record<string, string> = {
+  'Þingvellir': '建議 08:00–09:00 拍攝；此為攝影提示，尚未預約。',
+  'Strokkur': '可從側邊平台取景；此為攝影提示，尚未預約。',
+  'Gullfoss': '下午較有機會遇到彩虹；此為攝影提示，尚未預約。',
+  'Seljalandsfoss': '使用者筆記：日出或早上；Gljúfrabúi 作延伸點，攜帶雨衣。',
+  'Reynisfjara': '使用者筆記：日落前約一小時抵達。',
+}

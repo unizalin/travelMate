@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import { journeyPhotoKey } from '@/services/journeyPhotoContext'
+import { journeyPhotoKey } from '@/domain/journeyPhotoContext'
 import type { JourneyItem } from '@/domain/tripJourney'
 import { cameraSettingsByPhotoSpotId } from '@/data/icelandPhotography'
 const photo = inject(journeyPhotoKey, null)
 const showPhotography = computed(() => photo?.preferences.value?.showPhotography !== false)
-function favorite(id: string, device: 'phoneSpotIds' | 'cameraSpotIds') {
-  const current = photo?.preferences.value
-  if (!current || !photo) return
-  const values = current[device].includes(id) ? current[device].filter(value => value !== id) : [...current[device], id]
-  void photo.update({ ...current, [device]: values })
-}
 const props = defineProps<{ item: JourneyItem }>()
 const phone = computed(() => (props.item.photoSpots ?? []).filter(spot => spot.device === 'phone' || spot.device === 'both'))
 const camera = computed(() => (props.item.photoSpots ?? []).filter(spot => spot.device === 'camera' || spot.device === 'both'))
@@ -23,14 +17,14 @@ const hasCameraSettings = computed(() => camera.value.some(spot => Boolean(camer
       <div class="photo-row">
         <b>iPhone</b>
         <div>
-          <p v-for="spot in phone" :key="spot.id"><button v-if="photo?.preferences.value" type="button" :disabled="photo.busy.value" :aria-pressed="photo.preferences.value.phoneSpotIds.includes(spot.id)" @click="favorite(spot.id,'phoneSpotIds')">{{photo.preferences.value.phoneSpotIds.includes(spot.id)?'★ 已收藏手機拍攝點':'☆ 收藏手機拍攝點'}}</button> {{ spot.composition }} <span v-if="spot.safetyNote">{{ spot.safetyNote }}</span></p>
+          <p v-for="spot in phone" :key="spot.id"> {{ spot.composition }} <span v-if="spot.safetyNote">{{ spot.safetyNote }}</span></p>
           <p v-if="!phone.length">{{ item.photoTip || '先用 1× 構圖，保留高光；人物與地景各留一張。' }}</p>
         </div>
       </div>
       <div class="photo-row">
         <b>相機</b>
         <div>
-          <p v-for="spot in camera" :key="spot.id"><button v-if="photo?.preferences.value" type="button" :disabled="photo.busy.value" :aria-pressed="photo.preferences.value.cameraSpotIds.includes(spot.id)" @click="favorite(spot.id,'cameraSpotIds')">{{photo.preferences.value.cameraSpotIds.includes(spot.id)?'★ 已收藏相機拍攝點':'☆ 收藏相機拍攝點'}}</button>
+          <p v-for="spot in camera" :key="spot.id">
             {{ spot.composition }} <span v-if="spot.safetyNote">{{ spot.safetyNote }}</span>
             <span v-if="cameraSettingsByPhotoSpotId[spot.id]" class="camera-settings">建議參數：{{ cameraSettingsByPhotoSpotId[spot.id] }}</span>
           </p>
