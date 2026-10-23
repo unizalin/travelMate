@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, shallowRef,
 import { useRoute, useRouter } from 'vue-router'
 import { canReadJourney } from '@/services/journeyService'
 import { loadLocalJourney } from '@/domain/tripJourney'
+import EmailIdentityConfirmation from '@/components/trip/EmailIdentityConfirmation.vue'
 import JourneyAdmin from '@/components/trip/JourneyAdmin.vue'
 import TripReader from '@/components/trip/TripReader.vue'
 import { ICELAND_TRIP_ID } from '@/router/iceland'
@@ -16,6 +17,7 @@ const membershipReady = shallowRef(false)
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 const loginError = shallowRef('')
 const membershipError = shallowRef('')
+const reservationOffered = shallowRef(false)
 let epoch = 0
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 async function refreshMembership() {
@@ -93,7 +95,8 @@ async function switchAccount() {
     <template #header-notice>
       <p v-if="signedIn && !membershipReady" role="status">正在確認旅程資格…</p>
       <p v-else-if="signedIn && membershipError" role="alert">{{ membershipError }} <button type="button" data-test="retry-membership" class="min-h-11 underline" @click="refreshMembership">重新確認</button></p>
-      <p v-else-if="signedIn" role="status">尚未加入，請透過邀請連結加入</p>
+      <p v-else-if="signedIn && !reservationOffered" role="status">尚未加入，請透過邀請連結加入</p>
+      <EmailIdentityConfirmation v-if="auth?.user && !member" :trip-id="ICELAND_TRIP_ID" :account-id="auth.user.id" @offered="reservationOffered=$event" @joined="refreshMembership" />
       <p v-if="loginError" role="status">{{ loginError }}</p>
     </template>
   </TripReader>

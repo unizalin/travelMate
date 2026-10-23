@@ -172,11 +172,44 @@ describe('IcelandPlanner cloud controls', () => {
       ...nights.slice(1).map(([date, , name]) => [date, name]),
     ]) {
       await wrapper.get(`#day-tab-${date}`).trigger('click')
-      expect(wrapper.get('.tonight-stay').text()).toBe(`今晚住宿：${name}`)
+      expect(wrapper.get('.tonight-stay').text()).toBe(`今晚住宿：${name} ↗`)
+      const navigation=wrapper.get('.tonight-stay a')
+      expect(navigation.attributes('href')).toBe(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`)
+      expect(navigation.attributes('target')).toBe('_blank')
+      expect(navigation.attributes('rel')).toContain('noreferrer')
       expect(wrapper.find('.compact-stay').exists()).toBe(false)
     }
     await wrapper.get('#day-tab-2026-11-07').trigger('click')
     expect(wrapper.find('.tonight-stay').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('renders document photography guidance in member activity cards without seed lookup or preferences', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+    setAuthUser('qa-owner')
+    const journey = structuredClone(icelandJourney)
+    journey.items = [{
+      ...journey.items[0], id:'document-photo', date:'2026-11-02', name:'Document photo stop',
+      photoTip:'Document shooting tip', photoSpots:[
+        {id:'document-phone',title:'Phone',device:'phone',composition:'Document phone composition',sourceLabel:'Fixture'},
+        {id:'document-camera',title:'Camera',device:'camera',composition:'Document camera composition',sourceLabel:'Fixture'},
+      ],
+    }, { ...journey.items[0], id:'document-no-photo', date:'2026-11-02', name:'No photo stop', photoTip:null, photoSpots:[] }]
+    loadJourney.mockResolvedValue({tripId:journey.tripId,revision:1,journey,canEdit:true})
+    const router=makeRouter(); await router.push('/trips/tripbook-iceland-2026/journey')
+    const wrapper=mount(IcelandPlanner,{global:{plugins:[router]}}); await flushPromises()
+    await wrapper.get('#day-tab-2026-11-02').trigger('click'); await flushPromises()
+    const photo=wrapper.get('#activity-document-photo [data-testid="photography-spots"]')
+    expect(photo.element.tagName).toBe('DETAILS')
+    expect(photo.attributes('open')).toBeUndefined()
+    expect(photo.get('summary').text()).toBe('拍攝建議')
+    expect(photo.text()).toContain('iPhone')
+    expect(photo.text()).toContain('相機')
+    expect(photo.text()).toContain('Document phone composition')
+    expect(photo.text()).toContain('Document camera composition')
+    expect(wrapper.find('#activity-document-no-photo [data-testid="photography-spots"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('攝影偏好與收藏')
     wrapper.unmount()
   })
 

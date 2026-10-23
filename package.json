@@ -20,7 +20,7 @@
     "test:all": "npm run test && npm run test:public-build && npm run test:db-contract && npm run test:membership-db && npm run test:ledger-db && npm run test:notifications",
     "dev:notifications": "node scripts/aurora-push-server.mjs",
     "test:notifications": "node --test tests/notifications/*.test.mjs",
-    "test:membership-db": "node --test tests/journey-service/fixed-membership-db.test.mjs",
+    "test:membership-db": "node --test tests/journey-service/fixed-membership-db.test.mjs tests/journey-service/email-binding-db.test.mjs",
     "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs tests/journey-service/push-storage-db.test.mjs"
   },
   "dependencies": {

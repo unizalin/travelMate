@@ -16,7 +16,7 @@ onMounted(async () => { await nextTick(); if(nextId.value) document.getElementBy
     <template #item="{ element: item, index }">
       <ItineraryActivity :item="item" :index="index" :editing="editing" :disabled="disabled" :next="item.id===nextId" :navigation-term="mapTerm(item)" :facility-label="publicStopService(item.name)?.label" :facility-query="publicStopService(item.name)?.query" @edit="(id,patch)=>emit('edit',id,patch)">
         <template #reminder><slot name="reminder" :item="item" /></template>
-        <template #photography><PhotographySpots :item="item" /></template>
+        <template #photography><slot name="photography" :item="item"><PhotographySpots :item="item" /></slot></template>
         <template #comments><slot name="comments" :item="item" /></template>
       </ItineraryActivity>
     </template>

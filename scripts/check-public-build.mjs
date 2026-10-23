@@ -3,6 +3,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 const PRIVATE_MODULE_PATTERNS = [
+  /(?:^|\/)src\/components\/trip\/EmailIdentityConfirmation\.vue$/i,
   /(?:^|\/)src\/components\/trip\/JourneyMyPage\.vue$/i,
   /(?:^|\/)src\/composables\/useDeviceReminders\.ts$/i,
   /(?:^|\/)scripts\/lib\/aurora-(?:cloud|runtime)\.mjs$/i,
@@ -34,6 +35,7 @@ const PRIVATE_MODULE_PATTERNS = [
 ]
 
 const PRIVATE_CONTENT_PATTERNS = [
+  /tripbook_(?:email_reservations|set_email_reservation|match_email_reservation|confirm_email_reservation)/,
   /SUPABASE_SERVICE_ROLE_KEY|AURORA_VAPID_PRIVATE_KEY|CRON_SECRET/,
   /tripbook_(?:ledger|save_ledger_entry|void_ledger_entry)/,
   /jinyo/i,

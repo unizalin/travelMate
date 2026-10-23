@@ -3,9 +3,9 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import InviteJoin from '@/views/InviteJoin.vue'
 import IcelandJourney from '@/views/IcelandJourney.vue'
-const state = vi.hoisted(() => ({ user: { id: 'guest' } as { id: string } | null, preview: vi.fn(), join: vi.fn(), oauth: vi.fn(), joined: false }))
+const state = vi.hoisted(() => ({ user: { id: 'guest' } as { id: string } | null, preview: vi.fn(), join: vi.fn(), oauth: vi.fn(), joined: false, match: vi.fn(), confirmEmail: vi.fn() }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ get user() { return state.user }, initializeAuth: async () => {}, signInWithOAuth: state.oauth, openAuthModal: vi.fn() }) }))
-vi.mock('@/services/journeyInviteService', () => ({ previewInvite: state.preview, joinInvite: state.join }))
+vi.mock('@/services/journeyInviteService', () => ({ previewInvite: state.preview, joinInvite: state.join, matchEmailReservation: state.match, confirmEmailReservation: state.confirmEmail }))
 vi.mock('@/services/journeyService', () => ({ canReadJourney: async () => state.joined }))
 vi.mock('@/views/IcelandPlanner.vue', () => ({ default: { template: '<div data-test="member-journey">會員旅程</div>' } }))
 vi.mock('@/services/tripWeatherService', () => ({ loadDayForecast: async () => ({ kind: 'unavailable', fetchedAt: new Date().toISOString() }) }))
@@ -14,7 +14,7 @@ async function setup(memberEntry = false) {
   await router.push('/iceland/join?token=' + 'a'.repeat(64))
   const wrapper = mount(InviteJoin, { global: { plugins: [router] } }); await flushPromises(); return { wrapper, router }
 }
-beforeEach(() => { vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-test-key'); state.joined = false; state.user = { id: 'guest' }; state.preview.mockReset().mockResolvedValue({ members: [{ id: 'member-1', name: 'U', claimed: true }, { id: 'member-4', name: 'Rosanne 🌹', claimed: false }] }); state.join.mockReset().mockResolvedValue({ tripId: 'trip' }) })
+beforeEach(() => { vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-test-key'); state.match.mockReset().mockResolvedValue(null); state.confirmEmail.mockReset().mockResolvedValue({tripId:'trip'}); state.joined = false; state.user = { id: 'guest' }; state.preview.mockReset().mockResolvedValue({ members: [{ id: 'member-1', name: 'U', claimed: true }, { id: 'member-4', name: 'Rosanne 🌹', claimed: false }] }); state.join.mockReset().mockResolvedValue({ tripId: 'trip' }) })
 afterEach(() => { vi.unstubAllEnvs() })
 describe('Invitation joining', () => {
   it('disables claimed identities and confirms before granting membership', async () => {
@@ -57,6 +57,28 @@ describe('Invitation joining', () => {
     const { wrapper, router } = await setup()
     expect(router.currentRoute.value.fullPath).toBe('/iceland?section=flights')
     expect(state.join).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('offers the reserved identity before invitation choices and keeps invitation joining after declining', async () => {
+    state.match.mockResolvedValue({id:'member-4',name:'Fixture Four'})
+    const {wrapper}=await setup()
+    expect(wrapper.text()).toContain('信箱已被預留為 Fixture Four')
+    expect(wrapper.find('[data-member]').exists()).toBe(false)
+    await wrapper.get('[data-test="decline-email-identity"]').trigger('click')
+    expect(wrapper.find('[data-member="member-4"]').exists()).toBe(true)
+    expect(state.confirmEmail).not.toHaveBeenCalled()
+    expect(state.join).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('can confirm a reservation from the join page without needing an active invitation', async () => {
+    state.preview.mockRejectedValue(new Error('邀請連結已失效'))
+    state.match.mockResolvedValue({id:'member-4',name:'Fixture Four'})
+    const {wrapper,router}=await setup()
+    await wrapper.get('[data-test="confirm-email-identity"]').trigger('click'); await flushPromises()
+    expect(state.confirmEmail).toHaveBeenCalledWith(expect.any(String),'member-4')
+    expect(state.join).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.fullPath).toBe('/iceland?section=flights')
     wrapper.unmount()
   })
 

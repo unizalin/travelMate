@@ -45,7 +45,7 @@ test('accepts London itinerary data, shared read-only presentation and accommoda
   finally { await rm(root, { recursive: true, force: true }) }
 })
 
-for (const privateContent of ['SUPABASE_SERVICE_ROLE_KEY', 'AURORA_VAPID_PRIVATE_KEY', 'CRON_SECRET', 'jinyo', 'Kevin Ho', 'Rosanne', 'YU', 'YU 的私人備註', 'member-2', 'tripbook_list_activity_comments']) {
+for (const privateContent of ['SUPABASE_SERVICE_ROLE_KEY', 'AURORA_VAPID_PRIVATE_KEY', 'CRON_SECRET', 'jinyo', 'Kevin Ho', 'Rosanne', 'YU', 'YU 的私人備註', 'member-2', 'tripbook_list_activity_comments', 'tripbook_email_reservations', 'tripbook_set_email_reservation', 'tripbook_match_email_reservation', 'tripbook_confirm_email_reservation']) {
   test(`rejects private content in an otherwise allowed London bundle: ${privateContent}`, async () => {
     const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', 'src/data/londonItinerary.ts'])
     await writeFile(path.join(root, 'assets/index.js'), `export const leaked = ${JSON.stringify(privateContent)}\n`)
@@ -159,4 +159,10 @@ test('rejects ledger RPC content in an otherwise public bundle', async () => {
  await writeFile(path.join(root, 'assets/index.js'), 'export const leaked = "tripbook_save_ledger_entry"\n')
  try { await assert.rejects(() => checkPublicBuild(root), /private identity or comment content/i) }
  finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('rejects the private email identity confirmation from the public graph', async () => {
+  const root = await fixture({ 'src/share.ts': { file: 'assets/index.js', src: 'src/share.ts', isEntry: true } }, ['assets/index.js'], ['src/share.ts', 'src/components/trip/EmailIdentityConfirmation.vue'])
+  try { await assert.rejects(() => checkPublicBuild(root), /private module/i) }
+  finally { await rm(root, { recursive: true, force: true }) }
 })

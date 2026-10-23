@@ -9,6 +9,8 @@ function mountJourney() {
   return mount(IcelandJourney, { global: { plugins: [router] } })
 }
 
+const emailApi = vi.hoisted(() => ({ matchEmailReservation: vi.fn(), confirmEmailReservation: vi.fn() }))
+vi.mock('@/services/journeyInviteService', () => emailApi)
 const membership = vi.hoisted(() => vi.fn())
 vi.mock('@/services/journeyService', () => ({ canReadJourney: membership, loadJourney: vi.fn().mockRejectedValue(new Error('document unavailable')) }))
 const state = vi.hoisted(() => ({ store: null as null | { user: { id: string } | null; initializeAuth: ReturnType<typeof vi.fn>; openAuthModal: ReturnType<typeof vi.fn>; signOut: ReturnType<typeof vi.fn> } }))
@@ -23,6 +25,8 @@ beforeEach(async () => {
   vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-test-key')
   await import('@/stores/auth')
+  emailApi.matchEmailReservation.mockReset().mockResolvedValue(null)
+  emailApi.confirmEmailReservation.mockReset().mockResolvedValue({tripId:'trip'})
   membership.mockReset().mockResolvedValue(false)
   if (state.store) { state.store.user = null; state.store.openAuthModal.mockReset(); state.store.initializeAuth.mockReset() }
 })
@@ -49,6 +53,19 @@ describe('Unified Iceland itinerary', () => {
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
     expect(wrapper.find('.journey-navigation').exists()).toBe(false)
     expect(wrapper.text()).toContain('切換帳號')
+    wrapper.unmount()
+  })
+
+  it('offers a reservation on a normal visit and enters the member view only after confirmation', async () => {
+    state.store!.user={id:'reserved-account'}
+    emailApi.matchEmailReservation.mockResolvedValue({id:'member-2',name:'Fixture Two'})
+    const wrapper=mountJourney(); await flushPromises()
+    expect(wrapper.text()).toContain('信箱已被預留為 Fixture Two')
+    expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
+    expect(emailApi.confirmEmailReservation).not.toHaveBeenCalled()
+    membership.mockResolvedValue(true)
+    await wrapper.get('[data-test="confirm-email-identity"]').trigger('click'); await flushPromises()
+    await vi.waitFor(()=>expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))
     wrapper.unmount()
   })
 

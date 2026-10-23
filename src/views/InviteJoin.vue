@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { previewInvite, joinInvite, type InviteMember } from '@/services/journeyInviteService'
+import EmailIdentityConfirmation from '@/components/trip/EmailIdentityConfirmation.vue'
 import { canReadJourney } from '@/services/journeyService'
 import { ICELAND_TRIP_ID } from '@/router/iceland'
 import { clearInvite, rememberInvite } from '@/services/inviteReturn'
 const route = useRoute(); const router = useRouter(); const auth = useAuthStore()
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token : '')
 const members = ref<InviteMember[]>([]); const selected = ref<InviteMember | null>(null)
+const reservationOffered = ref(false)
 const busy = ref(false); const error = ref(''); const ready = ref(false)
 async function load() {
   busy.value = true; error.value = ''; members.value = []; selected.value = null
@@ -30,6 +32,7 @@ async function login() {
     await auth.signInWithOAuth('google', path)
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '登入失敗，請重試。'; busy.value = false }
 }
+async function enterJourney() { clearInvite(); await router.replace('/iceland?section=flights') }
 async function confirm() {
   if (!selected.value || busy.value) return
   busy.value = true; error.value = ''
@@ -46,7 +49,8 @@ onMounted(async () => { try { if (!auth.user) await auth.initializeAuth(); await
     <p v-if="error" role="alert" class="my-4 text-red-700">{{ error }}</p>
     <p v-if="busy" role="status">處理中…</p>
     <button v-if="ready && !auth.user && !error" data-test="invite-login" :disabled="busy" class="my-4 min-h-11 rounded-xl border px-4" @click="login">使用 Google 登入</button>
-    <template v-if="auth.user && members.length">
+    <EmailIdentityConfirmation v-if="auth.user && ready" :trip-id="ICELAND_TRIP_ID" :account-id="auth.user.id" @offered="reservationOffered=$event" @joined="enterJourney" />
+    <template v-if="auth.user && members.length && !reservationOffered">
       <p class="my-4">請選擇自己的名字，每個帳號只能認領一位。</p>
       <div class="grid grid-cols-2 gap-3"><button v-for="member in members" :key="member.id" :data-member="member.id" :disabled="member.claimed || busy" class="min-h-12 rounded-xl border p-3 disabled:opacity-50" @click="selected=member">{{ member.name }}{{ member.claimed ? ' · 已認領' : '' }}</button></div>
       <section v-if="selected" class="my-6 rounded-xl border p-4" aria-label="確認身分">
