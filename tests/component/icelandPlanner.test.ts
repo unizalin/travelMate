@@ -140,6 +140,46 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
+  it('shows only the loaded document stay for each night and excludes checkout', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+    setAuthUser('qa-owner')
+    const journey = structuredClone(icelandJourney)
+    const nights = [
+      ['2026-10-30', '2026-11-01', 'U16 by Stay in Iceland'],
+      ['2026-11-01', '2026-11-02', 'Aurora Igloo South'],
+      ['2026-11-02', '2026-11-03', 'The Barn'],
+      ['2026-11-03', '2026-11-04', 'Lækjarhus Farm Holidays'],
+      ['2026-11-04', '2026-11-05', 'Hotel Jökulsárlón - Glacier Lagoon Hotel'],
+      ['2026-11-05', '2026-11-06', 'Apartments Reykjavík'],
+      ['2026-11-06', '2026-11-07', 'Silica Hotel'],
+    ]
+    journey.accommodations = nights.map(([checkIn, checkOut, name], index) => ({
+      id: `fixture-stay-${index}`, tripId: journey.tripId, name, checkIn, checkOut,
+      participantIds: [], rooms: [], benefits: [],
+    }))
+    const response = deferred<{ tripId: string; revision: number; journey: typeof journey; canEdit: boolean }>()
+    loadJourney.mockReturnValue(response.promise)
+    const router = makeRouter()
+    await router.push('/trips/tripbook-iceland-2026/journey')
+    const wrapper = mount(IcelandPlanner, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.find('.tonight-stay').exists()).toBe(false)
+    response.resolve({ tripId: journey.tripId, revision: 1, journey, canEdit: true })
+    await flushPromises()
+    for (const [date, name] of [
+      ['2026-10-30', nights[0][2]], ['2026-10-31', nights[0][2]],
+      ...nights.slice(1).map(([date, , name]) => [date, name]),
+    ]) {
+      await wrapper.get(`#day-tab-${date}`).trigger('click')
+      expect(wrapper.get('.tonight-stay').text()).toBe(`今晚住宿：${name}`)
+      expect(wrapper.find('.compact-stay').exists()).toBe(false)
+    }
+    await wrapper.get('#day-tab-2026-11-07').trigger('click')
+    expect(wrapper.find('.tonight-stay').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('shows the active Iceland aurora card in the global area before the tabs and keeps the daily summary compact', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-11-01T12:00:00Z'))
