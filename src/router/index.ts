@@ -16,7 +16,7 @@ const router = createRouter({
       path: '/iceland',
       name: 'iceland-planner',
       component: () => import('../views/IcelandJourney.vue'),
-      meta: { hideMobileTab: true, title: '冰島行程' },
+      meta: { hideMobileTab: true, title: '倫敦・冰島行程' },
     },
     {
       path: '/share/iceland',

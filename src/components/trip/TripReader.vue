@@ -169,7 +169,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
       <div class="site-header-row"><div class="site-brand">travelmate<span>.</span></div>      <div role="tablist" aria-label="旅程檢視" v-if="!publicOnly" class="journey-navigation">
         <button v-for="view in readerViews" :id="`view-tab-${view.id}`" :key="view.id" role="tab" type="button" :tabindex="activeView === view.id ? 0 : -1" @keydown="navigateViews" :aria-selected="activeView === view.id" :aria-current="activeView === view.id ? 'page' : undefined" :aria-controls="`view-${view.id === 'more' ? 'preparation' : view.id}`" class="min-h-11 rounded-xl px-4 py-2 text-sm font-bold" :class="activeView === view.id ? 'bg-[var(--iceland-action)] text-white' : 'bg-stone-100 text-stone-600'" @click="selectView(view.id)"><component :is="view.icon" aria-hidden="true" />{{ view.label }}</button>
       </div><div class="account-actions"><slot name="header-actions" /></div></div>
-      <div class="journey-header__inner mx-auto max-w-6xl">
+      <div class="journey-header__inner mx-auto">
         <div class="brand-row"><p>{{ hasLondon ? 'LONDON · ICELAND · 2026' : 'ICELAND · 2026' }}</p></div>
         <h1 v-if="activeView==='daily'" class="journey-title">{{ hasLondon ? '一起去倫敦・冰島' : '一起去冰島' }} <small>{{ hasLondon ? '10/24–11/7 · 15 天 · 6 人' : '10/30–11/7 · 9 天 · 6 人' }}</small></h1>
         <h1 v-if="activeView!=='daily'" class="journey-title">{{readerViews.find(view=>view.id===activeView)?.label}}</h1>
@@ -177,7 +177,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
       </div>
     </header>
 
-    <div class="journey-content mx-auto max-w-6xl">
+    <div class="journey-content mx-auto">
       <div class="global-information">
         <VedurAlertBanner :alerts="currentVedurAlerts" />
         <template v-if="activeView === 'daily'">
@@ -300,6 +300,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 
 <style scoped>
 .iceland-reader {
+  --journey-gutter: 16px;
   --iceland-snow: #f7f8f6;
   --iceland-paper: #ffffff;
   --iceland-ink: #263331;
@@ -317,9 +318,18 @@ function flightTime(flight: (typeof flights.value)[number]): string {
   -webkit-font-smoothing: antialiased;
 }
 .iceland-reader ::selection { background: #cee3df; }
+.site-header-row,
+.journey-header__inner,
+.journey-content {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding-inline: var(--journey-gutter);
+}
 .journey-header { background: var(--iceland-snow); }
-.journey-header__inner { max-width: 960px; padding: 14px 18px 8px; }
-.global-information { max-width: 960px; margin-top: 2px; margin-bottom: 8px; }.global-information:empty { display: none; }
+.journey-header__inner { padding-block: 14px 8px; }
+.global-information { min-width: 0; margin-top: 2px; margin-bottom: 8px; }.global-information:empty { display: none; }
 .aurora-placeholder { display: grid; gap: 3px; padding: 10px 13px; margin: 8px 0 2px; border-radius: 12px; background: var(--iceland-night); color: #dcebf0; font-size: 11.5px; line-height: 1.5; }
 .aurora-placeholder b { color: #fff; font-size: 13px; }
 .header-notice { max-width: 100%; margin-top: 6px; overflow-wrap: anywhere; }
@@ -340,7 +350,7 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 .journey-title small { color: var(--iceland-muted); font-size: 12.5px; font-weight: 400; margin-left: 6px; }
 .journey-title span { color: var(--iceland-glacier); margin-left: .12em; }
 .journey-header__inner > p { color: var(--iceland-muted); }
-.journey-content { max-width: 960px; padding: 0 18px 28px; }
+.journey-content { padding-block: 0 28px; }
 .journey-navigation { display: flex; margin: 0; background: var(--iceland-snow); padding: 6px 0 0; gap: 6px; }
 .journey-navigation button { flex: 1; min-height: 42px; padding: 9px 0; border-radius: 11px; font-size: 13.5px; white-space: nowrap; }
 .journey-navigation [role="tab"] { flex: 1; min-width: 0; white-space: nowrap; background: transparent; border-radius: 11px; color: var(--iceland-muted); font-weight: 500; }
@@ -372,12 +382,12 @@ function flightTime(flight: (typeof flights.value)[number]): string {
 .iceland-reader :deep(.journey-status) { background: var(--iceland-moss); color: #435347; font-size: 11px; font-weight: 500; }
 .reader-event { border-top: 1px solid var(--iceland-line); padding: 11px 0 8px; }.reader-event__number { flex: none; color: var(--iceland-glacier); font-size: 12px; padding-top: 4px; }.reader-event h3 { font-size: 15px; line-height: 1.5; font-weight: 600; }.reader-event p { font-size: 12.5px; line-height: 1.55; }
 .daily-flight-options { margin-top: 8px; padding: 8px 0; border-top: 1px solid var(--iceland-line); font-size: 12px; line-height: 1.6; color: var(--iceland-muted); }.daily-flight-options b { color: var(--iceland-glacier); font-weight: 500; }.daily-flight-options small { font-size: 11px; }
-@media(min-width: 768px) { .journey-header__inner { padding: 24px 28px 8px; }.journey-content { padding: 0 28px 48px; } }
+@media(min-width: 768px) { .iceland-reader { --journey-gutter: 28px; }.journey-header__inner { padding-block: 24px 8px; }.journey-content { padding-bottom: 48px; } }
 @media(prefers-reduced-motion: reduce) { .iceland-reader * { transition: none !important; scroll-behavior: auto !important; } }
 
-.site-brand{font-size:26px;font-weight:700;letter-spacing:-1px;padding:20px max(20px,calc((100vw - 1128px)/2));border-bottom:1px solid #dde3de}.site-brand span{color:#397d86}.journey-content{max-width:1128px;padding-bottom:110px}.journey-header__inner{max-width:1128px}.journey-title{font-size:28px;letter-spacing:-.5px}.journey-navigation svg{width:23px;height:23px}.journey-navigation button{display:flex;align-items:center;justify-content:center;gap:8px}.date-toolbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:20px}.date-toolbar button{display:inline-flex;align-items:center;justify-content:center;color:#397d86;min-height:44px;padding:8px 12px;border-radius:10px}.global-information{margin-top:16px}.global-information :deep(.clocks){display:grid;padding:18px;background:#e5ebdf;border-radius:14px;font-size:15px;line-height:1.7}.public-plan-b{display:block}.public-plan-b summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}.journey-navigation{margin-bottom:22px}.journey-navigation [role="tab"][aria-selected="true"]{color:#397d86;background:#e5ebdf}.journey-dates{position:static}.iceland-reader{color-scheme:light}.global-information:empty{display:none}
-@media(max-width:743px){.site-brand{font-size:22px;padding:18px 20px}.journey-header__inner{padding:24px 20px 8px}.journey-title{font-size:24px}.journey-title small{font-size:13px}.journey-content{padding-left:20px;padding-right:20px}.journey-navigation{position:fixed;bottom:0;left:0;right:0;z-index:40;background:#f7f8f6;border-top:1px solid #dde3de;padding:7px 10px calc(7px + env(safe-area-inset-bottom));margin:0;gap:0}.journey-navigation button{flex-direction:column;font-size:10px;min-height:54px;gap:5px;border-radius:0}.journey-navigation [role="tab"][aria-selected="true"]{background:transparent}.activity{padding-top:16px}.brand-row{font-size:11px}.global-information{margin-top:12px}}
+.site-brand{font-size:26px;font-weight:700;letter-spacing:-1px;padding:20px;border-bottom:1px solid #dde3de}.site-brand span{color:#397d86}.journey-content{padding-bottom:110px}.journey-title{font-size:28px;letter-spacing:-.5px}.journey-navigation svg{width:23px;height:23px}.journey-navigation button{display:flex;align-items:center;justify-content:center;gap:8px}.date-toolbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:20px}.date-toolbar button{display:inline-flex;align-items:center;justify-content:center;color:#397d86;min-height:44px;padding:8px 12px;border-radius:10px}.global-information{margin-top:16px}.global-information :deep(.clocks){display:grid;padding:18px;background:#e5ebdf;border-radius:14px;font-size:15px;line-height:1.7}.public-plan-b{display:block}.public-plan-b summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}.journey-navigation{margin-bottom:22px}.journey-navigation [role="tab"][aria-selected="true"]{color:#397d86;background:#e5ebdf}.journey-dates{position:static}.iceland-reader{color-scheme:light}.global-information:empty{display:none}
+@media(max-width:743px){.site-brand{font-size:22px;padding:18px 20px}.journey-header__inner{padding-block:24px 8px}.journey-title{font-size:24px}.journey-title small{font-size:13px}.journey-navigation{position:fixed;bottom:0;left:0;right:0;z-index:40;background:#f7f8f6;border-top:1px solid #dde3de;padding:7px 10px calc(7px + env(safe-area-inset-bottom));margin:0;gap:0}.journey-navigation button{flex-direction:column;font-size:10px;min-height:54px;gap:5px;border-radius:0}.journey-navigation [role="tab"][aria-selected="true"]{background:transparent}.activity{padding-top:16px}.brand-row{font-size:11px}.global-information{margin-top:12px}}
 
-.site-header-row{display:flex;align-items:center;gap:24px;border-bottom:1px solid #dde3de;max-width:1128px;margin:auto;padding:0 20px;min-height:80px}.site-brand{border:0;padding:18px 0;flex:1}.account-actions{display:flex;gap:10px;align-items:center}.site-header-row .journey-navigation{margin:0;gap:20px;padding:0;background:transparent}.site-header-row .journey-navigation button{padding:12px 0;font-size:14px;background:transparent!important}.journey-title small{display:block;font-size:14px;margin:12px 0 0;font-weight:400;color:#4e605a}.brand-row{margin-bottom:12px}.nonmember .journey-content{padding-bottom:24px}
+.site-header-row{display:flex;align-items:center;gap:24px;border-bottom:1px solid #dde3de;margin:auto;padding-block:0;min-height:80px}.site-brand{border:0;padding:18px 0;flex:1}.account-actions{display:flex;gap:10px;align-items:center}.site-header-row .journey-navigation{margin:0;gap:20px;padding:0;background:transparent}.site-header-row .journey-navigation button{padding:12px 0;font-size:14px;background:transparent!important}.journey-title small{display:block;font-size:14px;margin:12px 0 0;font-weight:400;color:#4e605a}.brand-row{margin-bottom:12px}.nonmember .journey-content{padding-bottom:24px}
 @media(max-width:743px){.site-header-row{min-height:68px}.site-header-row .journey-navigation{gap:0;padding:7px 10px calc(7px + env(safe-area-inset-bottom));background:#f7f8f6;margin:0}.site-header-row .journey-navigation button{font-size:10px;padding:3px 0}.journey-title small{font-size:13px}.journey-header__inner{padding-top:25px}.global-information{margin-top:16px}}
 </style>
