@@ -1,9 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { ref, nextTick } from 'vue'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const device=vi.hoisted(()=>({current:undefined as unknown}))
 vi.mock('@/composables/useDeviceReminders',()=>({useDeviceReminders:()=>device.current}))
-beforeEach(()=>vi.resetModules())
+beforeEach(()=>{
+ const values=new Map<string,string>()
+ vi.stubGlobal('localStorage',{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)})
+ vi.resetModules()
+})
+afterEach(()=>vi.unstubAllGlobals())
 async function fixture({ready=true,install=false,aurora=false,ios=false,canInstall=false,itinerary=true}={}) {
  const state={ready:ref(ready),todo:ref({install,aurora}),ios,canInstall:ref(canInstall),install:vi.fn()}
  device.current=state
@@ -54,4 +59,47 @@ it('main action emits navigation to expanded aurora card',async()=>{
  await wrapper.findAll('button').find(button=>button.text()==='前往開啟整趟提醒')?.trigger('click')
  expect(wrapper.emitted('aurora')).toHaveLength(1)
  expect(wrapper.find('[role=dialog]').exists()).toBe(false);wrapper.unmount()
+})
+
+it('persists each stage independently across fresh app openings without changing pending todos',async()=>{
+ const first=await fixture({install:true})
+ expect(first.wrapper.find('[role=dialog]').exists()).toBe(true)
+ expect(first.state.todo.value.install).toBe(true)
+ first.wrapper.unmount()
+ vi.resetModules()
+ const reopened=await fixture({install:true})
+ expect(reopened.wrapper.find('[role=dialog]').exists()).toBe(false)
+ expect(reopened.state.todo.value.install).toBe(true)
+ reopened.wrapper.unmount()
+ vi.resetModules()
+ const aurora=await fixture({aurora:true})
+ expect(aurora.wrapper.find('[role=dialog]').exists()).toBe(true)
+ await aurora.wrapper.get('.later').trigger('click')
+ expect(aurora.state.todo.value.aurora).toBe(true)
+ aurora.wrapper.unmount()
+ vi.resetModules()
+ const next=await fixture({aurora:true})
+ expect(next.wrapper.find('[role=dialog]').exists()).toBe(false)
+ expect(next.state.todo.value.aurora).toBe(true)
+ next.wrapper.unmount()
+})
+it('counts display itself even without pressing later and never reopens when returning to itinerary',async()=>{
+ const {wrapper}=await fixture({install:true})
+ expect(wrapper.find('[role=dialog]').exists()).toBe(true)
+ await wrapper.setProps({itinerary:false})
+ await wrapper.setProps({itinerary:true})
+ expect(wrapper.find('[role=dialog]').exists()).toBe(false)
+ wrapper.unmount()
+ vi.resetModules()
+ const next=await fixture({install:true})
+ expect(next.wrapper.find('[role=dialog]').exists()).toBe(false)
+ next.wrapper.unmount()
+})
+it('does not consume a stage before it can actually show',async()=>{
+ const first=await fixture({install:true,ready:false})
+ first.wrapper.unmount()
+ vi.resetModules()
+ const next=await fixture({install:true})
+ expect(next.wrapper.find('[role=dialog]').exists()).toBe(true)
+ next.wrapper.unmount()
 })

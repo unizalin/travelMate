@@ -3,16 +3,25 @@ let openingPromptClaimed=false
 </script>
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { markMemberReminderShown, wasMemberReminderShown, type MemberReminderStage } from '@/domain/memberReminderHistory'
 import { useDeviceReminders } from '@/composables/useDeviceReminders'
 const props=defineProps<{ itinerary: boolean }>()
 const emit=defineEmits<{ aurora: [] }>()
 const device=useDeviceReminders()
 const open=ref(false),dismiss=ref<HTMLButtonElement|null>(null)
-// Survives member component remounts; resets only when the page is opened again.
-watch(()=>[props.itinerary,device.ready.value,device.todo.value.install,device.todo.value.aurora],async()=>{
- if(!openingPromptClaimed && props.itinerary && device.ready.value && (device.todo.value.install || device.todo.value.aurora)) {openingPromptClaimed=true;open.value=true;await nextTick();dismiss.value?.focus()}
+const stage=computed<MemberReminderStage|null>(()=>device.todo.value.install?'install':device.todo.value.aurora?'aurora':null)
+const displayedStage=ref<MemberReminderStage|null>(null)
+watch(()=>[props.itinerary,device.ready.value,stage.value],async()=>{
+ if(!props.itinerary || !device.ready.value || displayedStage.value!==stage.value) open.value=false
+ if(!openingPromptClaimed && props.itinerary && device.ready.value && stage.value && !wasMemberReminderShown(stage.value)) {
+  openingPromptClaimed=true
+  displayedStage.value=stage.value
+  markMemberReminderShown(stage.value)
+  open.value=true
+  await nextTick();dismiss.value?.focus()
+ }
 },{immediate:true})
-const visible=computed(()=>open.value && props.itinerary && device.ready.value && (device.todo.value.install || device.todo.value.aurora))
+const visible=computed(()=>open.value && props.itinerary && device.ready.value && displayedStage.value===stage.value && stage.value!==null)
 function trapTab(event:KeyboardEvent) {
  if(event.key!=='Tab' || !(event.currentTarget instanceof HTMLElement))return
  const buttons=event.currentTarget.querySelectorAll('button:not(:disabled)')
