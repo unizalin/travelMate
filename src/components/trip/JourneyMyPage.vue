@@ -26,6 +26,7 @@ const offlineStatus=computed(()=>{void offlineRevision.value;try{const value=loc
   <details class="my-section" @toggle="ledgerOpen=($event.target as HTMLDetailsElement).open"><summary><span>旅費記帳<small>共同支出、分帳與已還款紀錄</small></span></summary><JourneyLedger v-if="ledgerOpen" :trip-id="tripId" :account-id="accountId" :members="journey.members" :self-member-id="selfMemberId" :disabled="offline || !canEdit" /></details>
   <slot name="management" />
   <section class="my-section"><h2>帳號與裝置</h2><slot name="account" />
+   <a class="task-row" href="/line/connect"><span>LINE 旅行提醒<small>綁定會員、管理 LINE 極光提醒</small></span><span aria-hidden="true">→</span></a>
    <details class="device-row"><summary><span>離線行程<small>{{offlineStatus}}</small></span></summary><TripPreparation :account-id="accountId" :trip-id="tripId" :journey="journey" account-tools @offline-updated="offlineRevision++" /></details>
    <details class="device-row"><summary><span>通知提醒<small>{{device.status.value}}</small></span></summary><AuroraReminderSettings :account-id="accountId" /></details>
   </section>

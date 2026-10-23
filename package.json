@@ -21,7 +21,7 @@
     "dev:notifications": "node scripts/aurora-push-server.mjs",
     "test:notifications": "node --test tests/notifications/*.test.mjs",
     "test:membership-db": "node --test tests/journey-service/fixed-membership-db.test.mjs tests/journey-service/email-binding-db.test.mjs",
-    "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs tests/journey-service/push-storage-db.test.mjs"
+    "test:ledger-db": "node --test tests/journey-service/ledger-db.test.mjs tests/journey-service/push-storage-db.test.mjs tests/journey-service/line-storage-db.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

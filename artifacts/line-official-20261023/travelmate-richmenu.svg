@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2500" height="1686" viewBox="0 0 2500 1686">
+<rect width="2500" height="1686" fill="#f5f5ee"/>
+<rect x="0.0" y="0" width="833.3333333333334" height="843" fill="#e2ece5"/>
+<text x="72.0" y="100" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">01</text>
+<circle cx="416.6666666666667" cy="315" r="132" fill="#d2e2da"/>
+<g transform="translate(416.6666666666667,315)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-60,-45h120v100h-120z M-60,-10h120 M-30,-65v40 M30,-65v40"/></g>
+<text x="416.6666666666667" y="575" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">今日行程</text>
+<text x="416.6666666666667" y="660" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">看看今天去哪裡</text>
+<rect x="833.3333333333334" y="0" width="833.3333333333334" height="843" fill="#f5f5ee"/>
+<text x="905.3333333333334" y="100" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">02</text>
+<circle cx="1250.0" cy="315" r="132" fill="#d2e2da"/>
+<g transform="translate(1250.0,315)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-65,-45l45,-15 45,15 40,-15v105l-40,15 -45,-15 -45,15z M-20,-60v105 M25,-45v105"/></g>
+<text x="1250.0" y="575" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">完整旅程</text>
+<text x="1250.0" y="660" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">九天冰島・一路同行</text>
+<rect x="1666.6666666666667" y="0" width="833.3333333333334" height="843" fill="#f5f5ee"/>
+<text x="1738.6666666666667" y="100" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">03</text>
+<circle cx="2083.3333333333335" cy="315" r="132" fill="#d2e2da"/>
+<g transform="translate(2083.3333333333335,315)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-65,25q-10,-55 35,-60q25,-55 65,-20q55,-10 40,55h-140 M-20,-80v-20 M55,-70l15,-15"/></g>
+<text x="2083.3333333333335" y="575" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">天氣／極光</text>
+<text x="2083.3333333333335" y="660" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">出發前，看看天空</text>
+<rect x="0.0" y="843" width="833.3333333333334" height="843" fill="#f5f5ee"/>
+<text x="72.0" y="943" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">04</text>
+<circle cx="416.6666666666667" cy="1158" r="132" fill="#d2e2da"/>
+<g transform="translate(416.6666666666667,1158)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-40,-50h90v115h-110v-115h20 M-20,-65h50v25h-50z M-40,0l15,15 25,-30 M10,35h25"/></g>
+<text x="416.6666666666667" y="1418" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">行前準備</text>
+<text x="416.6666666666667" y="1503" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">把該帶的都準備好</text>
+<rect x="833.3333333333334" y="843" width="833.3333333333334" height="843" fill="#f5f5ee"/>
+<text x="905.3333333333334" y="943" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">05</text>
+<circle cx="1250.0" cy="1158" r="132" fill="#d2e2da"/>
+<g transform="translate(1250.0,1158)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-65,-55h130v115h-130z M-65,-20h130 M-45,-38h3 M-25,-38h3 M-5,-38h3 M-25,20l-15,15 15,15 M25,20l15,15 -15,15"/></g>
+<text x="1250.0" y="1418" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">開啟網站</text>
+<text x="1250.0" y="1503" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">一起編輯我們的旅行</text>
+<rect x="1666.6666666666667" y="843" width="833.3333333333334" height="843" fill="#e2ece5"/>
+<text x="1738.6666666666667" y="943" fill="#7e948a" font-family="Arial,sans-serif" font-size="32" letter-spacing="5">06</text>
+<circle cx="2083.3333333333335" cy="1158" r="132" fill="#d2e2da"/>
+<g transform="translate(2083.3333333333335,1158)" fill="none" stroke="#246757" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"><path d="M-45,35v-35q0,-50 45,-50q45,0 45,50v35l20,15h-130z M-15,65q15,20 30,0"/></g>
+<text x="2083.3333333333335" y="1418" text-anchor="middle" fill="#203d35" font-family="PingFang TC,Heiti TC,sans-serif" font-size="72" font-weight="600">通知設定</text>
+<text x="2083.3333333333335" y="1503" text-anchor="middle" fill="#657b70" font-family="PingFang TC,Heiti TC,sans-serif" font-size="34">綁定會員・管理提醒</text>
+<path d="M833.333,0V1686 M1666.667,0V1686 M0,843H2500" stroke="#bacdc2" stroke-width="2"/>
+</svg>

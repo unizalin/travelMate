@@ -11,6 +11,13 @@
   ],
   "headers": [
     {
+      "source": "/line/connect",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    },
+    {
       "source": "/api/vedur-alerts",
       "headers": [
         {
@@ -38,6 +45,9 @@
     }
   ],
   "functions": {
+    "api/line.mjs": {
+      "maxDuration": 60
+    },
     "api/aurora-notifications/*.mjs": {
       "maxDuration": 60
     }
