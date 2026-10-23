@@ -184,7 +184,7 @@ describe('IcelandPlanner cloud controls', () => {
     wrapper.unmount()
   })
 
-  it('renders document photography guidance in member activity cards without seed lookup or preferences', async () => {
+  it.each([false,true])('renders document photography guidance even when card projection=%s omits photo fields', async projected => {
     vi.stubEnv('VITE_SUPABASE_URL', 'http://supabase.test')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
     setAuthUser('qa-owner')
@@ -198,7 +198,7 @@ describe('IcelandPlanner cloud controls', () => {
     }, { ...journey.items[0], id:'document-no-photo', date:'2026-11-02', name:'No photo stop', photoTip:null, photoSpots:[] }]
     loadJourney.mockResolvedValue({tripId:journey.tripId,revision:1,journey,canEdit:true})
     const router=makeRouter(); await router.push('/trips/tripbook-iceland-2026/journey')
-    const wrapper=mount(IcelandPlanner,{global:{plugins:[router]}}); await flushPromises()
+    const wrapper=mount(IcelandPlanner,{global:{plugins:[router],stubs:projected ? {ItineraryActivities:{props:['items'],template:'<div><div v-for="item in items" :key="item.id" :id="`activity-${item.id}`"><slot name="photography" :item="{...item, photoTip:undefined, photoSpots:undefined}" /></div></div>'}} : {}}}); await flushPromises()
     await wrapper.get('#day-tab-2026-11-02').trigger('click'); await flushPromises()
     const photo=wrapper.get('#activity-document-photo [data-testid="photography-spots"]')
     expect(photo.element.tagName).toBe('DETAILS')

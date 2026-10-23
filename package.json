@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "vue-tsc && vite build && node scripts/check-member-photography-build.mjs dist",
     "build:share": "vue-tsc && vite build --config vite.share.config.ts",
     "check:share": "node scripts/check-public-build.mjs dist-share",
     "preview": "vite preview",
