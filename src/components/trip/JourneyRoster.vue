@@ -63,20 +63,20 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
       <section v-if="self && selected('fi0454')" class="departure-guide" aria-label="冰島離境注意事項">
         <h3>冰島離境注意事項</h3>
         <ol>
-          <li><b>提前到機場</b>：KEF 建議起飛前 2.5–3 小時抵達。預留還車、報到與安檢時間。</li>
-          <li><b>報到與托運</b>：可用自助機辦理報到、列印登機證與行李條，再到自助行李托運區。貼標後檢查是否牢固、航班與行李條目的地是否正確；若不確定操作，改到人工櫃檯請人員協助。</li>
-          <li v-if="fliesIcelandairViaLondon"><b>先確認能否直掛</b>：這兩段跨航空公司的行李能否直掛，須由冰島航空依實際訂位確認。行李交出前，向人工櫃檯出示 FI0454、CI0082 兩段機票，並說 <span lang="en">“Direct to Taipei (TPE), please. Can you check my bag through to TPE? Please confirm the destination on the bag tag.”</span> 核對行李條上是 <b>TPE</b> 還是 <b>LHR</b>，保留收據。轉機複雜或不熟悉自助貼標時，優先排人工櫃檯。</li>
-          <li><b>安檢與護照查驗</b>：安檢後依螢幕與指標前往 D 區登機門；飛往英國須經離開申根區的護照查驗，預留排隊時間。登機門可能變動，依現場公告為準。</li>
+          <li><b>提前 3 小時到 KEF</b>：預留還車、報到、托運、安檢與護照查驗時間；機場建議起飛前 2.5–3 小時抵達。</li>
+          <li><b>選擇自助或人工托運</b>：自助區可辦理報到、列印登機證與行李條，並自行貼標、到自助托運區交行李。交出前核對行李條的姓名與目的地，確認貼牢，保留托運收據；貼錯或脫落會增加行李延誤、追查困難的風險。若不會貼、現場無法立即取得協助，就改排人工櫃檯。</li>
+          <li v-if="fliesIcelandairViaLondon"><b>請人工櫃檯確認直掛台北</b>：若全程轉機兩次以上、要換航廈，或擔心自助貼標出錯，建議選人工托運。出示 FI0454 與 CI0082 兩段訂位，說 <span lang="en">“Direct to Taipei (TPE), please. Can you check my bag through to TPE?”</span> 請人員確認能否直掛，並當面看行李條目的地是 <b>TPE</b> 還是 <b>LHR</b>。跨航空公司能否直掛須依實際票券與航空公司答覆，不能只靠自助機顯示推定。</li>
+          <li><b>到 2 樓安檢，再往 D 區</b>：安檢可能排隊。飛往英國須經離開申根區的護照查驗，再依螢幕前往 D 區登機門；護照查驗也要預留排隊時間，登機門以現場公告為準。</li>
         </ol>
         <template v-if="fliesIcelandairViaLondon">
-          <h4>倫敦希斯洛轉機</h4>
+          <h4>抵達倫敦希斯洛後</h4>
           <ol>
-            <li>FI0454 預計 19:30 抵達，CI0082 預計 21:15 起飛，相隔 1 小時 45 分。登機前先查 CI0082 航廈，落地後立刻再看轉機電子看板。</li>
-            <li>若行李條是 <b>TPE</b> 且已拿到下一段登機證，循紫色 <span lang="en">Flight Connections</span> 指標；換航廈依指標搭免費轉機接駁車，再過安檢並確認登機門。</li>
-            <li>若行李條只到 <b>LHR</b>、未完成下一段報到，或兩段是分開訂票且需自行領行李，須走入境、領行李、前往出發航廈重新報到並再次安檢。此銜接時間很短，出發前先向兩家航空公司確認能否趕上及替代方案。</li>
+            <li><b>先找下一段航廈</b>：登機前先查 CI0082 航廈；下機後立刻再看電子看板。FI0454 預計 19:30 抵達、CI0082 預計 21:15 起飛，表定只隔 1 小時 45 分。</li>
+            <li><b>已確認行李直掛 TPE</b>：循紫色 <span lang="en">Flight Connections</span> 指標；若要換航廈，依指標搭免費轉機接駁車。抵達下一航廈後再次安檢，再查登機門與登機時間。</li>
+            <li><b>行李只到 LHR 或須自行轉機</b>：走入境、領行李，前往出發航廈重新報到、托運並安檢。若為分開訂票，希斯洛提醒通常必須自行完成這些步驟；時間非常緊，出發前先向兩家航空公司確認能否銜接與替代方案。</li>
           </ol>
         </template>
-        <p class="guide-sources">官方資訊：<a href="https://www.kefairport.com/check-in-information" target="_blank" rel="noreferrer">KEF 出發流程 ↗</a> · <a href="https://www.kefairport.com/passport-control" target="_blank" rel="noreferrer">KEF 護照查驗 ↗</a> · <a href="https://www.icelandair.com/en-gb/support/pre-flight/check-in/" target="_blank" rel="noreferrer">冰島航空報到 ↗</a><template v-if="fliesIcelandairViaLondon"> · <a href="https://www.heathrow.com/connecting-flights" target="_blank" rel="noreferrer">希斯洛轉機 ↗</a></template></p>
+        <p class="guide-sources">官方資訊：<a href="https://www.kefairport.com/check-in-information" target="_blank" rel="noreferrer">KEF 出發流程 ↗</a> · <a href="https://www.kefairport.com/fast-track" target="_blank" rel="noreferrer">KEF 安檢樓層 ↗</a> · <a href="https://www.kefairport.com/passport-control" target="_blank" rel="noreferrer">KEF 護照查驗 ↗</a> · <a href="https://www.icelandair.com/en-gb/support/pre-flight/check-in/" target="_blank" rel="noreferrer">冰島航空報到 ↗</a><template v-if="fliesIcelandairViaLondon"> · <a href="https://www.heathrow.com/connecting-flights" target="_blank" rel="noreferrer">希斯洛轉機 ↗</a></template></p>
       </section>
     </template>
   </section>
