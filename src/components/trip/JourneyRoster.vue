@@ -65,9 +65,13 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
         <ol>
           <li><b>提前 3 小時到 KEF</b>：預留還車、報到、托運、安檢與護照查驗時間；機場建議起飛前 2.5–3 小時抵達。</li>
           <li><b>選擇自助或人工托運</b>：自助區可辦理報到、列印登機證與行李條，並自行貼標、到自助托運區交行李。交出前核對行李條的姓名與目的地，確認貼牢，保留托運收據；貼錯或脫落會增加行李延誤、追查困難的風險。若不會貼、現場無法立即取得協助，就改排人工櫃檯。</li>
-          <li v-if="fliesIcelandairViaLondon"><b>請人工櫃檯確認直掛台北</b>：若全程轉機兩次以上、要換航廈，或擔心自助貼標出錯，建議選人工托運。出示 FI0454 與 CI0082 兩段訂位，說 <span lang="en">“Direct to Taipei (TPE), please. Can you check my bag through to TPE?”</span> 請人員確認能否直掛，並當面看行李條目的地是 <b>TPE</b> 還是 <b>LHR</b>。跨航空公司能否直掛須依實際票券與航空公司答覆，不能只靠自助機顯示推定。</li>
+          <li v-if="fliesIcelandairViaLondon"><b>請人工櫃檯確認直掛台北</b>：若全程轉機兩次以上、要換航廈，或擔心自助貼標出錯，建議選人工托運。出示 FI0454 與 CI0082 兩段訂位，用下方英文請人員確認能否直掛，並當面看行李條目的地是 <b>TPE</b> 還是 <b>LHR</b>。跨航空公司能否直掛須依實際票券與航空公司答覆，不能只靠自助機顯示推定。</li>
           <li><b>到 2 樓安檢，再往 D 區</b>：安檢可能排隊。飛往英國須經離開申根區的護照查驗，再依螢幕前往 D 區登機門；護照查驗也要預留排隊時間，登機門以現場公告為準。</li>
         </ol>
+        <div v-if="fliesIcelandairViaLondon" class="counter-script">
+          <h4>人工櫃檯英文說法</h4>
+          <p lang="en">Hi, I’m flying from Keflavík to London Heathrow on FI0454, then on to Taipei on China Airlines CI0082. Here are both booking confirmations. Could you check my bag through to Taipei (TPE)? Please confirm the final destination on the bag tag. If it can only be checked to London Heathrow, where should I collect and recheck it?</p>
+        </div>
         <template v-if="fliesIcelandairViaLondon">
           <h4>抵達倫敦希斯洛後</h4>
           <ol>
@@ -84,5 +88,5 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
 
 <style scoped>
 .journey-roster{min-width:0}.flight-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}.flight-heading h2{font-size:14px;font-weight:600}.flight-heading button{font-size:12px;color:#397d86;min-height:36px}.self-name,.muted{font-size:12px;color:#7a8783;margin:4px 0;line-height:1.6}.flight-cards{margin-top:8px}.identity-choices button{min-height:48px;border:1px solid #dde3de;border-radius:10px;background:white;color:#263331;text-align:left;padding:10px;font-size:12px}.identity-choices button:disabled{opacity:.5}.journey-roster :is(button,input):focus-visible{outline:3px solid #83b3b6;outline-offset:3px}
-.departure-guide{margin-top:16px;padding:16px;border:1px solid #dde3de;border-radius:12px;background:#f7f8f6;color:#263331;font-size:12.5px;line-height:1.7}.departure-guide h3{font-size:16px;font-weight:600;margin:0 0 8px}.departure-guide h4{font-size:14px;font-weight:600;margin:14px 0 6px}.departure-guide ol{padding-left:20px;margin:0}.departure-guide li{padding:5px 0}.departure-guide li b{font-weight:600}.guide-sources{margin:12px 0 0;font-size:11.5px;color:#68766f}.guide-sources a{color:#397d86;text-decoration:underline;text-underline-offset:2px}
+.departure-guide{margin-top:16px;padding:16px;border:1px solid #dde3de;border-radius:12px;background:#f7f8f6;color:#263331;font-size:12.5px;line-height:1.7}.departure-guide h3{font-size:16px;font-weight:600;margin:0 0 8px}.departure-guide h4{font-size:14px;font-weight:600;margin:14px 0 6px}.counter-script{margin-top:12px;padding:12px;border-left:3px solid #397d86;background:white;border-radius:0 8px 8px 0}.counter-script h4{margin:0 0 5px}.counter-script p{margin:0;line-height:1.7}.departure-guide ol{padding-left:20px;margin:0}.departure-guide li{padding:5px 0}.departure-guide li b{font-weight:600}.guide-sources{margin:12px 0 0;font-size:11.5px;color:#68766f}.guide-sources a{color:#397d86;text-decoration:underline;text-underline-offset:2px}
 </style>
