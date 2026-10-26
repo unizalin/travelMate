@@ -121,7 +121,8 @@ async function refreshPackingProgress() {
   try { const items=await preparationService.getItems(trip,account); if(account===accountId.value && trip===activeTripId.value) packingRemaining.value=items.filter(i=>!i.completed).length } catch { packingRemaining.value=null }
 }
 watch(activeSection,()=>{ void refreshPackingProgress() })
-const myFlightNames = computed(() => flightRoster.value.choices.filter(c=>c.memberId===selfMember.value?.memberId).map(c=>icelandFlights.find(f=>f.id===c.flightId)?.name).filter((name): name is string => typeof name==='string'))
+const myFlightIds = computed(() => flightRoster.value.choices.filter(c=>c.memberId===selfMember.value?.memberId).map(c=>c.flightId))
+const myFlightNames = computed(() => myFlightIds.value.map(id=>icelandFlights.find(f=>f.id===id)?.name).filter((name): name is string => typeof name==='string'))
 const previewMemberId = ref('all')
 type CloudEnvelope = { tripId?: string; revision: number; journey: TripJourney; canEdit: boolean; updatedAt?: string }
 const pendingEnvelope = ref<CloudEnvelope | null>(null)
@@ -180,6 +181,7 @@ watch(routeTripId, async nextTripId => {
 
   invalidateJourneyOperations()
   activeTripId.value = nextTripId
+  flightRoster.value = { claims: [], choices: [] }
   draft.value = withTripId(publicJourneyDraft, nextTripId)
   localSavedJson.value = JSON.stringify(draft.value)
   cloudBaseJson.value = null
@@ -225,6 +227,7 @@ function switchAccount(nextAccountId: string): void {
   if (accountId.value === nextAccountId) return
   invalidateJourneyOperations()
   accountId.value = nextAccountId
+  flightRoster.value = { claims: [], choices: [] }
 
 
 
@@ -440,7 +443,7 @@ onBeforeUnmount(() => {
       <JourneyRoster :trip-id="activeTripId" :account-id="accountId" :can-edit="cloudCanEdit === true" :members="draft.members" @update="updateFlightRoster" />
     </template>
     <template #me>
-      <JourneyMyPage :identity-name="identityName" :sync-status="offline ? '離線副本 · 僅供閱讀' : cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程'" :trip-id="activeTripId" :account-id="accountId" :journey="draft" :flight-names="myFlightNames" :packing-remaining="packingRemaining" :self-member-id="selfMember?.memberId" :offline="offline" :can-edit="cloudCanEdit===true" @flights="router.replace({query:{section:'flights'}})" @preparation="router.replace({query:{section:'more'}})" @aurora="router.replace({query:{section:'itinerary',aurora:String(Date.now())}})">
+      <JourneyMyPage :identity-name="identityName" :sync-status="offline ? '離線副本 · 僅供閱讀' : cloudCanEdit === false ? '目前僅可閱讀' : journeyMissing ? '尚無可存取旅程' : hasCloudChanges ? '有尚未儲存的變更' : cloudLoaded ? '已同步' : errorMessage ? '旅程載入失敗' : busy ? '正在載入旅程' : '尚未連接旅程'" :trip-id="activeTripId" :account-id="accountId" :journey="draft" :flight-ids="myFlightIds" :flight-names="myFlightNames" :packing-remaining="packingRemaining" :self-member-id="selfMember?.memberId" :offline="offline" :can-edit="cloudCanEdit===true" @flights="router.replace({query:{section:'flights'}})" @preparation="router.replace({query:{section:'more'}})" @aurora="router.replace({query:{section:'itinerary',aurora:String(Date.now())}})">
         <template #management><slot name="management" :trip-id="activeTripId" /></template>
         <template #account><slot name="account-settings" /></template>
       </JourneyMyPage>

@@ -20,6 +20,8 @@ describe('identity and own flight selection', () => {
     api.chooseFlight.mockResolvedValue({ claims: [{ memberId: 'member-1', name: '旅伴一', isSelf: true }], choices: [{ memberId: 'member-1', flightId: 'fi0501' }] })
     const wrapper = mount(JourneyRoster, { props })
     await flushPromises()
+    expect(wrapper.findAll('article')).toHaveLength(0)
+    await wrapper.findAll('button').find(b => b.text() === '選擇航班')!.trigger('click')
     const fi = wrapper.findAll('article').find(a => a.text().includes('FI0501'))!
     await fi.find('button').trigger('click')
     await flushPromises()
@@ -28,6 +30,41 @@ describe('identity and own flight selection', () => {
     expect(wrapper.text()).toContain('已選 1 段')
     expect(wrapper.find('article').text()).toContain('台灣')
     expect(wrapper.find('article').text()).toContain('訂位代號：待補')
+    await wrapper.findAll('button').find(b => b.text() === '完成選擇')!.trigger('click')
+    expect(wrapper.findAll('article')).toHaveLength(1)
+    await wrapper.findAll('button').find(b => b.text() === '更改航班')!.trigger('click')
+    expect(wrapper.findAll('article')).toHaveLength(8)
+    wrapper.unmount()
+  })
+  it('keeps only this member’s outbound and return flights in the usual view', async () => {
+    api.loadRoster.mockResolvedValue({
+      claims: [{ memberId: 'member-1', name: '旅伴一', isSelf: true }, { memberId: 'member-2', name: '旅伴二', isSelf: false }],
+      choices: [
+        { memberId: 'member-1', flightId: 'fi0501' },
+        { memberId: 'member-1', flightId: 'ba801' },
+        { memberId: 'member-2', flightId: 'ba802' },
+        { memberId: 'member-2', flightId: 'fi0454' },
+      ],
+    })
+    const wrapper = mount(JourneyRoster, { props })
+    await flushPromises()
+    const cards = wrapper.findAll('article')
+    expect(cards).toHaveLength(2)
+    expect(cards.map(card => card.text())).toEqual([expect.stringContaining('FI0501'), expect.stringContaining('BA801')])
+    expect(wrapper.text()).not.toContain('BA802')
+    expect(wrapper.text()).not.toContain('FI0454')
+    wrapper.unmount()
+  })
+  it('does not show an unselected onward flight or its reminder', async () => {
+    api.loadRoster.mockResolvedValue({
+      claims: [{ memberId: 'member-1', name: '旅伴一', isSelf: true }],
+      choices: [{ memberId: 'member-1', flightId: 'fi0454' }],
+    })
+    const wrapper = mount(JourneyRoster, { props })
+    await flushPromises()
+    expect(wrapper.findAll('article')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('CI0082')
+    expect(wrapper.text()).not.toContain('直掛')
     wrapper.unmount()
   })
   it('does not allow readonly claim or selecting already claimed identities', async () => {
