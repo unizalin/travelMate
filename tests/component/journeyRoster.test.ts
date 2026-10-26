@@ -67,6 +67,23 @@ describe('identity and own flight selection', () => {
     expect(wrapper.text()).not.toContain('直掛')
     wrapper.unmount()
   })
+  it('shows Iceland departure and London transfer guidance below the selected flights', async () => {
+    api.loadRoster.mockResolvedValue({
+      claims: [{ memberId: 'member-1', name: '旅伴一', isSelf: true }],
+      choices: [{ memberId: 'member-1', flightId: 'fi0454' }, { memberId: 'member-1', flightId: 'ci0082' }],
+    })
+    const wrapper = mount(JourneyRoster, { props })
+    await flushPromises()
+    const guide = wrapper.get('[aria-label="冰島離境注意事項"]')
+    expect(guide.text()).toContain('起飛前 2.5–3 小時')
+    expect(guide.text()).toContain('人工櫃檯')
+    expect(guide.text()).toContain('Direct to Taipei (TPE), please.')
+    expect(guide.text()).toContain('Flight Connections')
+    expect(guide.text()).toContain('1 小時 45 分')
+    expect(wrapper.findAll('article')).toHaveLength(2)
+    expect(wrapper.text()).not.toContain('Travel Q&A')
+    wrapper.unmount()
+  })
   it('does not allow readonly claim or selecting already claimed identities', async () => {
     api.loadRoster.mockResolvedValue({ claims: [{ memberId: 'member-1', name: '其他人', isSelf: false }], choices: [] })
     const wrapper = mount(JourneyRoster, { props: { ...props, canEdit: false } })
