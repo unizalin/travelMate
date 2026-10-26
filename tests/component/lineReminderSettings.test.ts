@@ -7,15 +7,13 @@ vi.mock('@/services/lineReminderService', () => ({ lineState: vi.fn(), prepareLi
 const disabled = { linked: true, enabled: false, blocked: false, expiresAt: '2026-11-07T12:00:00Z' }
 beforeEach(() => { vi.mocked(lineState).mockReset() })
 
-it('only reports enabled after the server confirms the saved setting', async () => {
-  vi.mocked(lineState).mockResolvedValueOnce(disabled).mockRejectedValueOnce(new Error('未確認'))
+it('reply-only settings remove enable while retaining unlink and query information', async () => {
+  vi.mocked(lineState).mockResolvedValueOnce(disabled)
   const wrapper = mount(LineReminderSettings, { props: { accountId: 'member' } })
   await flushPromises()
-  const enable = wrapper.findAll('button').find(button => button.text() === '開啟 LINE 極光提醒')
-  expect(enable).toBeDefined()
-  await enable?.trigger('click'); await flushPromises()
-  expect(wrapper.text()).toContain('未確認')
-  expect(wrapper.text()).not.toContain('LINE 極光提醒已開啟')
+  expect(wrapper.findAll('button').some(button => button.text() === '開啟 LINE 極光提醒')).toBe(false)
+  expect(wrapper.text()).toContain('LINE 主動提醒已關閉')
+  expect(wrapper.text()).toContain('解除 LINE 綁定')
 })
 
 it('does not apply a previous account response after switching accounts', async () => {
@@ -34,5 +32,5 @@ it('requires an explicit confirmation for a LINE binding ticket', async () => {
   const wrapper = mount(LineReminderSettings, { props: { accountId: 'member', ticket: 'a'.repeat(64) } })
   await flushPromises()
   expect(wrapper.text()).toContain('確認綁定這個會員')
-  expect(wrapper.text()).toContain('不會自動開啟提醒')
+  expect(wrapper.text()).toContain('不主動發送極光提醒')
 })

@@ -22,10 +22,11 @@ onMounted(async () => { await auth.initializeAuth() })
     <p v-if="auth.loading" role="status">正在確認登入狀態…</p>
     <LineReminderSettings v-else-if="auth.user" :account-id="auth.user.id" :ticket="ticket" />
     <section v-else>
-      <h1>綁定 LINE 旅行提醒</h1>
-      <p>請使用已加入旅程的 Google 帳號登入。加好友與登入都不會自動開啟提醒。</p>
+      <h1>LINE 旅行助手</h1>
+      <p>LINE 已改為查詢回覆，不主動發送極光提醒。查詢不需登入或綁定；若要管理既有綁定，再登入會員。</p>
       <p v-if="error" role="alert">{{ error }}</p>
-      <button @click="login">使用 Google 登入</button>
+      <p><a href="https://lin.ee/xIV8f3m" rel="noreferrer">加入 TravelMate，點選選單查詢</a></p>
+      <button @click="login">登入管理既有綁定</button>
     </section>
   </main>
 </template>

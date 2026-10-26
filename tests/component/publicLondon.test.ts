@@ -88,9 +88,11 @@ describe('public London and Iceland page', () => {
     vi.useRealTimers()
   })
 
-  it('keeps public London independent from private journey fields or supplied private slots', () => {
+  it('keeps public London independent from private journey fields or supplied private slots', async () => {
     const privateJourney = { ...icelandJourney, members:[{...icelandJourney.members[0],displayName:'PRIVATE_PERSON_SENTINEL'}], memos:{'london-2026-10-24-1':{content:'PRIVATE_COMMENT_SENTINEL',updatedBy:'account',updatedByName:'PRIVATE_PERSON_SENTINEL',updatedAt:'2026-10-21T00:00:00Z'}} }
     const wrapper = mount(TripReader, { props:{journey:privateJourney,publicOnly:true},slots:{prelude:()=>h('p','PRIVATE_PRELUDE_SENTINEL'), 'daily-footer':()=>h('button','編輯行程')} })
+    await wrapper.get('#leg-tab-london').trigger('click')
+    await wrapper.get('#day-tab-2026-10-24').trigger('click')
     expect(wrapper.text()).toContain('Hammersmith')
     expect(wrapper.text()).not.toMatch(/PRIVATE_|編輯行程|jinyo|Kevin Ho|Rosanne|YU/)
     wrapper.unmount()

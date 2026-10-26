@@ -37,6 +37,8 @@ describe('Unified Iceland itinerary', () => {
     const wrapper = mountJourney()
     await flushPromises()
     expect(wrapper.text()).toContain('一起去倫敦・冰島')
+    await wrapper.get('#leg-tab-london').trigger('click')
+    await wrapper.get('#day-tab-2026-10-24').trigger('click')
     expect(wrapper.text()).toContain('Hammersmith')
     expect(wrapper.text()).not.toMatch(/jinyo|Kevin Ho|Rosanne|YU/)
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)

@@ -9,10 +9,11 @@ import { londonPrelude } from '@/data/londonPrelude'
 import ItineraryDates from '@/components/trip/ItineraryDates.vue'
 const sharedJourney = () => ({ ...icelandJourney,members:icelandJourney.members.map((member,index)=>({...member,displayName:['U','jinyo','Kevin Ho か','Rosanne 🌹','YU','思辰'][index]})),items:[...icelandJourney.items,...londonSeedItems(icelandJourney.tripId)] })
 describe('London early group', () => {
- it('keeps the six dates and only the four confirmed people', () => {
+ it('keeps the six dates and only the four confirmed people', async () => {
   expect(londonPrelude.days.map(day => day.date)).toEqual(['2026-10-24','2026-10-25','2026-10-26','2026-10-27','2026-10-28','2026-10-29'])
   expect(londonPrelude.memberIds).toEqual(['member-2','member-3','member-4','member-5'])
   const wrapper = mount(LondonPrelude,{props:{journey:sharedJourney()}})
+  await wrapper.findAll('[role="tab"]')[0].trigger('click')
   expect(wrapper.get('.prelude-people').text()).toBe('參加：jinyo、Kevin Ho か、Rosanne 🌹、YU')
   expect(wrapper.text()).not.toContain('思辰')
   expect(wrapper.text()).toContain('Cockfosters')
@@ -65,8 +66,10 @@ describe('London early group', () => {
   expect(wrapper.text()).not.toContain('加入共同行程')
   expect(wrapper.text()).not.toContain('預覽')
  })
- it('shows the London itinerary to visitors without the participant line', () => {
+ it('shows the London itinerary to visitors without the participant line', async () => {
   const wrapper = mount(TripReader)
+  await wrapper.get('#leg-tab-london').trigger('click')
+  await wrapper.get('#day-tab-2026-10-24').trigger('click')
   expect(wrapper.find('[aria-label="行程段落"]').exists()).toBe(false)
   expect(wrapper.find('[aria-label="倫敦前段行程"]').exists()).toBe(true)
   expect(wrapper.text()).toContain('Hammersmith')

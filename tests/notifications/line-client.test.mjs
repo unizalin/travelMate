@@ -20,3 +20,13 @@ test('LINE quota checks fail closed if totals cannot be verified', async () => {
   const broken = createLineClient({ token: 'fixture-token', fetcher: async () => new Response('{}') })
   await assert.rejects(broken.remaining(), /quota_unavailable/)
 })
+
+test('card replies use the reply endpoint only and never consume quota through a fallback', async () => {
+  const calls = []
+  const line = createLineClient({ token: 'fixture-token', fetcher: async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); return Response.json({}) } })
+  await line.reply('one-use-token', [{ type: 'flex', altText: '行程卡片', contents: { type: 'bubble' } }])
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].url, 'https://api.line.me/v2/bot/message/reply')
+  assert.equal(calls[0].body.replyToken, 'one-use-token')
+  assert.equal(calls[0].body.to, undefined)
+})

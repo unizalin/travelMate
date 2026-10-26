@@ -7,7 +7,7 @@ import { makeLineHandler } from '../../scripts/lib/line-api.mjs'
 const origin = 'https://example.test'
 const secret = 'secret'
 const uid = `U${'a'.repeat(32)}`
-function fixture() {
+function fixture(options = {}) {
   const replies = [], seen = new Set()
   const store = {
     event: async (id, owner, complete) => complete || seen.has(id) ? 'completed' : (seen.add(id), 'claimed'),
@@ -15,7 +15,7 @@ function fixture() {
     block: async () => {},
   }
   const line = { reply: async (token, messages) => { replies.push(messages) } }
-  const handler = makeLineHandler({ store, line, authorize: async token => token === 'member' ? { id: 'member' } : null, origin, secret })
+  const handler = makeLineHandler({ store, line, authorize: async token => token === 'member' ? { id: 'member' } : null, origin, secret, ...options })
   const call = async (action, body, headers = {}, sign = false) => {
     const bytes = Buffer.from(JSON.stringify(body))
     const req = Object.assign(Readable.from([bytes]), { url: `/api/line?action=${action}`, method: 'POST', headers: { ...headers } })
@@ -40,7 +40,8 @@ test('LINE repeats do not duplicate replies and group events do not expose membe
   assert.equal((await f.call('webhook', { events: [event] }, {}, true)).status, 200)
   await f.call('webhook', { events: [event] }, {}, true)
   assert.equal(f.replies.length, 1)
-  assert.ok(f.replies[0][0].text.includes('/iceland'))
+  assert.equal(f.replies[0][0].type, 'flex')
+  assert.ok(JSON.stringify(f.replies[0][0]).includes('/iceland'))
   await f.call('webhook', { events: [{ ...event, webhookEventId: 'group', source: { type: 'group', userId: uid } }] }, {}, true)
   assert.equal(f.replies.length, 1)
 })
@@ -78,4 +79,25 @@ test('LINE binding uses the authenticated account and the official redirect, nev
 test('LINE subscriptions cannot report enabled before the production delivery switch is on', async () => {
   const f = fixture()
   assert.equal((await f.call('enable', {}, { authorization: 'Bearer member' })).status, 503)
+})
+
+for (const command of ['今日行程', '完整旅程', '行程 2026-11-02', '天氣', '極光', '天氣／極光', '行前準備', '通知設定', '綁定', '開啟極光提醒', '未知指令']) {
+  test(`reply-only ${command} returns a card without push, quota lookup or binding creation`, async () => {
+    const f = fixture({ loadWeather: async () => null })
+    const event = { webhookEventId: 'card', type: 'message', replyToken: 'single-use', source: { type: 'user', userId: uid }, message: { type: 'text', text: command } }
+    assert.equal((await f.call('webhook', { events: [event] }, {}, true)).status, 200)
+    assert.equal(f.replies.length, 1)
+    assert.equal(f.replies[0][0].type, 'flex')
+  })
+}
+
+test('failed replies never fall back to quota-consuming push', async () => {
+  let pushes = 0
+  const handler = makeLineHandler({ store: { event: async () => 'claimed' }, line: { reply: async () => { throw Error('expired_reply_token') }, push: async () => { pushes++ } }, origin, secret })
+  const bytes = Buffer.from(JSON.stringify({ events: [{ webhookEventId: 'failed', type: 'message', replyToken: 'expired', source: { type: 'user', userId: uid }, message: { type: 'text', text: '今日行程' } }] }))
+  const req = Object.assign(Readable.from([bytes]), { url: '/api/line?action=webhook', method: 'POST', headers: { 'x-line-signature': createHmac('sha256', secret).update(bytes).digest('base64') } })
+  let status
+  await handler(req, { writeHead: value => { status = value }, end: () => {} })
+  assert.equal(status, 503)
+  assert.equal(pushes, 0)
 })
