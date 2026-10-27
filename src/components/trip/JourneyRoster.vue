@@ -70,7 +70,7 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
         </ol>
         <div v-if="fliesIcelandairViaLondon" class="counter-script">
           <h4>人工櫃檯英文說法</h4>
-          <p lang="en">Hi, I’m flying from Keflavík to London Heathrow on FI0454, then on to Taipei on China Airlines CI0082. Here are both booking confirmations. Could you check my bag through to Taipei (TPE)? Please confirm the final destination on the bag tag. If it can only be checked to London Heathrow, where should I collect and recheck it?</p>
+          <p lang="en">Hi, I’m going to Taipei via London. Can you check my bag all the way to Taipei (TPE)? Does the bag tag say TPE? If not, do I pick it up in London?</p>
         </div>
         <template v-if="fliesIcelandairViaLondon">
           <h4>抵達倫敦希斯洛後</h4>
