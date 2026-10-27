@@ -90,6 +90,19 @@ describe('identity and own flight selection', () => {
     expect(wrapper.text()).not.toContain('Travel Q&A')
     wrapper.unmount()
   })
+  it('shows the counter script for the member taking BR068 from London', async () => {
+    api.loadRoster.mockResolvedValue({
+      claims: [{ memberId: 'member-1', name: '旅伴一', isSelf: true }],
+      choices: [{ memberId: 'member-1', flightId: 'fi0454' }, { memberId: 'member-1', flightId: 'br068-lhr' }],
+    })
+    const wrapper = mount(JourneyRoster, { props })
+    await flushPromises()
+    const guide = wrapper.get('[aria-label="冰島離境注意事項"]')
+    expect(guide.get('.counter-script').text()).toContain('Can you check my bag all the way to Taipei (TPE)?')
+    expect(guide.text()).toContain('BR068 預計 21:20 起飛，表定只隔 1 小時 50 分')
+    expect(guide.text()).not.toContain('CI0082')
+    wrapper.unmount()
+  })
   it('does not allow readonly claim or selecting already claimed identities', async () => {
     api.loadRoster.mockResolvedValue({ claims: [{ memberId: 'member-1', name: '其他人', isSelf: false }], choices: [] })
     const wrapper = mount(JourneyRoster, { props: { ...props, canEdit: false } })
