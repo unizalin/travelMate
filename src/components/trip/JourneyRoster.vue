@@ -80,11 +80,17 @@ onBeforeUnmount(() => { epoch++; if (refreshTimer) clearInterval(refreshTimer); 
             <li><b>行李只到 LHR 或須自行轉機</b>：走入境、領行李，前往出發航廈重新報到、托運並安檢。若為分開訂票，希斯洛提醒通常必須自行完成這些步驟；時間非常緊，出發前先向兩家航空公司確認能否銜接與替代方案。</li>
         </ol>
         <p class="guide-sources">官方資訊：<a href="https://www.kefairport.com/check-in-information" target="_blank" rel="noreferrer">KEF 出發流程 ↗</a> · <a href="https://www.kefairport.com/fast-track" target="_blank" rel="noreferrer">KEF 安檢樓層 ↗</a> · <a href="https://www.kefairport.com/passport-control" target="_blank" rel="noreferrer">KEF 護照查驗 ↗</a> · <a href="https://www.icelandair.com/en-gb/support/pre-flight/check-in/" target="_blank" rel="noreferrer">冰島航空報到 ↗</a> · <a href="https://www.heathrow.com/connecting-flights" target="_blank" rel="noreferrer">希斯洛轉機 ↗</a></p>
+        <div class="guide-videos">
+          <h4>影片參考</h4>
+          <a href="https://www.youtube.com/watch?v=JyNGwZ2AiTA" target="_blank" rel="noreferrer">自助貼行李條教學 ↗</a>
+          <a href="https://www.youtube.com/watch?v=24DrDbWWddM" target="_blank" rel="noreferrer">華航 LHR 第 2 航廈轉第 3 航廈示範 ↗</a>
+          <p>影片供熟悉操作與動線；實際航廈、登機門及轉機時間以當天資訊為準。</p>
+        </div>
     </section>
   </section>
 </template>
 
 <style scoped>
 .journey-roster{min-width:0}.flight-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}.flight-heading h2{font-size:14px;font-weight:600}.flight-heading button{font-size:12px;color:#397d86;min-height:36px}.self-name,.muted{font-size:12px;color:#7a8783;margin:4px 0;line-height:1.6}.flight-cards{margin-top:8px}.identity-choices button{min-height:48px;border:1px solid #dde3de;border-radius:10px;background:white;color:#263331;text-align:left;padding:10px;font-size:12px}.identity-choices button:disabled{opacity:.5}.journey-roster :is(button,input):focus-visible{outline:3px solid #83b3b6;outline-offset:3px}
-.departure-guide{margin-top:16px;padding:16px;border:1px solid #dde3de;border-radius:12px;background:#f7f8f6;color:#263331;font-size:12.5px;line-height:1.7}.departure-guide h3{font-size:16px;font-weight:600;margin:0 0 8px}.guide-intro{margin:0 0 8px;color:#68766f}.departure-guide h4{font-size:14px;font-weight:600;margin:14px 0 6px}.counter-script{margin-top:12px;padding:12px;border-left:3px solid #397d86;background:white;border-radius:0 8px 8px 0}.counter-script h4{margin:0 0 5px}.counter-script p{margin:0;line-height:1.7}.departure-guide ol{padding-left:20px;margin:0}.departure-guide li{padding:5px 0}.departure-guide li b{font-weight:600}.guide-sources{margin:12px 0 0;font-size:11.5px;color:#68766f}.guide-sources a{color:#397d86;text-decoration:underline;text-underline-offset:2px}
+.departure-guide{margin-top:16px;padding:16px;border:1px solid #dde3de;border-radius:12px;background:#f7f8f6;color:#263331;font-size:12.5px;line-height:1.7}.departure-guide h3{font-size:16px;font-weight:600;margin:0 0 8px}.guide-intro{margin:0 0 8px;color:#68766f}.departure-guide h4{font-size:14px;font-weight:600;margin:14px 0 6px}.counter-script{margin-top:12px;padding:12px;border-left:3px solid #397d86;background:white;border-radius:0 8px 8px 0}.counter-script h4{margin:0 0 5px}.counter-script p{margin:0;line-height:1.7}.departure-guide ol{padding-left:20px;margin:0}.departure-guide li{padding:5px 0}.departure-guide li b{font-weight:600}.guide-sources{margin:12px 0 0;font-size:11.5px;color:#68766f}.guide-sources a,.guide-videos a{color:#397d86;text-decoration:underline;text-underline-offset:2px}.guide-videos{margin-top:12px;border-top:1px solid #dde3de;padding-top:10px}.guide-videos h4{margin:0 0 5px}.guide-videos a{display:block;width:fit-content;padding:3px 0}.guide-videos p{margin:4px 0 0;color:#68766f;font-size:11.5px}
 </style>
