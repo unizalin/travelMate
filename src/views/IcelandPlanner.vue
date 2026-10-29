@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ICELAND_TRAVEL_MAP_URL } from '@/data/icelandTravelMap'
-import { computed, onBeforeUnmount, onMounted, ref, watch, type WatchStopHandle } from 'vue'
+import { computed, provide, onBeforeUnmount, onMounted, ref, watch, type WatchStopHandle } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   buildDailyTimeline,
@@ -24,7 +24,9 @@ import { loadRoster, type JourneyRoster as RosterState } from '@/services/journe
 import { icelandFlights } from '@/data/icelandFlights'
 import { isOnlyLondonAddition } from '@/domain/londonJourney'
 import ItineraryActivities from '@/components/trip/ItineraryActivities.vue'
-import PhotographySpots from '@/components/trip/PhotographySpots.vue'
+import MemberPhotography from '@/components/trip/MemberPhotography.vue'
+import { memberPhotoDeviceKey, type PhotoDevice } from '@/domain/memberPhotography'
+provide(memberPhotoDeviceKey, ref<PhotoDevice>('a7c'))
 import AddItineraryActivity from '@/components/trip/AddItineraryActivity.vue'
 import MorningChecks from '@/components/trip/MorningChecks.vue'
 import TripPreparation from '@/components/trip/TripPreparation.vue'
@@ -464,10 +466,10 @@ onBeforeUnmount(() => {
     <template #day-content>
       <div v-if="selectedDay" class="compact-day">
         <details v-if="dayPlan" class="plan-b" :open="editMode"><summary>Plan B</summary><template v-if="editMode"><label>保住<input :value="dayPlan.keep" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('keep',($event.target as HTMLInputElement).value)" /></label><label>先刪<input :value="dayPlan.skip" maxlength="2000" :disabled="!canEditDraft" @input="editPlan('skip',($event.target as HTMLInputElement).value)" /></label></template><template v-else><b>應變</b>　保住：{{ dayPlan.keep }} ｜ 先刪：{{ dayPlan.skip }}</template></details>
-        <ItineraryActivities :items="visibleItems" :editing="editMode" :disabled="!canEditDraft" :today="selectedDate===tripToday" @edit="editItem" @reorder="reorderItems"><template #reminder="{ item }"><p v-if="/Ice Cave|Zodiac/.test(item.name)" class="notice-line">{{ /Zodiac/.test(item.name) ? '行程時段 11:20–13:20' : '行程時段 09:00–15:00' }}；集合／報到時間依票券核對。</p><p v-if="/Reynisfjara/.test(item.name)" class="notice-line">面向海、遵守警示燈與封閉線，保留退路。</p><p v-if="/Blue Lagoon/.test(item.name) && selectedDate==='2026-11-07'" class="notice-line">泡湯與當日航班時間衝突待確認，先保留機場緩衝。</p></template><template #photography="{ item }"><PhotographySpots :item="photographyItem(item)" /></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities>
+        <ItineraryActivities :items="visibleItems" :editing="editMode" :disabled="!canEditDraft" :today="selectedDate===tripToday" @edit="editItem" @reorder="reorderItems"><template #reminder="{ item }"><p v-if="/Ice Cave|Zodiac/.test(item.name)" class="notice-line">{{ /Zodiac/.test(item.name) ? '行程時段 11:20–13:20' : '行程時段 09:00–15:00' }}；集合／報到時間依票券核對。</p><p v-if="/Reynisfjara/.test(item.name)" class="notice-line">面向海、遵守警示燈與封閉線，保留退路。</p><p v-if="/Blue Lagoon/.test(item.name) && selectedDate==='2026-11-07'" class="notice-line">泡湯與當日航班時間衝突待確認，先保留機場緩衝。</p></template><template #photography="{ item }"><MemberPhotography :item="photographyItem(item)" /></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities>
         <p v-if="tonightStay" class="practical tonight-stay"><b>今晚住宿：</b><a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tonightStay.name)}`" target="_blank" rel="noreferrer">{{ tonightStay.name }} ↗</a></p>
         <AddItineraryActivity v-if="canEditDraft" :editing="editMode" :disabled="!canEditDraft" @start="editMode=true" @add="(name,location)=>addItem(selectedDate,name,location)" />
-        <details v-if="fallbackItems.length" class="alternatives"><summary>備選景點與餐廳 <span class="disclosure-label" aria-hidden="true" /></summary><ItineraryActivities :items="fallbackItems" :editing="editMode" :disabled="!canEditDraft" @edit="editItem" @reorder="reorderItems"><template #photography="{ item }"><PhotographySpots :item="photographyItem(item)" /></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities></details>
+        <details v-if="fallbackItems.length" class="alternatives"><summary>備選景點與餐廳 <span class="disclosure-label" aria-hidden="true" /></summary><ItineraryActivities :items="fallbackItems" :editing="editMode" :disabled="!canEditDraft" @edit="editItem" @reorder="reorderItems"><template #photography="{ item }"><MemberPhotography :item="photographyItem(item)" /></template><template #comments="{ item }"><ActivityComments :trip-id="activeTripId" :activity-id="item.id" :account-id="accountId" :can-post="cloudLoaded && cloudCanEdit===true" /></template></ItineraryActivities></details>
       </div>
     </template>
     <template #daily-footer><footer v-if="canEditDraft" class="edit-footer"><button type="button" :disabled="!canEditDraft" @click="editMode=!editMode">{{ editMode ? '完成編輯' : '編輯行程' }}</button></footer></template>
