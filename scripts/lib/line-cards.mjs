@@ -1,5 +1,14 @@
 import { sharedStops } from '../../shared/iceland-stops.mjs'
+import { londonItinerary } from '../../shared/london-itinerary.mjs'
 import { loadLineWeather } from './line-weather.mjs'
+
+const londonStops = londonItinerary.days.flatMap(day => day.stops.map(stop => ({ ...stop, date: day.date, location: stop.note })))
+const itineraryStops = [...londonStops, ...sharedStops]
+const itineraryDates = [...new Set(itineraryStops.map(stop => stop.date))]
+const itineraryToday = now => {
+  const londonDate = new Intl.DateTimeFormat('en-CA', { timeZone: londonItinerary.timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+  return londonDate < '2026-10-30' ? londonDate : now.toISOString().slice(0, 10)
+}
 
 const green = '#246757', ink = '#253C35', muted = '#64766E'
 const text = (value, options = {}) => ({ type: 'text', text: value, size: 'sm', color: ink, wrap: true, ...options })
@@ -24,14 +33,15 @@ export function lineNotificationCard(origin) {
 }
 
 function itineraryCard(date, origin, now, requested) {
-  const today = now.toISOString().slice(0, 10)
-  const stops = sharedStops.filter(stop => stop.date === date)
-  const before = today < '2026-10-30', after = today > '2026-11-07'
+  const today = itineraryToday(now)
+  const stops = itineraryStops.filter(stop => stop.date === date)
+  const before = today < itineraryDates[0], after = today > '2026-11-07'
   const lines = stops.map((stop, i) => `${String(i + 1).padStart(2, '0')}  ${stop.name}\n${stop.location}`)
   if (date === '2026-10-30') lines.unshift('BA802｜LHR 13:50 → KEF 17:15（當地時間）')
   if (date === '2026-11-07') lines.push('BA801｜KEF 11:55 → LHR 15:05（當地時間）', 'Blue Lagoon 與機場報到時間需再確認，勿視為已可銜接。')
-  const day = [...new Set(sharedStops.map(stop => stop.date))].indexOf(date) + 1
-  return lineCard({ title: `DAY ${day} · ${date.slice(5).replace('-', '/')}`, subtitle: requested ? '指定日期行程' : before ? '冰島旅程尚未開始 · 先看第一天' : after ? '冰島旅程已結束 · 回看最後一天' : '今日行程 · 冰島時間',
+  const london = date < '2026-10-30'
+  const day = (london ? londonItinerary.days.map(day => day.date) : [...new Set(sharedStops.map(stop => stop.date))]).indexOf(date) + 1
+  return lineCard({ title: `${london ? '倫敦 ' : ''}DAY ${day} · ${date.slice(5).replace('-', '/')}`, subtitle: requested ? '指定日期行程' : before ? '旅程尚未開始 · 先看第一天' : after ? '冰島旅程已結束 · 回看最後一天' : `今日行程 · ${london ? '倫敦' : '冰島'}時間`,
     lines, note: '公開行程快照。最新修改與已確認時間請以會員網站為準；此卡不含私人 Memo、住宿或旅伴資料。',
     buttons: [messageButton('其他日期', '完整旅程'), uriButton('查看網站行程', `${origin}/iceland?section=itinerary`, true)] })
 }
@@ -41,13 +51,13 @@ export async function lineQueryCard(command, { origin, now = new Date(), loadWea
   if (['通知設定', '綁定', '開啟極光提醒'].includes(command)) return lineNotificationCard(origin)
   const requested = /^行程 (\d{4}-\d\d-\d\d)$/.exec(command)?.[1]
   if (command === '今日行程' || requested) {
-    const today = now.toISOString().slice(0, 10)
-    const date = requested ?? (today < '2026-10-30' ? '2026-10-30' : today > '2026-11-07' ? '2026-11-07' : today)
-    if (sharedStops.some(stop => stop.date === date)) return itineraryCard(date, origin, now, !!requested)
+    const today = itineraryToday(now)
+    const date = requested ?? (today < itineraryDates[0] ? itineraryDates[0] : today > '2026-11-07' ? '2026-11-07' : today)
+    if (itineraryStops.some(stop => stop.date === date)) return itineraryCard(date, origin, now, !!requested)
   }
-  if (command === '完整旅程') return lineCard({ title: '冰島九天旅程', subtitle: '2026/10/30 — 11/07',
+  if (command === '完整旅程') return lineCard({ title: '倫敦與冰島旅程', subtitle: '2026/10/24 — 11/07',
     lines: ['選一天，直接在聊天室查看景點。', '行程與時間為公開快照；會員共同編輯內容請到網站查看。'],
-    buttons: [...new Set(sharedStops.map(stop => stop.date))].map((date, i) => messageButton(`DAY ${i + 1} · ${date.slice(5).replace('-', '/')}`, `行程 ${date}`)) })
+    buttons: itineraryDates.map(date => messageButton(`${date < '2026-10-30' ? '倫敦' : '冰島'} · ${date.slice(5).replace('-', '/')}`, `行程 ${date}`)) })
   if (['天氣／極光', '天氣', '極光'].includes(command)) {
     let result
     try { result = await loadWeather(now) } catch { result = null }

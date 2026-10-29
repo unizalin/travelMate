@@ -13,8 +13,8 @@ test('today card uses shared public stop order and a truthful before-trip/after-
   assert.ok(content.indexOf('Dyrhólaey') < content.indexOf('Reynisfjara'))
   assert.match(content, /公開行程快照/)
   assert.match(card.altText, /11\/02/)
-  const before = await lineQueryCard('今日行程', { origin, now: new Date('2026-10-26T23:00:00+08:00') })
-  assert.match(before.altText, /10\/30.*尚未開始/)
+  const before = await lineQueryCard('今日行程', { origin, now: new Date('2026-10-23T23:00:00+08:00') })
+  assert.match(before.altText, /10\/24.*尚未開始/)
   const after = await lineQueryCard('今日行程', { origin, now: new Date('2026-11-08T00:00:00Z') })
   assert.match(after.altText, /11\/07.*已結束/)
   assert.match(JSON.stringify(after), /Blue Lagoon.*機場/)
@@ -22,7 +22,7 @@ test('today card uses shared public stop order and a truthful before-trip/after-
 
 test('date buttons send a message to receive another reply rather than opening a URL', async () => {
   const card = await lineQueryCard('完整旅程', { origin, now })
-  assert.equal(card.contents.footer.contents.length, 9)
+  assert.equal(card.contents.footer.contents.length, 15)
   for (const button of card.contents.footer.contents) {
     assert.equal(button.action.type, 'message')
     const day = await lineQueryCard(button.action.text, { origin, now })
@@ -59,4 +59,16 @@ test('weather failure or stale result produces an honest unavailable card, no in
     assert.match(JSON.stringify(card), /無法取得有效天氣資料/)
     assert.doesNotMatch(JSON.stringify(card), /-1～4/)
   }
+})
+
+ test('London today includes the public October 29 stops and excludes undated alternatives', async () => {
+  const card = await lineQueryCard('今日行程', { origin, now: new Date('2026-10-29T12:00:00Z') })
+  assert.match(card.altText, /10\/29.*倫敦/)
+  const content = JSON.stringify(card)
+  for (const name of ['大英博物館', 'Covent Garden', 'Bancone Covent Garden', 'Lyceum Theatre']) assert.ok(content.includes(name))
+  assert.doesNotMatch(content, /Notting Hill|Flat Iron Soho|BA802|Memo內容/)
+  const britishSummerTime = await lineQueryCard('今日行程', { origin, now: new Date('2026-10-24T23:30:00Z') })
+  assert.match(britishSummerTime.altText, /10\/25/)
+  const iceland = await lineQueryCard('今日行程', { origin, now: new Date('2026-10-30T00:30:00Z') })
+  assert.match(iceland.altText, /DAY 1.*10\/30.*冰島/)
 })

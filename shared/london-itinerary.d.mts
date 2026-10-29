@@ -1,0 +1,1 @@
+export const londonItinerary: { title: string; timeZone: string; days: Array<{ date: string; title: string; stops: Array<{ name: string; note: string }> }>; alternativePlaces: string[]; alternativeRestaurants: string[] }
