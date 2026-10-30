@@ -80,6 +80,7 @@ describe('London early group', () => {
  it('uses one date selector per journey leg in the private itinerary', async () => {
   const journey = sharedJourney()
   const wrapper = mount(TripReader,{ props:{companionMode:true,publicOnly:false,journey},slots:{prelude:({date})=>h(LondonPrelude,{journey,date,embedded:true})} })
+  await wrapper.get('#leg-tab-london').trigger('click')
   await wrapper.get('#day-tab-2026-10-24').trigger('click')
   expect(wrapper.find('[aria-label="倫敦前段行程"]').isVisible()).toBe(true)
   expect(wrapper.text()).toContain('一起去倫敦・冰島')

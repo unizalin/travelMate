@@ -12,6 +12,7 @@ vi.mock('@/services/tripWeatherService', () => ({ loadDayForecast: async () => (
 describe('public London and Iceland page', () => {
   it('shows the two journey legs with their own dates and no private controls', async () => {
     const wrapper = mount(TripReader)
+    await wrapper.get('#leg-tab-london').trigger('click')
     expect(wrapper.get('h1').text()).toContain('一起去倫敦・冰島')
     expect(wrapper.get('h1').text()).toContain('15 天')
     expect(wrapper.get('.clocks').text()).toMatch(/倫敦.*台灣/)
@@ -44,8 +45,10 @@ describe('public London and Iceland page', () => {
 
   it('switches legs and dates without duplicate daily content', async () => {
     const wrapper = mount(TripReader)
+    await wrapper.get('#leg-tab-london').trigger('click')
     await wrapper.get('#day-tab-2026-10-29').trigger('click')
     await wrapper.get('#leg-tab-iceland').trigger('click')
+    await wrapper.get('#day-tab-2026-10-30').trigger('click')
     expect(wrapper.get('#day-tab-2026-10-30').attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[aria-label="倫敦前段行程"]').exists()).toBe(false)
     expect(wrapper.get('[aria-label="天氣與出門準備"]').exists()).toBe(true)

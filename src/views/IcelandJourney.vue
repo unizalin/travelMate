@@ -15,12 +15,14 @@ const signedIn = computed(() => Boolean(auth.value?.user))
 const member = shallowRef(false)
 const membershipReady = shallowRef(false)
 const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
+const authReady = shallowRef(false)
 const loginError = shallowRef('')
 const membershipError = shallowRef('')
 const reservationOffered = shallowRef(false)
 let epoch = 0
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 async function refreshMembership() {
+  if (!authReady.value) return
   const current = ++epoch
   membershipReady.value = false
   membershipError.value = ''
@@ -57,17 +59,23 @@ watch(() => [route.query.section, membershipReady.value, member.value, membershi
 }, { immediate: true })
 onMounted(async () => {
   if (!configured) return
+  await restoreAuth()
+  refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') void refreshMembership() }, 30_000)
+  window.addEventListener('focus', refreshMembership)
+  window.addEventListener('online', refreshMembership)
+  window.addEventListener('offline', refreshMembership)
+})
+async function restoreAuth() {
+  authReady.value = false
+  loginError.value = ''
   try {
     const { useAuthStore } = await import('@/stores/auth')
     auth.value = useAuthStore()
-    if (!auth.value.user) await auth.value.initializeAuth()
+    await auth.value.initializeAuth()
+    authReady.value = true
     await refreshMembership()
-    refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') void refreshMembership() }, 30_000)
-    window.addEventListener('focus', refreshMembership)
-    window.addEventListener('online', refreshMembership)
-    window.addEventListener('offline', refreshMembership)
   } catch { loginError.value = '登入服務暫時無法連線，仍可查看行程。' }
-})
+}
 onBeforeUnmount(() => { epoch++; clearInterval(refreshTimer); window.removeEventListener('focus', refreshMembership); window.removeEventListener('online', refreshMembership); window.removeEventListener('offline', refreshMembership) })
 async function signOut() {
   try { await auth.value?.signOut(); member.value = false }
@@ -90,14 +98,15 @@ async function switchAccount() {
   <TripReader v-else>
     <template #header-actions>
       <details v-if="signedIn" class="account-menu"><summary>帳號</summary><div><p class="break-all">目前帳號：{{ auth?.user?.email }}</p><button class="min-h-11" @click="switchAccount">切換帳號</button><button class="min-h-11" @click="signOut">登出本機</button></div></details>
-      <button v-else-if="configured" type="button" class="min-h-11 rounded-full border px-4 text-sm font-semibold disabled:opacity-50" :disabled="!auth" @click="signIn">登入</button>
+      <button v-else-if="configured && authReady" type="button" class="min-h-11 rounded-full border px-4 text-sm font-semibold disabled:opacity-50" :disabled="!auth" @click="signIn">登入</button>
     </template>
     <template #header-notice>
-      <p v-if="signedIn && !membershipReady" role="status">正在確認旅程資格…</p>
+      <p v-if="configured && !authReady && !loginError" role="status">正在恢復登入狀態…</p>
+      <p v-else-if="signedIn && !membershipReady" role="status">正在確認旅程資格…</p>
       <p v-else-if="signedIn && membershipError" role="alert">{{ membershipError }} <button type="button" data-test="retry-membership" class="min-h-11 underline" @click="refreshMembership">重新確認</button></p>
       <p v-else-if="signedIn && !reservationOffered" role="status">尚未加入，請透過邀請連結加入</p>
       <EmailIdentityConfirmation v-if="auth?.user && !member" :trip-id="ICELAND_TRIP_ID" :account-id="auth.user.id" @offered="reservationOffered=$event" @joined="refreshMembership" />
-      <p v-if="loginError" role="status">{{ loginError }}</p>
+      <p v-if="loginError" role="status">{{ loginError }} <button v-if="!authReady" type="button" data-test="retry-auth" class="min-h-11 underline" @click="restoreAuth">重試恢復登入</button></p>
     </template>
   </TripReader>
 </template>

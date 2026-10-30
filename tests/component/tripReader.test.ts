@@ -19,6 +19,7 @@ describe('TripReader', () => {
 
   it('keeps both local and Taiwan clocks visible in the compact header', async () => {
     const wrapper = mount(TripReader)
+    await wrapper.get('#leg-tab-london').trigger('click')
     const clocks = wrapper.find('.global-information .clocks')
     expect(clocks.text()).toContain('倫敦')
     expect(clocks.text()).toContain('台灣')

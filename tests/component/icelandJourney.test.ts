@@ -33,6 +33,36 @@ beforeEach(async () => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('Unified Iceland itinerary', () => {
+  it('waits for stored login before offering sign-in or replacing the requested member section', async () => {
+    let restore!: () => void
+    state.store!.initializeAuth.mockImplementationOnce(() => new Promise<void>(resolve => {
+      restore = () => { state.store!.user = { id: 'returning-member' }; resolve() }
+    }))
+    membership.mockResolvedValue(true)
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/iceland', component: IcelandJourney }] })
+    await router.push('/iceland?section=me')
+    const wrapper = mount(IcelandJourney, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('正在恢復登入狀態')
+    expect(wrapper.findAll('button').some(button => button.text() === '登入')).toBe(false)
+    expect(router.currentRoute.value.query.section).toBe('me')
+    restore(); await flushPromises()
+    await vi.waitFor(() => expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))
+    expect(router.currentRoute.value.query.section).toBe('me')
+    wrapper.unmount()
+  })
+
+  it('retries failed login restoration without starting another Google login', async () => {
+    state.store!.initializeAuth.mockRejectedValueOnce(new Error('offline'))
+    const wrapper = mountJourney(); await flushPromises()
+    state.store!.initializeAuth.mockImplementationOnce(async () => { state.store!.user = { id: 'returning-member' } })
+    membership.mockResolvedValue(true)
+    await wrapper.get('[data-test="retry-auth"]').trigger('click'); await flushPromises()
+    await vi.waitFor(() => expect(wrapper.find('[data-test="companion"]').exists()).toBe(true))
+    expect(state.store!.openAuthModal).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('shows visitors the itinerary and a sign-in action without private controls', async () => {
     const wrapper = mountJourney()
     await flushPromises()
@@ -146,7 +176,8 @@ describe('Unified Iceland itinerary', () => {
     await flushPromises()
     expect(wrapper.find('[data-test="companion"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('登入')
-    expect(wrapper.find('[aria-label="倫敦前段行程"]').exists()).toBe(true)
+    await wrapper.get('#leg-tab-london').trigger('click')
+    expect(wrapper.get('#leg-tab-london').attributes('aria-selected')).toBe('true')
     expect(wrapper.find('.prelude-people').exists()).toBe(false)
     wrapper.unmount()
   })
